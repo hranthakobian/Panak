@@ -135,7 +135,7 @@ namespace Panak.Services {
                     using (var key = Registry.CurrentUser.CreateSubKey(UNINSTALL_REG_KEY)) {
                         key.SetValue("DisplayName", "Panak - Android-style Folders");
                         key.SetValue("DisplayIcon", $"\"{targetExe}\",0");
-                        key.SetValue("DisplayVersion", "1.5.0");
+                        key.SetValue("DisplayVersion", "1.5.5");
                         key.SetValue("Publisher", "Panak Team");
                         key.SetValue("InstallLocation", targetDir);
                         key.SetValue("UninstallString", uninstallCommand);
