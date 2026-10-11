@@ -77,9 +77,18 @@ namespace Panak.Services {
                 string dir = Path.GetDirectoryName(exePath) ?? string.Empty;
                 string comhostPath = Path.Combine(dir, "Panak.ShellExt.comhost.dll");
                 if (!File.Exists(comhostPath)) {
-                    string devPath = Path.Combine(dir, "..", "..", "..", "Panak.ShellExt", "bin", "Debug", "net8.0-windows", "Panak.ShellExt.comhost.dll");
-                    if (File.Exists(devPath)) {
-                        comhostPath = Path.GetFullPath(devPath);
+                    string[] candidates = new[] {
+                        Path.Combine(dir, "Panak.ShellExt.comhost.dll"),
+                        Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "Panak.ShellExt", "bin", "Debug", "net8.0-windows", "Panak.ShellExt.comhost.dll")),
+                        Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "..", "Panak.ShellExt", "bin", "Debug", "net8.0-windows", "Panak.ShellExt.comhost.dll")),
+                        Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "Panak.ShellExt", "bin", "Release", "net8.0-windows", "Panak.ShellExt.comhost.dll")),
+                        Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "..", "Panak.ShellExt", "bin", "Release", "net8.0-windows", "Panak.ShellExt.comhost.dll")),
+                    };
+                    foreach (var cand in candidates) {
+                        if (File.Exists(cand)) {
+                            comhostPath = cand;
+                            break;
+                        }
                     }
                 }
 

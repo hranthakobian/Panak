@@ -68,6 +68,9 @@ namespace Panak {
             try {
                 _instanceMutex = new Mutex(true, "PanakSingleInstanceApplicationMutex_2026", out isFirstInstance);
                 _ownsMutex = isFirstInstance;
+            } catch (AbandonedMutexException) {
+                isFirstInstance = true;
+                _ownsMutex = true;
             } catch {
                 isFirstInstance = false;
                 _ownsMutex = false;

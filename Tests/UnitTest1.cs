@@ -851,17 +851,57 @@ namespace Panak.Tests {
         }
 
         [TestMethod]
-        public void TestRefreshLiveDesktopPanakFoldersIfPresent() {
-            string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            if (Directory.Exists(desktop)) {
-                foreach (var dir in Directory.GetDirectories(desktop)) {
-                    string pj = Path.Combine(dir, "panak.json");
-                    if (File.Exists(pj)) {
-                        var data = PanakFolderData.Load(dir);
-                        IconGenerator.GenerateFolderIcon(dir, data.IconShape, data.Color, data.BackgroundOpacity);
-                    }
-                }
+        public void TestContextMenuRegistryDragDropHandlerRegistration() {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string exePath = Path.Combine(baseDir, "Panak.exe");
+            if (!File.Exists(exePath)) {
+                File.WriteAllText(exePath, "mock");
             }
+
+            ContextMenuRegistry.RegisterAll(exePath);
+
+            const string clsid = "{E5A7B812-3D4C-4A2E-8910-1F2D3C4E5A6B}";
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\shellex\DragDropHandlers\Panak")) {
+                Assert.IsNotNull(key, "DragDropHandlers for Directory should be registered");
+                Assert.AreEqual(clsid, key.GetValue(""));
+            }
+
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Folder\shellex\DragDropHandlers\Panak")) {
+                Assert.IsNotNull(key, "DragDropHandlers for Folder should be registered");
+                Assert.AreEqual(clsid, key.GetValue(""));
+            }
+
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Drive\shellex\DragDropHandlers\Panak")) {
+                Assert.IsNotNull(key, "DragDropHandlers for Drive should be registered");
+                Assert.AreEqual(clsid, key.GetValue(""));
+            }
+
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey($@"Software\Classes\CLSID\{clsid}\InprocServer32")) {
+                Assert.IsNotNull(key, "InprocServer32 for PanakDragDropHandler should be registered");
+                Assert.AreEqual("Apartment", key.GetValue("ThreadingModel"));
+            }
+        }
+
+        [TestMethod]
+        public void TestTrayContextMenuCreationAndPalette() {
+            var thread = new System.Threading.Thread(() => {
+                var tm = new TrayManager();
+
+                // Test Dark Mode
+                SettingsService.Instance.Current.ThemeMode = "Dark";
+                var darkMenu = tm.BuildContextMenu();
+                Assert.IsNotNull(darkMenu);
+                Assert.IsTrue(darkMenu.Items.Count >= 4, "Dark menu must contain items");
+
+                // Test Light Mode
+                SettingsService.Instance.Current.ThemeMode = "Light";
+                var lightMenu = tm.BuildContextMenu();
+                Assert.IsNotNull(lightMenu);
+                Assert.IsTrue(lightMenu.Items.Count >= 4, "Light menu must contain items");
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
         }
     }
 }
