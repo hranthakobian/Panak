@@ -69,12 +69,25 @@ namespace Panak.Views {
         }
 
         private void OnSettingsChanged(AppSettings s) {
-            Dispatcher.Invoke(() => {
-                ApplyThemeMode(s.ThemeMode ?? "Auto");
-                if (_itemsUniformGrid != null) {
-                    _itemsUniformGrid.Columns = GetConfiguredColumns();
+            try {
+                if (Dispatcher.Thread.IsAlive && !Dispatcher.HasShutdownStarted) {
+                    if (Dispatcher.CheckAccess()) {
+                        ApplyThemeMode(s.ThemeMode ?? "Auto");
+                        if (_itemsUniformGrid != null) {
+                            _itemsUniformGrid.Columns = GetConfiguredColumns();
+                        }
+                    } else {
+                        Dispatcher.BeginInvoke(() => {
+                            try {
+                                ApplyThemeMode(s.ThemeMode ?? "Auto");
+                                if (_itemsUniformGrid != null) {
+                                    _itemsUniformGrid.Columns = GetConfiguredColumns();
+                                }
+                            } catch { }
+                        });
+                    }
                 }
-            });
+            } catch { }
         }
 
         private void ItemsUniformGrid_Loaded(object sender, RoutedEventArgs e) {
@@ -268,7 +281,9 @@ namespace Panak.Views {
                 HueSlider.Value = ShellHelper.GetHueFromHex(_folderData.Color);
 
                 // Initialize Opacity Slider position
-                double op = _folderData.BackgroundOpacity > 0 ? _folderData.BackgroundOpacity : 0.85;
+                double defaultOp = SettingsService.Instance.Current.FolderOpacity;
+                if (defaultOp <= 0) defaultOp = 0.85;
+                double op = _folderData.BackgroundOpacity > 0 ? _folderData.BackgroundOpacity : defaultOp;
                 OpacitySlider.Value = op;
                 ApplyOpacity(op);
 
@@ -1246,7 +1261,7 @@ namespace Panak.Views {
             ScheduleDebouncedFolderSettingsSave(immediate: false);
         }
 
-        private void ApplyOpacity(double opacity) {
+        public void ApplyOpacity(double opacity) {
             opacity = Math.Clamp(opacity, 0.20, 1.0);
             FrostedTintLayer.Opacity = opacity;
             TintLayer.Opacity = Math.Min(1.0, opacity * 1.1);

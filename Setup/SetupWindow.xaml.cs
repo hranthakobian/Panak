@@ -11,6 +11,8 @@ namespace Panak.Setup {
     public partial class SetupWindow : Window {
         private readonly bool _isUninstallMode;
         private string _targetDirectory;
+        private bool _isUpdatingLanguage = false;
+        private bool _needsAutoDetect = false;
 
         public SetupWindow(bool isUninstallMode = false) {
             InitializeComponent();
@@ -24,6 +26,15 @@ namespace Panak.Setup {
             LoadLogoAndIcon();
             LoadThemeAndLanguage();
             ConfigureMode();
+
+            Loaded += SetupWindow_Loaded;
+        }
+
+        private async void SetupWindow_Loaded(object sender, RoutedEventArgs e) {
+            if (_needsAutoDetect) {
+                string detected = await LocalizationService.DetectOptimalLanguageAsync();
+                SetSelectedLanguage(detected);
+            }
         }
 
         private void LoadLogoAndIcon() {
@@ -77,6 +88,7 @@ namespace Panak.Setup {
         private void LoadThemeAndLanguage() {
             string language = "hy";
             string colorHex = ShellHelper.GetDefaultPastelColorHex();
+            bool foundSavedLanguage = false;
 
             try {
                 string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -86,6 +98,7 @@ namespace Panak.Setup {
                     using var doc = JsonDocument.Parse(json);
                     if (doc.RootElement.TryGetProperty("Language", out var langProp) && !string.IsNullOrEmpty(langProp.GetString())) {
                         language = langProp.GetString()!;
+                        foundSavedLanguage = true;
                     }
                     if (doc.RootElement.TryGetProperty("ThemeColor", out var colProp) && !string.IsNullOrEmpty(colProp.GetString())) {
                         colorHex = colProp.GetString()!;
@@ -93,9 +106,34 @@ namespace Panak.Setup {
                 }
             } catch { }
 
-            LocalizationService.Instance.CurrentLanguage = language;
+            _needsAutoDetect = !foundSavedLanguage;
+            SetSelectedLanguage(language);
+
             double hue = ShellHelper.GetHueFromHex(colorHex);
             ApplyMaterialYouPalette(hue);
+        }
+
+        private void SetSelectedLanguage(string lang) {
+            _isUpdatingLanguage = true;
+            try {
+                foreach (System.Windows.Controls.ComboBoxItem item in LanguageComboBox.Items) {
+                    if (string.Equals(item.Tag?.ToString(), lang, StringComparison.OrdinalIgnoreCase)) {
+                        item.IsSelected = true;
+                        break;
+                    }
+                }
+                LocalizationService.Instance.CurrentLanguage = lang;
+            } finally {
+                _isUpdatingLanguage = false;
+            }
+        }
+
+        private void LanguageComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) {
+            if (_isUpdatingLanguage) return;
+            if (LanguageComboBox.SelectedItem is System.Windows.Controls.ComboBoxItem item && item.Tag is string lang) {
+                LocalizationService.Instance.CurrentLanguage = lang;
+                ConfigureMode();
+            }
         }
 
         public void ApplyMaterialYouPalette(double hue) {
@@ -131,12 +169,14 @@ namespace Panak.Setup {
                 if (MainWindowBorder != null) {
                     MainWindowBorder.Background = new SolidColorBrush(wpfSurface);
                 }
+                if (LanguageComboBox != null) {
+                    LanguageComboBox.Foreground = new SolidColorBrush(wpfOnSurface);
+                }
             } catch { }
         }
 
         private void ConfigureMode() {
             var loc = LocalizationService.Instance;
-            UpdateLanguagePillStyles();
 
             InstallFolderDisplayPath.Text = _targetDirectory;
 
@@ -194,21 +234,6 @@ namespace Panak.Setup {
                 "ru" => "Обзор...",
                 _ => "Browse..."
             };
-        }
-
-        private void UpdateLanguagePillStyles() {
-            string lang = LocalizationService.Instance.CurrentLanguage;
-            var primaryBrush = (Brush)FindResource("M3PrimaryBrush");
-            var variantBrush = (Brush)FindResource("M3OnSurfaceVariantBrush");
-
-            LangHyBtn.Foreground = lang == "hy" ? primaryBrush : variantBrush;
-            LangHyBtn.FontWeight = lang == "hy" ? FontWeights.Bold : FontWeights.Normal;
-
-            LangEnBtn.Foreground = lang == "en" ? primaryBrush : variantBrush;
-            LangEnBtn.FontWeight = lang == "en" ? FontWeights.Bold : FontWeights.Normal;
-
-            LangRuBtn.Foreground = lang == "ru" ? primaryBrush : variantBrush;
-            LangRuBtn.FontWeight = lang == "ru" ? FontWeights.Bold : FontWeights.Normal;
         }
 
         private void BrowseFolderBtn_Click(object sender, RoutedEventArgs e) {
@@ -298,21 +323,6 @@ namespace Panak.Setup {
             if (e.LeftButton == MouseButtonState.Pressed) {
                 DragMove();
             }
-        }
-
-        private void LangHy_Click(object sender, MouseButtonEventArgs e) {
-            LocalizationService.Instance.CurrentLanguage = "hy";
-            ConfigureMode();
-        }
-
-        private void LangEn_Click(object sender, MouseButtonEventArgs e) {
-            LocalizationService.Instance.CurrentLanguage = "en";
-            ConfigureMode();
-        }
-
-        private void LangRu_Click(object sender, MouseButtonEventArgs e) {
-            LocalizationService.Instance.CurrentLanguage = "ru";
-            ConfigureMode();
         }
     }
 }

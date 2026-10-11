@@ -289,6 +289,107 @@
             </Setter>
         </Style>
 
+        <!-- Material Design 3 ComboBox Style: Pill container, rotating chevron & elevated rounded popup -->
+        <Style x:Key="MaterialComboBoxItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemBorder" CornerRadius="12" Margin="4,2" Padding="12,8" Background="Transparent" BorderThickness="0">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
+                                <Setter TargetName="ItemBorder" Property="TextBlock.Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
+                                <Setter TargetName="ItemBorder" Property="TextBlock.Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MaterialComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource MaterialComboBoxItemStyle}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="DropDownToggle" Focusable="False" ClickMode="Press"
+                                          Foreground="{DynamicResource M3OnSurfaceBrush}"
+                                          TextBlock.Foreground="{DynamicResource M3OnSurfaceBrush}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="ToggleBorder" Height="32" CornerRadius="16"
+                                                Background="{DynamicResource M3SurfaceContainerBrush}"
+                                                BorderThickness="0" Padding="12,0,10,0">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <ContentPresenter Grid.Column="0" Content="{TemplateBinding Content}"
+                                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                  TextBlock.Foreground="{DynamicResource M3OnSurfaceBrush}"
+                                                                  HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                <Path x:Name="ChevronPath" Grid.Column="1" Data="M 0,0 L 4 4 L 8,0"
+                                                      Stroke="{DynamicResource M3PrimaryBrush}" StrokeThickness="1.8"
+                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ToggleBorder" Property="Opacity" Value="0.88"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <ContentPresenter IsHitTestVisible="False"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                  TextBlock.Foreground="{DynamicResource M3OnSurfaceBrush}"
+                                                  HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            </ToggleButton>
+
+                            <Popup x:Name="PART_Popup" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom" PopupAnimation="Slide">
+                                <Border x:Name="PopupBorder" MinWidth="{Binding ActualWidth, ElementName=DropDownToggle}"
+                                        Margin="0,4,0,0" CornerRadius="14"
+                                        Background="{DynamicResource M3SurfaceBrush}"
+                                        TextBlock.Foreground="{DynamicResource M3OnSurfaceBrush}"
+                                        BorderThickness="1" BorderBrush="{DynamicResource M3SurfaceContainerBrush}" Padding="4">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.25" Color="#000000"/>
+                                    </Border.Effect>
+                                    <ScrollViewer MaxHeight="200" SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Material 3 Rounded Progress Bar Style -->
         <Style x:Key="MaterialProgressBarStyle" TargetType="ProgressBar">
             <Setter Property="Height" Value="8"/>
@@ -337,20 +438,20 @@
                     </Border>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock x:Name="WizardTitleText" Text="Panak Setup" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                        <TextBlock x:Name="WizardSubtitleText" Text="Android-style Popup Folders for Windows" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                        <TextBlock x:Name="WizardSubtitleText" Text="Material You Popup Folders for Windows" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Language selector pills -->
-                    <Border Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="12" Padding="4,2" Margin="0,0,10,0">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock x:Name="LangHyBtn" Text="HY" FontSize="11" FontWeight="Bold" Cursor="Hand" Margin="6,2" MouseDown="LangHy_Click" Foreground="{DynamicResource M3PrimaryBrush}"/>
-                            <TextBlock Text="|" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="LangEnBtn" Text="EN" FontSize="11" FontWeight="Normal" Cursor="Hand" Margin="6,2" MouseDown="LangEn_Click" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
-                            <TextBlock Text="|" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="LangRuBtn" Text="RU" FontSize="11" FontWeight="Normal" Cursor="Hand" Margin="6,2" MouseDown="LangRu_Click" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
-                        </StackPanel>
-                    </Border>
+                    <!-- UN Languages + Armenian Dropdown -->
+                    <ComboBox x:Name="LanguageComboBox" Width="120" Height="32" Margin="0,0,10,0" Style="{StaticResource MaterialComboBoxStyle}" SelectionChanged="LanguageComboBox_SelectionChanged">
+                        <ComboBoxItem Content="Հայերեն" Tag="hy"/>
+                        <ComboBoxItem Content="English" Tag="en"/>
+                        <ComboBoxItem Content="Русский" Tag="ru"/>
+                        <ComboBoxItem Content="Français" Tag="fr"/>
+                        <ComboBoxItem Content="Español" Tag="es"/>
+                        <ComboBoxItem Content="中文" Tag="zh"/>
+                        <ComboBoxItem Content="العربية" Tag="ar"/>
+                    </ComboBox>
                     <Button Style="{StaticResource CloseIconButtonStyle}" Content="✕" Width="36" Height="36" Click="CancelButton_Click"/>
                 </StackPanel>
             </Grid>
@@ -362,7 +463,7 @@
                     <!-- Feature Intro Card -->
                     <Border Style="{StaticResource SectionCardStyle}">
                         <TextBlock x:Name="InstallIntroText"
-                                   Text="Install Panak to enjoy Android-style popup folder widgets, dynamic 2x2 preview icons, right double-click quick look, and Windows Explorer context menu integration."
+                                   Text="Install Panak to enjoy Material You popup folder widgets, dynamic 2x2 preview icons, right double-click quick look, and Windows Explorer context menu integration."
                                    FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" LineHeight="17"/>
                     </Border>
 
@@ -485,7 +586,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="CancelActionBtn" Grid.Column="0" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Click="CancelButton_Click"/>
-                <TextBlock Grid.Column="1" Text="Panak v1.0 • Android-style popup folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
+                <TextBlock Grid.Column="1" Text="Panak v1.5.5 • Material You Folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Button x:Name="MainActionBtn" Style="{StaticResource ActionButtonStyle}" Content="Install Now" Click="MainActionBtn_Click"/>
                     <Button x:Name="FinishBtn" Style="{StaticResource ActionButtonStyle}" Content="Finish" Visibility="Collapsed" Click="FinishBtn_Click"/>

@@ -24,6 +24,13 @@
         <SolidColorBrush x:Key="M3OnErrorContainerBrush" Color="#410002"/>
         <SolidColorBrush x:Key="SettingsHueThumbBrush" Color="#FCDDC5"/>
 
+        <!-- Dynamic Logo Brushes -->
+        <SolidColorBrush x:Key="LogoContainerBrush" Color="#E5CBB4"/>
+        <SolidColorBrush x:Key="LogoTriangleBrush" Color="#884433"/>
+        <SolidColorBrush x:Key="LogoCloudBrush" Color="#481A0A"/>
+        <SolidColorBrush x:Key="LogoShieldBrush" Color="#CFA636"/>
+        <SolidColorBrush x:Key="LogoEllipseBrush" Color="#CF5D36"/>
+
         <!-- Material 3 Section Card Style: Pure borderless elevated container -->
         <Style x:Key="SectionCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource M3CardBrush}"/>
@@ -155,24 +162,50 @@
             </Setter>
         </Style>
 
-        <!-- Material 3 Hue Slider Styles: Pure borderless rainbow track -->
+        <!-- Material 3 Hue Slider Styles: Pure borderless rainbow track with M3 Expressive Vertical Line Handle -->
         <Style x:Key="PastelHueThumbStyle" TargetType="{x:Type Thumb}">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Grid x:Name="HueThumbRoot" Width="22" Height="22">
-                            <Ellipse Fill="#FFFFFF">
-                                <Ellipse.Effect>
-                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.30" Color="#000000"/>
-                                </Ellipse.Effect>
-                            </Ellipse>
-                            <Ellipse Width="12" Height="12" Fill="{DynamicResource SettingsHueThumbBrush}"/>
+                        <Grid x:Name="HueThumbRoot" Width="14" Height="28" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="ThumbScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Grid.RenderTransform>
+                            <!-- White outer vertical pill handle -->
+                            <Border Width="5" Height="26" CornerRadius="2.5" Background="#FFFFFF">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.35" Color="#000000"/>
+                                </Border.Effect>
+                            </Border>
+                            <!-- Hue color accent inner bar -->
+                            <Border Width="2.5" Height="16" CornerRadius="1.25" Background="{DynamicResource SettingsHueThumbBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="HueThumbRoot" Property="Opacity" Value="0.9"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbScale" Storyboard.TargetProperty="ScaleX" To="1.3" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -225,24 +258,50 @@
             </Setter>
         </Style>
 
-        <!-- Material Design 3 Slider Style: Thick pill track with active tonal fill -->
+        <!-- Material Design 3 Slider Style: Thick pill track with M3 Expressive Vertical Line Handle -->
         <Style x:Key="MaterialSliderThumbStyle" TargetType="{x:Type Thumb}">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Grid x:Name="ThumbRoot" Width="22" Height="22">
-                            <Ellipse Fill="{DynamicResource M3PrimaryBrush}">
-                                <Ellipse.Effect>
-                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.25" Color="#301A06"/>
-                                </Ellipse.Effect>
-                            </Ellipse>
-                            <Ellipse Width="8" Height="8" Fill="{DynamicResource M3OnPrimaryBrush}"/>
+                        <Grid x:Name="ThumbRoot" Width="14" Height="28" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="ThumbScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Grid.RenderTransform>
+                            <!-- Primary color vertical pill handle -->
+                            <Border Width="5" Height="26" CornerRadius="2.5" Background="{DynamicResource M3PrimaryBrush}">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.30" Color="#301A06"/>
+                                </Border.Effect>
+                            </Border>
+                            <!-- On-primary center indicator -->
+                            <Border Width="2" Height="14" CornerRadius="1" Background="{DynamicResource M3OnPrimaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ThumbRoot" Property="Opacity" Value="0.9"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbScale" Storyboard.TargetProperty="ScaleX" To="1.3" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -340,7 +399,7 @@
             </Setter>
         </Style>
 
-        <!-- Material Design 3 Expressive Toggle Switch Style (matching Panak folder popup) -->
+        <!-- Material Design 3 Expressive Toggle Switch Style with Smooth Sliding Animation -->
         <Style x:Key="MaterialSwitchStyle" TargetType="CheckBox">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -354,7 +413,7 @@
                                     HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <!-- Switch Thumb Container -->
                                 <Canvas Width="40" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
-                                    <!-- Unchecked Thumb: 14x14 at left -->
+                                    <!-- Animated Thumb -->
                                     <Border x:Name="SwitchThumb" Width="14" Height="14" CornerRadius="7"
                                             Background="{DynamicResource M3OnSurfaceVariantBrush}" Canvas.Left="2" Canvas.Top="3">
                                         <Border.Effect>
@@ -364,21 +423,61 @@
                                     <!-- Checked Icon: subtle vector check inside thumb -->
                                     <Path x:Name="CheckIcon" Data="M 1,4 L 3.5,6.5 L 7.5,1.5"
                                           Stroke="{DynamicResource M3PrimaryBrush}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          Canvas.Left="26" Canvas.Top="6" Visibility="Collapsed"/>
+                                          Canvas.Left="26" Canvas.Top="6" Opacity="0"/>
                                 </Canvas>
                             </Border>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Left)" To="21" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Width" To="18" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Height" To="18" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Top)" To="1" Duration="0:0:0.22"/>
+                                            <DoubleAnimation Storyboard.TargetName="CheckIcon" Storyboard.TargetProperty="Opacity" To="1.0" Duration="0:0:0.18"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Left)" To="2" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Width" To="14" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Height" To="14" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Top)" To="3" Duration="0:0:0.22"/>
+                                            <DoubleAnimation Storyboard.TargetName="CheckIcon" Storyboard.TargetProperty="Opacity" To="0.0" Duration="0:0:0.12"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                                 <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
                                 <Setter TargetName="SwitchTrack" Property="BorderBrush" Value="{DynamicResource M3PrimaryBrush}"/>
-                                <Setter TargetName="SwitchThumb" Property="Canvas.Left" Value="21"/>
-                                <Setter TargetName="SwitchThumb" Property="Width" Value="18"/>
-                                <Setter TargetName="SwitchThumb" Property="Height" Value="18"/>
-                                <Setter TargetName="SwitchThumb" Property="CornerRadius" Value="9"/>
-                                <Setter TargetName="SwitchThumb" Property="Canvas.Top" Value="1"/>
                                 <Setter TargetName="SwitchThumb" Property="Background" Value="{DynamicResource M3OnPrimaryBrush}"/>
-                                <Setter TargetName="CheckIcon" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="SwitchTrack" Property="Opacity" Value="0.9"/>
@@ -505,7 +604,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}" RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="BtnScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -513,7 +615,39 @@
                                 <Setter TargetName="btnBorder" Property="Opacity" Value="0.92"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.80"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleX" To="0.96" Duration="0:0:0.1">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleY" To="0.96" Duration="0:0:0.1">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.82"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -532,7 +666,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}" RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="BtnScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -540,6 +677,38 @@
                                 <Setter TargetName="btnBorder" Property="Opacity" Value="0.88"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleX" To="0.96" Duration="0:0:0.1">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleY" To="0.96" Duration="0:0:0.1">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                                 <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -548,6 +717,7 @@
             </Setter>
         </Style>
 
+        <!-- Danger Button: Very sharp corners (CornerRadius="4") per user request -->
         <Style x:Key="DangerButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource M3ErrorContainerBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainerBrush}"/>
@@ -559,7 +729,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="18" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}" RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="BtnScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -567,31 +740,38 @@
                                 <Setter TargetName="btnBorder" Property="Opacity" Value="0.88"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="CloseIconButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="btnBorder" Width="36" Height="36" CornerRadius="18" Background="{TemplateBinding Background}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleX" To="0.96" Duration="0:0:0.1">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleY" To="0.96" Duration="0:0:0.1">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                                 <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -613,19 +793,35 @@
                 <RowDefinition Height="Auto"/> <!-- Footer Actions -->
             </Grid.RowDefinitions>
 
-            <!-- Header -->
-            <Grid Grid.Row="0" Margin="0,0,0,16" MouseDown="Header_MouseDown">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+            <!-- Header: Full-width draggable, dynamic vector SVG logo, no close button -->
+            <Grid Grid.Row="0" Margin="0,0,0,16" Background="Transparent" MouseDown="Header_MouseDown" Cursor="SizeAll">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="32" Height="32" CornerRadius="10" Margin="0,0,10,0" VerticalAlignment="Center" ClipToBounds="True">
-                        <Image x:Name="HeaderLogoImage" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality"/>
-                    </Border>
+                    <!-- Dynamic Vector Panak SVG Logo -->
+                    <Viewbox Width="32" Height="32" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <Canvas Width="88" Height="88" Clip="M 0,0 L 88,0 L 88,88 L 0,88 Z">
+                            <!-- 1. Scalloped badge base -->
+                            <Path Data="M59.4086 1.20571C76.2803 -3.9745 92.0771 11.8223 86.8969 28.694C84.4429 36.6874 87.7289 45.4262 94.7578 49.638C109.589 58.5255 104.707 80.4907 87.4938 82.5202C80.2882 83.3707 74.3913 88.7341 73.3424 95.9084C70.8385 113.033 49.3306 120.021 37.1517 107.842C31.9682 102.658 24.1166 101.096 17.3822 103.913C1.58784 110.518 -12.1813 94.0204 -8.51433 77.4093C-6.95462 70.3444 -10.7416 63.153 -17.6163 60.1268C-33.7402 53.0315 -30.7067 30.2285 -13.0617 27.385C-5.55627 26.1755 0.340623 20.2786 1.5501 12.7731C4.39366 -4.87189 27.1966 -7.90544 34.2919 8.21849C37.3181 15.0932 44.5095 18.8802 51.5744 17.3205C54.5779 16.6575 57.3406 14.4754 59.4086 1.20571Z"
+                                  Fill="{DynamicResource LogoContainerBrush}"/>
+                            <!-- 2. Dark brown cloud/flower bottom shape -->
+                            <Path Data="M23.0319 48.198C22.6105 47.9547 22.0911 48.0264 21.751 48.3752C21.4109 48.7239 21.328 49.2678 21.5463 49.7161C22.2599 51.1818 23.0366 52.8837 23.3686 54.7677C23.6934 56.6111 23.6338 58.2618 23.4072 59.6106C22.8466 62.9463 20.3015 65.4914 16.9658 66.052C15.617 66.2786 13.9663 66.3382 12.083 66.0062C10.239 65.6814 8.57709 64.912 7.15139 64.2117C6.70308 63.9922 6.15918 64.0751 5.81043 64.4152C5.46168 64.7554 5.39003 65.2748 5.6333 65.6962C7.30151 68.5855 10.0245 72.3364 14.3411 73.0975C19.7431 74.05 25.1064 70.9535 27.4239 65.7369C29.2801 61.5583 28.5292 56.5925 26.2415 52.0169C25.3265 50.1867 24.1678 48.854 23.0319 48.198Z"
+                                  Fill="{DynamicResource LogoCloudBrush}"/>
+                            <!-- 3. Upper left triangle/petal shape -->
+                            <Path Data="M22.303 11.7907C17.5146 15.8077 19.3402 23.5186 25.4309 25.0487C31.5217 26.5788 35.8055 20.3702 32.7483 14.8879C29.6912 9.40552 27.0913 7.77372 22.303 11.7907Z"
+                                  Fill="{DynamicResource LogoTriangleBrush}"/>
+                            <!-- 4. Lower right shield/bell shape -->
+                            <Path Data="M60.69 47.1992C54.4069 47.1992 49.3129 52.2932 49.3129 58.5763C49.3129 64.8594 54.4069 77.0674 60.69 77.0674C66.973 77.0674 72.0671 64.8594 72.0671 58.5763C72.0671 52.2932 66.973 47.1992 60.69 47.1992Z"
+                                  Fill="{DynamicResource LogoShieldBrush}"/>
+                            <!-- 5. Rotated ellipse shape -->
+                            <Path Data="M57.4394 24.3126C57.4394 18.6811 49.3925 14.1153 39.466 14.1153C29.5395 14.1153 21.4927 18.6811 21.4927 24.3126C21.4927 29.9442 29.5395 34.5099 39.466 34.5099C49.3925 34.5099 57.4394 29.9442 57.4394 24.3126Z"
+                                  Fill="{DynamicResource LogoEllipseBrush}">
+                                <Path.RenderTransform>
+                                    <MatrixTransform Matrix="0.643794, -0.765199, 0.765199, 0.643794, 24.0322, 57.2536"/>
+                                </Path.RenderTransform>
+                            </Path>
+                        </Canvas>
+                    </Viewbox>
                     <TextBlock x:Name="TitleText" Text="Panak Settings" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Button Grid.Column="1" Style="{StaticResource CloseIconButtonStyle}" Content="✕" Width="36" Height="36" Click="CloseButton_Click"/>
             </Grid>
 
             <!-- Body -->
@@ -663,7 +859,6 @@
                                         <TextBlock x:Name="LanguageAiBadge" Text="Թարգմանված է ԱԲ-ով" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
                                     </Border>
                                 </StackPanel>
-                                <TextBlock x:Name="LanguageSubtext" Text="Հայերեն / English / Русский / Français / Español / 中文 / العربية" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3,0,0"/>
                             </StackPanel>
                             <ComboBox x:Name="LanguageComboBox" Grid.Column="1" Width="140" Style="{StaticResource MaterialComboBoxStyle}" SelectionChanged="LanguageComboBox_SelectionChanged">
                                 <ComboBoxItem Content="Հայերեն" Tag="hy"/>
@@ -686,7 +881,7 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock x:Name="IconShapeLabel" Text="Default Icon Shape" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                                <TextBlock Text="Android Adaptive Icon Shape" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                <TextBlock Text="Adaptive Icon Shape" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
                             </StackPanel>
                             <Border Grid.Column="1" Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="20" Padding="6,4" VerticalAlignment="Center" BorderThickness="0" SnapsToDevicePixels="True">
                                 <StackPanel x:Name="SettingsShapeSelectorPanel" Orientation="Horizontal" VerticalAlignment="Center">
@@ -764,6 +959,24 @@
                                         Style="{StaticResource PastelHueSliderStyle}"
                                         ValueChanged="SettingsHueSlider_ValueChanged"/>
                             </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- General Folder Opacity Slider -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="GeneralFolderOpacityLabel" Text="General Folder Opacity" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="GeneralFolderOpacityDescText" Text="Overall background opacity for all folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <TextBlock x:Name="GeneralFolderOpacityValueText" Grid.Column="1" Text="85%" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                            </Grid>
+                            <Slider x:Name="GeneralFolderOpacitySlider" Minimum="20" Maximum="100" Value="85" SmallChange="1" LargeChange="5" Style="{StaticResource MaterialSliderStyle}" ValueChanged="GeneralFolderOpacitySlider_ValueChanged"/>
                         </StackPanel>
                     </Border>
 
@@ -988,7 +1201,6 @@
                                 <TextBlock x:Name="InstallerSectionDesc" Text="Setup or remove Panak system integration" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button x:Name="InstallAppBtn" Style="{StaticResource ActionButtonStyle}" Content="Install" Padding="14,6" FontSize="12" Margin="0,0,6,0" Click="InstallAppBtn_Click"/>
                                 <Button x:Name="UninstallAppBtn" Style="{StaticResource DangerButtonStyle}" Content="Uninstall" Padding="14,6" Click="UninstallAppBtn_Click"/>
                             </StackPanel>
                         </Grid>
@@ -1002,7 +1214,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Panak v1.0 • Android-style popup folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="Panak v1.5.5 • Material You Folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button x:Name="CancelBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Margin="0,0,10,0" Click="CancelBtn_Click"/>
                     <Button x:Name="ApplyBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Apply" Margin="0,0,10,0" Click="ApplyBtn_Click"/>

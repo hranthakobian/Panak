@@ -1,6 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
+using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Panak.Services {
     public class LocalizationService : INotifyPropertyChanged {
@@ -12,8 +18,8 @@ namespace Panak.Services {
 
         private readonly Dictionary<string, Dictionary<string, string>> _translations = new() {
             ["hy"] = new Dictionary<string, string> {
-                ["AppTitle"] = "Panak - Android-ոճի պանակներ",
-                ["CreateFolder"] = "Ստեղծել Android-ոճի պանակ",
+                ["AppTitle"] = "Panak - Պանակներ",
+                ["CreateFolder"] = "Ստեղծել Panak պանակ",
                 ["OpenInPanak"] = "Բացել Panak-ով",
                 ["ConvertToPanak"] = "Վերածել Panak պանակի",
                 ["RevertToRegular"] = "Վերածել սովորական պանակի",
@@ -67,6 +73,8 @@ namespace Panak.Services {
                 ["ColorTheme"] = "Գույնը եւ ձեւը",
                 ["FolderTitle"] = "Անունը",
                 ["Opacity"] = "Թափանցիկություն",
+                ["GeneralFolderOpacity"] = "Ընդհանուր պանակների թափանցիկություն",
+                ["GeneralFolderOpacityDesc"] = "Պանակների նախադրված թափանցիկության աստիճան",
                 ["Theme"] = "Թեմա",
                 ["ThemeDesc"] = "Բաց, մուգ կամ համակարգի թեմա",
                 ["ThemeLight"] = "☀️ Բաց",
@@ -104,7 +112,7 @@ namespace Panak.Services {
                 ["StartMenuShortcut"] = "Ստեղծել Start ընտրացանկի դյուրանցում",
                 ["StartMenuShortcutDesc"] = "Ավելացնել Panak-ը Windows-ի մեկնարկային ընտրացանկում",
                 ["AutoStartDesc"] = "Միացնել ինքնաշխատորեն Windows-ի մեկնարկի հետ",
-                ["InstallIntroDesc"] = "Տեղադրեք Panak-ը՝ Android-ոճի պանակներով, 2x2 պատկերակների նախադիտմամբ, աջ կրկնակտտոցով արագ բացմամբ եւ Explorer ինտեգրմամբ:",
+                ["InstallIntroDesc"] = "Տեղադրեք Panak-ը՝ հարմարավետ պանակներով, 2x2 պատկերակների նախադիտմամբ, աջ կրկնակտտոցով արագ բացմամբ եւ Explorer ինտեգրմամբ:",
                 ["UninstallConfirm"] = "Համոզվա՞ծ եք, որ ցանկանում եք հեռացնել Panak-ը համակարգչից:",
                 ["UninstallWillRemove"] = "Սա կհեռացնի հետեւյալ բաղադրիչները՝",
                 ["UninstallItemContextMenu"] = "Explorer-ի աջ կտտոցի ընտրացանկի տարրերը",
@@ -116,8 +124,8 @@ namespace Panak.Services {
                 ["Finish"] = "Ավարտել"
             },
             ["en"] = new Dictionary<string, string> {
-                ["AppTitle"] = "Panak - Android-style Folders",
-                ["CreateFolder"] = "Create Android-style folder",
+                ["AppTitle"] = "Panak - Popup Folders",
+                ["CreateFolder"] = "Create Panak Folder",
                 ["OpenInPanak"] = "Open with Panak",
                 ["ConvertToPanak"] = "Convert to Panak Folder",
                 ["RevertToRegular"] = "Revert to Regular Folder",
@@ -171,6 +179,8 @@ namespace Panak.Services {
                 ["ColorTheme"] = "Color & Shape",
                 ["FolderTitle"] = "Name",
                 ["Opacity"] = "Transparency",
+                ["GeneralFolderOpacity"] = "Folder Opacity",
+                ["GeneralFolderOpacityDesc"] = "Default background opacity for folder popups",
                 ["Theme"] = "Theme",
                 ["ThemeDesc"] = "Light, Dark, or System (Windows) theme",
                 ["ThemeLight"] = "☀️ Light",
@@ -185,7 +195,7 @@ namespace Panak.Services {
                 ["InstallDesc"] = "Install Panak on your computer with seamless Explorer integration",
                 ["UninstallDesc"] = "Remove Panak and all Explorer context menu integrations",
                 ["CombineFilesOnDrop"] = "Combine files into folder on drag-and-drop",
-                ["CombineFilesOnDropDesc"] = "Automatically combine both files into a new Panak folder when dropping one file onto another (Android / iOS style)",
+                ["CombineFilesOnDropDesc"] = "Automatically combine both files into a new Panak folder when dropping one file onto another",
                 ["CollectIntoPanakFolder"] = "Collect into Panak folder",
                 ["Hue"] = "Hue",
                 ["DefaultFolderColor"] = "Default Folder Color",
@@ -208,7 +218,7 @@ namespace Panak.Services {
                 ["StartMenuShortcut"] = "Create Start Menu Shortcut",
                 ["StartMenuShortcutDesc"] = "Add Panak to the Windows Start Menu",
                 ["AutoStartDesc"] = "Launch automatically on Windows startup",
-                ["InstallIntroDesc"] = "Install Panak to enjoy Android-style popup folder widgets, dynamic 2x2 preview icons, right double-click quick look, and Windows Explorer integration.",
+                ["InstallIntroDesc"] = "Install Panak to enjoy popup folder widgets, dynamic 2x2 preview icons, right double-click quick look, and Windows Explorer integration.",
                 ["UninstallConfirm"] = "Are you sure you want to remove Panak from your computer?",
                 ["UninstallWillRemove"] = "This will remove the following components:",
                 ["UninstallItemContextMenu"] = "Windows Explorer context menu items",
@@ -220,8 +230,8 @@ namespace Panak.Services {
                 ["Finish"] = "Finish"
             },
             ["ru"] = new Dictionary<string, string> {
-                ["AppTitle"] = "Panak - Папки в стиле Android",
-                ["CreateFolder"] = "Создать Android-папку",
+                ["AppTitle"] = "Panak - Папки",
+                ["CreateFolder"] = "Создать папку Panak",
                 ["OpenInPanak"] = "Открыть в Panak",
                 ["ConvertToPanak"] = "Преобразовать в папку Panak",
                 ["RevertToRegular"] = "Преобразовать в обычную папку",
@@ -275,6 +285,8 @@ namespace Panak.Services {
                 ["ColorTheme"] = "Цвет и форма",
                 ["FolderTitle"] = "Имя",
                 ["Opacity"] = "Прозрачность",
+                ["GeneralFolderOpacity"] = "Прозрачность папок",
+                ["GeneralFolderOpacityDesc"] = "Прозрачность фона папок по умолчанию",
                 ["Theme"] = "Тема",
                 ["ThemeDesc"] = "Светлая, тёмная или системная (Windows) тема",
                 ["ThemeLight"] = "☀️ Светлая",
@@ -289,7 +301,7 @@ namespace Panak.Services {
                 ["InstallDesc"] = "Установить Panak на компьютер с интеграцией в Проводник",
                 ["UninstallDesc"] = "Удалить Panak и все интеграции с контекстным меню",
                 ["CombineFilesOnDrop"] = "Создавать папку при перетаскивании файла на файл",
-                ["CombineFilesOnDropDesc"] = "Автоматически объединять файлы в новую папку Panak при перетаскивании одного на другой (в стиле Android / iOS)",
+                ["CombineFilesOnDropDesc"] = "Автоматически объединять файлы в новую папку Panak при перетаскивании одного на другой",
                 ["CollectIntoPanakFolder"] = "Собрать в папку Panak",
                 ["Hue"] = "Оттенок (Hue)",
                 ["DefaultFolderColor"] = "Цвет папок по умолчанию",
@@ -312,7 +324,7 @@ namespace Panak.Services {
                 ["StartMenuShortcut"] = "Создать ярлык в меню Пуск",
                 ["StartMenuShortcutDesc"] = "Добавить Panak в меню Пуск Windows",
                 ["AutoStartDesc"] = "Запускать автоматически при входе в Windows",
-                ["InstallIntroDesc"] = "Установите Panak для использования всплывающих папок в стиле Android, динамических превью 2x2, быстрого открытия правым кликом и интеграции с Проводником.",
+                ["InstallIntroDesc"] = "Установите Panak для использования всплывающих папок, динамических превью 2x2, быстрого открытия правым кликом и интеграции с Проводником.",
                 ["UninstallConfirm"] = "Вы уверены, что хотите удалить Panak с вашего компьютера?",
                 ["UninstallWillRemove"] = "Будут удалены следующие компоненты:",
                 ["UninstallItemContextMenu"] = "Элементы контекстного меню Проводника",
@@ -324,8 +336,8 @@ namespace Panak.Services {
                 ["Finish"] = "Готово"
             },
             ["fr"] = new Dictionary<string, string> {
-                ["AppTitle"] = "Panak - Dossiers style Android",
-                ["CreateFolder"] = "Créer un dossier style Android",
+                ["AppTitle"] = "Panak - Dossiers popup",
+                ["CreateFolder"] = "Créer un dossier Panak",
                 ["OpenInPanak"] = "Ouvrir avec Panak",
                 ["ConvertToPanak"] = "Convertir en dossier Panak",
                 ["RevertToRegular"] = "Rétablir en dossier standard",
@@ -378,6 +390,9 @@ namespace Panak.Services {
                 ["Delete"] = "Supprimer",
                 ["ColorTheme"] = "Couleur du dossier",
                 ["FolderTitle"] = "Nom du dossier",
+                ["Opacity"] = "Opacité",
+                ["GeneralFolderOpacity"] = "Opacité des dossiers",
+                ["GeneralFolderOpacityDesc"] = "Opacité d'arrière-plan par défaut des dossiers",
                 ["Exit"] = "Quitter",
                 ["SearchPlaceholder"] = "Rechercher des fichiers...",
                 ["FilesCount"] = "fichiers",
@@ -387,14 +402,14 @@ namespace Panak.Services {
                 ["InstallDesc"] = "Installer Panak avec intégration complète à l'Explorateur",
                 ["UninstallDesc"] = "Supprimer Panak et toutes les intégrations de l'Explorateur",
                 ["CombineFilesOnDrop"] = "Combiner les fichiers en dossier lors du dépôt",
-                ["CombineFilesOnDropDesc"] = "Créer automatiquement un dossier Panak en glissant un fichier sur un autre (style Android / iOS)",
+                ["CombineFilesOnDropDesc"] = "Créer automatiquement un dossier Panak en glissant un fichier sur un autre",
                 ["CollectIntoPanakFolder"] = "Rassembler dans un dossier Panak",
                 ["Hue"] = "Teinte (Hue)",
                 ["DefaultFolderColor"] = "Couleur par défaut du dossier"
             },
             ["es"] = new Dictionary<string, string> {
-                ["AppTitle"] = "Panak - Carpetas estilo Android",
-                ["CreateFolder"] = "Crear carpeta estilo Android",
+                ["AppTitle"] = "Panak - Carpetas emergentes",
+                ["CreateFolder"] = "Crear carpeta Panak",
                 ["OpenInPanak"] = "Abrir con Panak",
                 ["ConvertToPanak"] = "Convertir a carpeta Panak",
                 ["RevertToRegular"] = "Restaurar a carpeta normal",
@@ -447,6 +462,9 @@ namespace Panak.Services {
                 ["Delete"] = "Eliminar",
                 ["ColorTheme"] = "Color de la carpeta",
                 ["FolderTitle"] = "Nombre de la carpeta",
+                ["Opacity"] = "Opacidad",
+                ["GeneralFolderOpacity"] = "Opacidad de carpetas",
+                ["GeneralFolderOpacityDesc"] = "Opacidad de fondo predeterminada para carpetas",
                 ["Exit"] = "Salir",
                 ["SearchPlaceholder"] = "Buscar archivos...",
                 ["FilesCount"] = "archivos",
@@ -456,14 +474,14 @@ namespace Panak.Services {
                 ["InstallDesc"] = "Instalar Panak con integración perfecta en el Explorador",
                 ["UninstallDesc"] = "Eliminar Panak y todas las integraciones del Explorador",
                 ["CombineFilesOnDrop"] = "Combinar archivos al soltar",
-                ["CombineFilesOnDropDesc"] = "Combinar automáticamente en una nueva carpeta Panak al arrastrar un archivo sobre otro (estilo Android / iOS)",
+                ["CombineFilesOnDropDesc"] = "Combinar automáticamente en una nueva carpeta Panak al arrastrar un archivo sobre otro",
                 ["CollectIntoPanakFolder"] = "Reunir en carpeta Panak",
                 ["Hue"] = "Tono (Hue)",
                 ["DefaultFolderColor"] = "Color predeterminado de carpeta"
             },
             ["zh"] = new Dictionary<string, string> {
-                ["AppTitle"] = "Panak - Android 风格文件夹",
-                ["CreateFolder"] = "创建 Android 风格文件夹",
+                ["AppTitle"] = "Panak - 弹出式文件夹",
+                ["CreateFolder"] = "创建 Panak 文件夹",
                 ["OpenInPanak"] = "使用 Panak 打开",
                 ["ConvertToPanak"] = "转换为 Panak 文件夹",
                 ["RevertToRegular"] = "还原为常规文件夹",
@@ -516,6 +534,9 @@ namespace Panak.Services {
                 ["Delete"] = "删除",
                 ["ColorTheme"] = "文件夹颜色",
                 ["FolderTitle"] = "文件夹名称",
+                ["Opacity"] = "透明度",
+                ["GeneralFolderOpacity"] = "文件夹透明度",
+                ["GeneralFolderOpacityDesc"] = "文件夹弹出窗口默认背景不透明度",
                 ["Exit"] = "退出",
                 ["SearchPlaceholder"] = "搜索文件...",
                 ["FilesCount"] = "个文件",
@@ -525,14 +546,14 @@ namespace Panak.Services {
                 ["InstallDesc"] = "将 Panak 安装到计算机并无缝集成资源管理器",
                 ["UninstallDesc"] = "从计算机卸载 Panak 及所有菜单集成",
                 ["CombineFilesOnDrop"] = "拖放重叠时合并文件为文件夹",
-                ["CombineFilesOnDropDesc"] = "将一个文件拖到另一个文件上时自动合并为新 Panak 文件夹 (Android / iOS 风格)",
+                ["CombineFilesOnDropDesc"] = "将一个文件拖到另一个文件上时自动合并为新 Panak 文件夹",
                 ["CollectIntoPanakFolder"] = "收集到 Panak 文件夹",
                 ["Hue"] = "色相 (Hue)",
                 ["DefaultFolderColor"] = "默认文件夹颜色"
             },
             ["ar"] = new Dictionary<string, string> {
-                ["AppTitle"] = "Panak - مجلدات بنمط Android",
-                ["CreateFolder"] = "إنشاء مجلد بنمط Android",
+                ["AppTitle"] = "Panak - مجلدات منبثقة",
+                ["CreateFolder"] = "إنشاء مجلد Panak",
                 ["OpenInPanak"] = "فتح باستخدام Panak",
                 ["ConvertToPanak"] = "تحويل إلى مجلد Panak",
                 ["RevertToRegular"] = "إعادة إلى مجلد عادي",
@@ -585,6 +606,9 @@ namespace Panak.Services {
                 ["Delete"] = "حذف",
                 ["ColorTheme"] = "لون المجلد",
                 ["FolderTitle"] = "اسم المجلد",
+                ["Opacity"] = "الشفافية",
+                ["GeneralFolderOpacity"] = "شفافية المجلدات",
+                ["GeneralFolderOpacityDesc"] = "درجة شفافية خلفية المجلدات الافتراضية",
                 ["Exit"] = "خروج",
                 ["SearchPlaceholder"] = "بحث عن ملفات...",
                 ["FilesCount"] = "ملفات",
@@ -594,7 +618,7 @@ namespace Panak.Services {
                 ["InstallDesc"] = "تثبيت Panak على جهازك مع تكامل سلس في مستكشف الملفات",
                 ["UninstallDesc"] = "إزالة Panak وجميع تكاملات القوائم السياقية",
                 ["CombineFilesOnDrop"] = "دمج الملفات في مجلد عند الإفلات",
-                ["CombineFilesOnDropDesc"] = "دمج الملفين تلقائياً في مجلد Panak جديد عند إفلات ملف فوق آخر (نمط Android / iOS)",
+                ["CombineFilesOnDropDesc"] = "دمج الملفين تلقائياً في مجلد Panak جديد عند إفلات ملف فوق آخر",
                 ["CollectIntoPanakFolder"] = "جمع في مجلد Panak",
                 ["Hue"] = "تدرج اللون (Hue)",
                 ["DefaultFolderColor"] = "لون المجلد الافتراضي"
@@ -625,6 +649,72 @@ namespace Panak.Services {
 
         public string Get(string key) {
             return this[key];
+        }
+
+        public static string MapCountryCodeToLanguage(string countryCode) {
+            if (string.IsNullOrWhiteSpace(countryCode)) return string.Empty;
+            string cc = countryCode.Trim().ToUpperInvariant();
+
+            if (cc == "AM") return "hy";
+
+            string[] ruCountries = { "RU", "BY", "KZ", "KG", "TJ", "UZ", "UA", "MD" };
+            if (ruCountries.Contains(cc)) return "ru";
+
+            string[] frCountries = { "FR", "BE", "CH", "MC", "SN", "CI", "CD", "CM", "MG", "LU" };
+            if (frCountries.Contains(cc)) return "fr";
+
+            string[] esCountries = { "ES", "MX", "AR", "CO", "CL", "PE", "VE", "GT", "EC", "CU", "BO", "DO", "HN", "PY", "SV", "NI", "CR", "PA", "UY", "PR" };
+            if (esCountries.Contains(cc)) return "es";
+
+            string[] zhCountries = { "CN", "TW", "HK", "MO", "SG" };
+            if (zhCountries.Contains(cc)) return "zh";
+
+            string[] arCountries = { "SA", "EG", "AE", "IQ", "DZ", "MA", "SD", "YE", "SY", "TN", "JO", "LY", "LB", "OM", "KW", "MR", "QA", "BH", "DJ", "SO", "PS" };
+            if (arCountries.Contains(cc)) return "ar";
+
+            string[] enCountries = { "US", "GB", "CA", "AU", "NZ", "IE", "ZA", "IN" };
+            if (enCountries.Contains(cc)) return "en";
+
+            return string.Empty;
+        }
+
+        public static async Task<string> DetectOptimalLanguageAsync() {
+            // 1. Check Windows UI Culture
+            try {
+                var uiCulture = CultureInfo.CurrentUICulture;
+                string twoLetter = uiCulture.TwoLetterISOLanguageName.ToLowerInvariant();
+                string[] supportedLangs = { "hy", "en", "ru", "fr", "es", "zh", "ar" };
+                if (supportedLangs.Contains(twoLetter)) {
+                    return twoLetter;
+                }
+
+                // Check Windows Region
+                try {
+                    var region = new RegionInfo(CultureInfo.CurrentCulture.LCID);
+                    string mapped = MapCountryCodeToLanguage(region.TwoLetterISORegionName);
+                    if (!string.IsNullOrEmpty(mapped)) {
+                        return mapped;
+                    }
+                } catch { }
+            } catch { }
+
+            // 2. Query IP Geolocation with strict 1.5s timeout
+            try {
+                using var cts = new CancellationTokenSource(1500);
+                using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromMilliseconds(1500);
+                string json = await client.GetStringAsync("http://ip-api.com/json/?fields=countryCode", cts.Token);
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("countryCode", out var ccProp)) {
+                    string cc = ccProp.GetString() ?? string.Empty;
+                    string mapped = MapCountryCodeToLanguage(cc);
+                    if (!string.IsNullOrEmpty(mapped)) {
+                        return mapped;
+                    }
+                }
+            } catch { }
+
+            return "hy"; // Default fallback
         }
     }
 }

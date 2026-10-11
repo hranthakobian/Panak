@@ -36,7 +36,6 @@ namespace Panak.Views {
             try {
                 var uri = new Uri("pack://application:,,,/PanakLogo.png", UriKind.Absolute);
                 var bi = new BitmapImage(uri);
-                HeaderLogoImage.Source = bi;
                 Icon = bi;
                 return;
             } catch { }
@@ -51,7 +50,6 @@ namespace Panak.Views {
                 foreach (var file in candidates) {
                     if (File.Exists(file)) {
                         var bi = new BitmapImage(new Uri(file, UriKind.Absolute));
-                        HeaderLogoImage.Source = bi;
                         Icon = bi;
                         return;
                     }
@@ -118,6 +116,28 @@ namespace Panak.Views {
                 SetBrush("M3OnSurfaceBrush", wpfOnSurface);
                 SetBrush("M3OnSurfaceVariantBrush", wpfOnSurfaceVariant);
                 SetBrush("M3TrackInactiveBrush", wpfTrackInactive);
+
+                // Dynamically update the 5 vector logo colors based on active theme hue & luminance
+                var (cContainer, cTriangle, cCloud, cShield, cEllipse) = IconGenerator.GetLogoDynamicColors(hue, isDark);
+                SetBrush("LogoContainerBrush", toWpf(cContainer));
+                SetBrush("LogoTriangleBrush", toWpf(cTriangle));
+                SetBrush("LogoCloudBrush", toWpf(cCloud));
+                SetBrush("LogoShieldBrush", toWpf(cShield));
+                SetBrush("LogoEllipseBrush", toWpf(cEllipse));
+
+                // Update Tray Icon in real time with vector logo theme
+                TrayManager.Instance?.UpdateTrayIconTheme(hue, isDark);
+
+                // Update Window Icon dynamically
+                try {
+                    using var bmp = IconGenerator.RenderPanakLogoBitmap(32, hue, isDark);
+                    IntPtr hIcon = bmp.GetHicon();
+                    Icon = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
+                        hIcon,
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromEmptyOptions());
+                    ShellHelper.DestroyIcon(hIcon);
+                } catch { }
 
                 System.Windows.Media.Color selColor;
                 try {
@@ -215,6 +235,10 @@ namespace Panak.Views {
 
             SettingsHueSlider.Value = initialHue;
 
+            // General folder opacity
+            GeneralFolderOpacitySlider.Value = Math.Round(s.FolderOpacity * 100);
+            GeneralFolderOpacityValueText.Text = $"{(int)GeneralFolderOpacitySlider.Value}%";
+
             // Grid columns
             GridColumnsSlider.Value = s.GridColumns;
             GridColumnsValueText.Text = s.GridColumns.ToString();
@@ -262,6 +286,8 @@ namespace Panak.Views {
             SettingsThemeAuto.Content = loc["ThemeAuto"];
             DefaultColorLabel.Text = loc["DefaultFolderColor"];
             SettingsHueLabel.Text = loc["Hue"];
+            GeneralFolderOpacityLabel.Text = loc["GeneralFolderOpacity"];
+            GeneralFolderOpacityDescText.Text = loc["GeneralFolderOpacityDesc"];
             GridColumnsLabel.Text = loc["ItemsPerRow"];
             FocusModeLabel.Text = loc["FocusMode"];
             FocusModeDescText.Text = loc["FocusModeDesc"];
@@ -286,7 +312,6 @@ namespace Panak.Views {
             SaveBtn.Content = loc["Save"];
             ApplyBtn.Content = loc["Apply"];
             CancelBtn.Content = loc["Cancel"];
-            InstallAppBtn.Content = loc["Install"];
             UninstallAppBtn.Content = loc["Uninstall"];
             InstallerSectionTitle.Text = loc["InstallerTitle"];
             InstallerSectionDesc.Text = loc["InstallDesc"];
@@ -396,6 +421,15 @@ namespace Panak.Views {
             }
         }
 
+        private void GeneralFolderOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (GeneralFolderOpacityValueText != null) {
+                GeneralFolderOpacityValueText.Text = $"{(int)e.NewValue}%";
+            }
+            if (!_isInitializing && PanakManager.Instance.IsPopupOpen) {
+                PanakManager.Instance.UpdateOpenPopupOpacity(e.NewValue / 100.0);
+            }
+        }
+
         public void ApplyCurrentSettings() {
             var s = SettingsService.Instance.Current;
 
@@ -406,6 +440,7 @@ namespace Panak.Views {
             s.IconShape = _selectedShape;
             s.ThemeColor = _selectedColor;
             s.ThemeMode = _selectedThemeMode;
+            s.FolderOpacity = GeneralFolderOpacitySlider.Value / 100.0;
 
             s.GridColumns = (int)GridColumnsSlider.Value;
             s.FocusModeEnabled = FocusModeCheckBox.IsChecked ?? true;
@@ -426,6 +461,7 @@ namespace Panak.Views {
             SettingsService.Instance.SaveSettings(s);
             PanakManager.Instance.UpdateOpenPopupThemeColor(s.ThemeColor);
             PanakManager.Instance.UpdateOpenPopupThemeMode(s.ThemeMode);
+            PanakManager.Instance.UpdateOpenPopupOpacity(s.FolderOpacity);
 
             _initialColor = _selectedColor;
             _initialThemeMode = _selectedThemeMode;
@@ -542,14 +578,6 @@ namespace Panak.Views {
             Close();
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e) {
-            if (PanakManager.Instance.IsPopupOpen) {
-                PanakManager.Instance.UpdateOpenPopupThemeColor(_initialColor);
-                PanakManager.Instance.UpdateOpenPopupThemeMode(_initialThemeMode);
-            }
-            Close();
-        }
-
         private void Header_MouseDown(object sender, MouseButtonEventArgs e) {
             if (e.LeftButton == MouseButtonState.Pressed) {
                 DragMove();
@@ -561,15 +589,6 @@ namespace Panak.Views {
             ContextMenuRegistry.RegisterAll(exe);
             ApplyLocalization();
             MessageBox.Show(LocalizationService.Instance["ContextMenuInstalled"], "Panak", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void InstallAppBtn_Click(object sender, RoutedEventArgs e) {
-            bool success = InstallerService.Install(createDesktopShortcut: true, createStartMenuShortcut: true, autoStart: AutoStartCheckBox.IsChecked ?? true);
-            if (success) {
-                MessageBox.Show(LocalizationService.Instance["InstalledSuccess"], "Panak", MessageBoxButton.OK, MessageBoxImage.Information);
-            } else {
-                MessageBox.Show("Installation encountered an issue. Please try again.", "Panak", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
         }
 
         private void UninstallAppBtn_Click(object sender, RoutedEventArgs e) {

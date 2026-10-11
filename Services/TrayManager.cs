@@ -60,6 +60,11 @@ namespace Panak.Services {
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         private static extern int RegisterWindowMessage(string lpString);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool DestroyIcon(IntPtr hIcon);
+
+        public static TrayManager? Instance { get; private set; }
+
         private HwndSource? _hwndSource;
         private IntPtr _hIcon = IntPtr.Zero;
         private bool _isAdded = false;
@@ -70,6 +75,7 @@ namespace Panak.Services {
         public event Action? ExitRequested;
 
         public void Initialize() {
+            Instance = this;
             // Create hidden message-only window
             HwndSourceParameters parameters = new HwndSourceParameters("PanakTrayMsgWindow") {
                 WindowStyle = 0,
@@ -85,6 +91,15 @@ namespace Panak.Services {
         }
 
         private IntPtr LoadPanakTrayIcon() {
+            try {
+                var settings = SettingsService.Instance.Current;
+                string col = string.IsNullOrEmpty(settings.ThemeColor) ? ShellHelper.GetDefaultPastelColorHex() : settings.ThemeColor;
+                double hue = ShellHelper.GetHueFromHex(col);
+                bool isDark = (settings.ThemeMode == "Dark") || (settings.ThemeMode != "Light" && ShellHelper.IsWindowsDarkTheme());
+                using Bitmap logoBmp = IconGenerator.RenderPanakLogoBitmap(32, hue, isDark);
+                return logoBmp.GetHicon();
+            } catch { }
+
             try {
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string icoPath = Path.Combine(baseDir, "Panak.ico");
@@ -103,22 +118,34 @@ namespace Panak.Services {
                     using var resized = new Bitmap(orig, new System.Drawing.Size(32, 32));
                     return resized.GetHicon();
                 }
-
-                // Check resource stream
-                var uri = new Uri("pack://application:,,,/PanakLogo.png", UriKind.Absolute);
-                var sri = Application.GetResourceStream(uri);
-                if (sri != null) {
-                    using var stream = sri.Stream;
-                    using var bmp = new Bitmap(stream);
-                    using var resized = new Bitmap(bmp, new System.Drawing.Size(32, 32));
-                    return resized.GetHicon();
-                }
             } catch { }
 
             // Fallback: render plate
             using (Bitmap fallbackBmp = IconGenerator.RenderPlateWithGrid(32, "Squircle", System.Drawing.Color.FromArgb(59, 130, 246), new System.Collections.Generic.List<Bitmap>())) {
                 return fallbackBmp.GetHicon();
             }
+        }
+
+        public void UpdateTrayIconTheme(double hue, bool isDark) {
+            if (_hwndSource == null) return;
+            try {
+                IntPtr oldIcon = _hIcon;
+                using Bitmap logoBmp = IconGenerator.RenderPanakLogoBitmap(32, hue, isDark);
+                _hIcon = logoBmp.GetHicon();
+
+                NOTIFYICONDATA nid = new NOTIFYICONDATA {
+                    cbSize = Marshal.SizeOf(typeof(NOTIFYICONDATA)),
+                    hWnd = _hwndSource.Handle,
+                    uID = 1001,
+                    uFlags = NIF_ICON,
+                    hIcon = _hIcon
+                };
+                Shell_NotifyIcon(NIM_MODIFY, ref nid);
+
+                if (oldIcon != IntPtr.Zero) {
+                    DestroyIcon(oldIcon);
+                }
+            } catch { }
         }
 
         private void AddOrUpdateTrayIcon() {
@@ -134,7 +161,7 @@ namespace Panak.Services {
                 uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP,
                 uCallbackMessage = WM_TRAYICON,
                 hIcon = _hIcon,
-                szTip = "Panak - Android-style popup folders"
+                szTip = "Panak"
             };
 
             if (_isAdded) {

@@ -148,7 +148,7 @@
             </Setter>
         </Style>
 
-        <!-- Material 3 Expressive Toggle Switch Style -->
+        <!-- Material 3 Expressive Toggle Switch Style with Smooth Sliding Animation -->
         <Style x:Key="M3ExpressiveToggleSwitchStyle" TargetType="CheckBox">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="#F8FAFC"/>
@@ -169,7 +169,7 @@
                                     HorizontalAlignment="Left" VerticalAlignment="Center">
                                 <!-- Switch Thumb Container -->
                                 <Canvas Width="40" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
-                                    <!-- Unchecked Thumb: 14x14 at left -->
+                                    <!-- Animated Thumb -->
                                     <Border x:Name="SwitchThumb" Width="14" Height="14" CornerRadius="7"
                                             Background="#CBD5E1" Canvas.Left="2" Canvas.Top="3">
                                         <Border.Effect>
@@ -179,7 +179,7 @@
                                     <!-- Checked Icon: subtle vector check inside thumb -->
                                     <Path x:Name="CheckIcon" Data="M 1,4 L 3.5,6.5 L 7.5,1.5"
                                           Stroke="{DynamicResource M3PrimaryBrush}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          Canvas.Left="26" Canvas.Top="6" Visibility="Collapsed"/>
+                                          Canvas.Left="26" Canvas.Top="6" Opacity="0"/>
                                 </Canvas>
                             </Border>
                             <!-- Label Content -->
@@ -191,15 +191,55 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Left)" To="21" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Width" To="18" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Height" To="18" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Top)" To="1" Duration="0:0:0.22"/>
+                                            <DoubleAnimation Storyboard.TargetName="CheckIcon" Storyboard.TargetProperty="Opacity" To="1.0" Duration="0:0:0.18"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Left)" To="2" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Width" To="14" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Height" To="14" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Top)" To="3" Duration="0:0:0.22"/>
+                                            <DoubleAnimation Storyboard.TargetName="CheckIcon" Storyboard.TargetProperty="Opacity" To="0.0" Duration="0:0:0.12"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                                 <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
                                 <Setter TargetName="SwitchTrack" Property="BorderThickness" Value="0"/>
-                                <Setter TargetName="SwitchThumb" Property="Canvas.Left" Value="21"/>
-                                <Setter TargetName="SwitchThumb" Property="Width" Value="18"/>
-                                <Setter TargetName="SwitchThumb" Property="Height" Value="18"/>
-                                <Setter TargetName="SwitchThumb" Property="CornerRadius" Value="9"/>
-                                <Setter TargetName="SwitchThumb" Property="Canvas.Top" Value="1"/>
                                 <Setter TargetName="SwitchThumb" Property="Background" Value="#FFFFFF"/>
-                                <Setter TargetName="CheckIcon" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="SwitchTrack" Property="Opacity" Value="0.9"/>
@@ -254,7 +294,7 @@
             </Setter>
         </Style>
 
-        <!-- Material 3 Expressive Filled Icon Button Style -->
+        <!-- Material 3 Expressive Filled Icon Button Style with squash feedback -->
         <Style x:Key="M3ExpressiveFilledIconButton" TargetType="Button">
             <Setter Property="Width" Value="32"/>
             <Setter Property="Height" Value="32"/>
@@ -270,7 +310,11 @@
                                 Width="{TemplateBinding Width}"
                                 Height="{TemplateBinding Height}"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="16">
+                                CornerRadius="16"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="BtnScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.25" Color="#000000"/>
                             </Border.Effect>
@@ -281,6 +325,38 @@
                                 <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.88"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleX" To="0.94" Duration="0:0:0.1">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleY" To="0.94" Duration="0:0:0.1">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="BtnScale" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                                 <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.75"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -289,7 +365,7 @@
             </Setter>
         </Style>
 
-        <!-- Dynamic Hue Brush & Pastel Hue Slider Style -->
+        <!-- Dynamic Hue Brush & Pastel Hue Slider Style with M3 Expressive Vertical Line Handle -->
         <SolidColorBrush x:Key="CurrentHueThumbBrush" Color="#FCDDC5"/>
 
         <Style x:Key="PastelHueThumbStyle" TargetType="{x:Type Thumb}">
@@ -298,14 +374,45 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Grid Width="20" Height="20">
-                            <Ellipse Fill="#FFFFFF">
-                                <Ellipse.Effect>
-                                    <DropShadowEffect BlurRadius="5" ShadowDepth="1" Direction="270" Opacity="0.45" Color="#000000"/>
-                                </Ellipse.Effect>
-                            </Ellipse>
-                            <Ellipse Width="10" Height="10" Fill="{DynamicResource CurrentHueThumbBrush}"/>
+                        <Grid x:Name="HueThumbRoot" Width="14" Height="28" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="ThumbScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Grid.RenderTransform>
+                            <!-- White outer vertical pill handle -->
+                            <Border Width="5" Height="26" CornerRadius="2.5" Background="#FFFFFF">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.35" Color="#000000"/>
+                                </Border.Effect>
+                            </Border>
+                            <!-- Hue color accent inner bar -->
+                            <Border Width="2.5" Height="16" CornerRadius="1.25" Background="{DynamicResource CurrentHueThumbBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbScale" Storyboard.TargetProperty="ScaleX" To="1.3" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -358,21 +465,52 @@
             </Setter>
         </Style>
 
-        <!-- Opacity Slider Styles -->
+        <!-- Opacity Slider Styles with M3 Expressive Vertical Line Handle -->
         <Style x:Key="PastelOpacityThumbStyle" TargetType="{x:Type Thumb}">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Grid Width="20" Height="20">
-                            <Ellipse Fill="#FFFFFF">
-                                <Ellipse.Effect>
-                                    <DropShadowEffect BlurRadius="5" ShadowDepth="1" Direction="270" Opacity="0.45" Color="#000000"/>
-                                </Ellipse.Effect>
-                            </Ellipse>
-                            <Ellipse Width="10" Height="10" Fill="{DynamicResource M3PrimaryBrush}"/>
+                        <Grid x:Name="OpacityThumbRoot" Width="14" Height="28" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="ThumbScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Grid.RenderTransform>
+                            <!-- White outer vertical pill handle -->
+                            <Border Width="5" Height="26" CornerRadius="2.5" Background="#FFFFFF">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.35" Color="#000000"/>
+                                </Border.Effect>
+                            </Border>
+                            <!-- Primary accent inner bar -->
+                            <Border Width="2.5" Height="16" CornerRadius="1.25" Background="{DynamicResource M3PrimaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbScale" Storyboard.TargetProperty="ScaleX" To="1.3" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>

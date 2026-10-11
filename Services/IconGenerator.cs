@@ -548,5 +548,75 @@ namespace Panak.Services {
             }
             return dib;
         }
+
+        public static (Color container, Color triangle, Color cloud, Color shield, Color ellipse) GetLogoDynamicColors(double hue, bool isDark) {
+            hue = (hue % 360.0 + 360.0) % 360.0;
+            if (isDark) {
+                var container = ShellHelper.ColorFromHsl(hue, 0.28, 0.24);
+                var triangle = ShellHelper.ColorFromHsl(hue, 0.75, 0.82);
+                var cloud = ShellHelper.ColorFromHsl(hue, 0.55, 0.68);
+                var shield = ShellHelper.ColorFromHsl((hue + 18.0) % 360.0, 0.65, 0.65);
+                var ellipse = ShellHelper.ColorFromHsl((hue + 349.0) % 360.0, 0.65, 0.65);
+                return (container, triangle, cloud, shield, ellipse);
+            } else {
+                var container = ShellHelper.ColorFromHsl(hue, 0.50, 0.80);
+                var triangle = ShellHelper.ColorFromHsl(hue, 0.75, 0.16);
+                var cloud = ShellHelper.ColorFromHsl(hue, 0.48, 0.36);
+                var shield = ShellHelper.ColorFromHsl((hue + 18.0) % 360.0, 0.61, 0.51);
+                var ellipse = ShellHelper.ColorFromHsl((hue + 349.0) % 360.0, 0.60, 0.51);
+                return (container, triangle, cloud, shield, ellipse);
+            }
+        }
+
+        public static Bitmap RenderPanakLogoBitmap(int size, double hue, bool isDark) {
+            Bitmap? result = null;
+            void CoreRender() {
+                var (colContainer, colTriangle, colCloud, colShield, colEllipse) = GetLogoDynamicColors(hue, isDark);
+
+                var dv = new System.Windows.Media.DrawingVisual();
+                using (var dc = dv.RenderOpen()) {
+                    double scale = size / 88.0;
+                    dc.PushTransform(new System.Windows.Media.ScaleTransform(scale, scale));
+
+                    System.Windows.Media.Color toWpf(Color c) => System.Windows.Media.Color.FromArgb(c.A, c.R, c.G, c.B);
+                    var brushContainer = new System.Windows.Media.SolidColorBrush(toWpf(colContainer));
+                    var brushTriangle = new System.Windows.Media.SolidColorBrush(toWpf(colTriangle));
+                    var brushCloud = new System.Windows.Media.SolidColorBrush(toWpf(colCloud));
+                    var brushShield = new System.Windows.Media.SolidColorBrush(toWpf(colShield));
+                    var brushEllipse = new System.Windows.Media.SolidColorBrush(toWpf(colEllipse));
+
+                    dc.DrawGeometry(brushContainer, null, System.Windows.Media.Geometry.Parse("M59.4086 1.20571C76.2803 -3.9745 92.0771 11.8223 86.8968 28.694L84.1639 37.595C82.8719 41.8029 82.8719 46.3016 84.1639 50.5095L86.8968 59.4105C92.0771 76.2822 76.2803 92.079 59.4086 86.8988L50.5076 84.1659C46.2997 82.8739 41.8009 82.8739 37.593 84.1659L28.6921 86.8988C11.8203 92.079 -3.97645 76.2822 1.20376 59.4105L3.93668 50.5095C5.22865 46.3016 5.22865 41.8029 3.93668 37.595L1.20376 28.694C-3.97645 11.8223 11.8203 -3.9745 28.692 1.20571L37.593 3.93863C41.8009 5.23061 46.2997 5.23061 50.5076 3.93863L59.4086 1.20571Z"));
+                    dc.DrawGeometry(brushCloud, null, System.Windows.Media.Geometry.Parse("M23.0319 48.198C24.8429 45.2673 29.1571 45.2673 30.9681 48.198C31.9209 49.7399 33.7031 50.5863 35.5195 50.3597C38.9718 49.9288 41.6617 53.2555 40.4677 56.4791C39.8394 58.1752 40.2795 60.0771 41.5918 61.3364C44.0858 63.7298 43.1258 67.878 39.8258 68.9672C38.0895 69.5402 36.8562 71.0654 36.6761 72.8624C36.3338 76.2778 32.4467 78.1239 29.5259 76.2585C27.989 75.2769 26.011 75.2769 24.4741 76.2585C21.5533 78.1239 17.6662 76.2778 17.3239 72.8624C17.1438 71.0654 15.9105 69.5402 14.1742 68.9672C10.8742 67.878 9.91423 63.7298 12.4082 61.3364C13.7205 60.0771 14.1606 58.1752 13.5323 56.4791C12.3383 53.2555 15.0282 49.9288 18.4805 50.3597C20.2969 50.5863 22.0791 49.7399 23.0319 48.198Z"));
+                    dc.DrawGeometry(brushTriangle, null, System.Windows.Media.Geometry.Parse("M22.303 11.7907C24.3905 8.06977 29.6095 8.06976 31.697 11.7907L42.2653 30.6279C44.3528 34.3488 41.7434 39 37.5683 39H16.4317C12.2566 39 9.64716 34.3488 11.7347 30.6279L22.303 11.7907Z"));
+                    dc.DrawGeometry(brushShield, null, System.Windows.Media.Geometry.Parse("M60.69 47.1992C62.9839 45.6003 66.0161 45.6003 68.31 47.1992L78.0961 54.0203C80.5738 55.7472 81.6123 58.9305 80.6373 61.8093L77.0467 72.4109C76.117 75.1559 73.5649 77 70.6955 77H58.3045C55.4351 77 52.883 75.1559 51.9533 72.4109L48.3627 61.8093C47.3877 58.9305 48.4262 55.7472 50.9039 54.0203L60.69 47.1992Z"));
+
+                    var ellipseGeom = new System.Windows.Media.EllipseGeometry(new System.Windows.Point(63.5067, 24.3126), 17.9667, 10.1973);
+                    ellipseGeom.Transform = new System.Windows.Media.RotateTransform(-49.923, 63.5067, 24.3126);
+                    dc.DrawGeometry(brushEllipse, null, ellipseGeom);
+
+                    dc.Pop();
+                }
+
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(size, size, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(dv);
+                using var ms = new MemoryStream();
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                enc.Save(ms);
+                ms.Position = 0;
+                result = new Bitmap(ms);
+            }
+
+            if (Thread.CurrentThread.GetApartmentState() == ApartmentState.STA) {
+                CoreRender();
+            } else {
+                var t = new Thread(CoreRender);
+                t.SetApartmentState(ApartmentState.STA);
+                t.Start();
+                t.Join();
+            }
+
+            return result!;
+        }
     }
 }

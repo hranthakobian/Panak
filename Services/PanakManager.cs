@@ -37,17 +37,49 @@ namespace Panak.Services {
 
         public void UpdateOpenPopupThemeColor(string hexColor) {
             if (_isOpen && _popupWindow != null && _popupWindow.IsVisible) {
-                _popupWindow.Dispatcher.Invoke(() => {
-                    _popupWindow.ApplyThemeColor(hexColor);
-                });
+                try {
+                    if (_popupWindow.Dispatcher.Thread.IsAlive && !_popupWindow.Dispatcher.HasShutdownStarted) {
+                        if (_popupWindow.Dispatcher.CheckAccess()) {
+                            _popupWindow.ApplyThemeColor(hexColor);
+                        } else {
+                            _popupWindow.Dispatcher.BeginInvoke(() => {
+                                try { _popupWindow?.ApplyThemeColor(hexColor); } catch { }
+                            });
+                        }
+                    }
+                } catch { }
             }
         }
 
         public void UpdateOpenPopupThemeMode(string mode) {
             if (_isOpen && _popupWindow != null && _popupWindow.IsVisible) {
-                _popupWindow.Dispatcher.Invoke(() => {
-                    _popupWindow.ApplyThemeMode(mode);
-                });
+                try {
+                    if (_popupWindow.Dispatcher.Thread.IsAlive && !_popupWindow.Dispatcher.HasShutdownStarted) {
+                        if (_popupWindow.Dispatcher.CheckAccess()) {
+                            _popupWindow.ApplyThemeMode(mode);
+                        } else {
+                            _popupWindow.Dispatcher.BeginInvoke(() => {
+                                try { _popupWindow?.ApplyThemeMode(mode); } catch { }
+                            });
+                        }
+                    }
+                } catch { }
+            }
+        }
+
+        public void UpdateOpenPopupOpacity(double opacity) {
+            if (_isOpen && _popupWindow != null && _popupWindow.IsVisible) {
+                try {
+                    if (_popupWindow.Dispatcher.Thread.IsAlive && !_popupWindow.Dispatcher.HasShutdownStarted) {
+                        if (_popupWindow.Dispatcher.CheckAccess()) {
+                            _popupWindow.ApplyOpacity(opacity);
+                        } else {
+                            _popupWindow.Dispatcher.BeginInvoke(() => {
+                                try { _popupWindow?.ApplyOpacity(opacity); } catch { }
+                            });
+                        }
+                    }
+                } catch { }
             }
         }
 

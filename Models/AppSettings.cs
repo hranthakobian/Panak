@@ -15,6 +15,7 @@ namespace Panak.Models {
         public bool CombineFilesOnDrop { get; set; } = true;
         public bool OpenInCenterOnly { get; set; } = false;
         public bool AutoCheckUpdates { get; set; } = true;
+        public double FolderOpacity { get; set; } = 0.85;
         public string GitHubRepo { get; set; } = "hranthakobian/Panak";
         public DateTime? LastUpdateCheck { get; set; }
     }

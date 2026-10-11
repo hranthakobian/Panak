@@ -385,6 +385,7 @@ namespace Panak.Tests {
                 Assert.IsFalse(popup.IsWithinOpenGracePeriod());
                 popup.LoadFolder(Path.GetTempPath(), System.Windows.Rect.Empty);
                 Assert.IsTrue(popup.IsWithinOpenGracePeriod(), "Popup should be within grace period immediately after LoadFolder");
+                popup.Close();
             });
             thread.SetApartmentState(System.Threading.ApartmentState.STA);
             thread.Start();
@@ -473,6 +474,7 @@ namespace Panak.Tests {
                 Assert.IsNotNull(window.FindName("HueSlider"), "HueSlider must exist for pastel color selection");
                 Assert.IsNotNull(window.FindName("PopupBlurImage"), "PopupBlurImage must exist for frosted glass / acrylic blur effect");
                 Assert.IsNotNull(window.FindName("FrostedTintLayer"), "FrostedTintLayer must exist for dark frosted glass overlay");
+                window.Close();
             });
             thread.SetApartmentState(System.Threading.ApartmentState.STA);
             thread.Start();
@@ -487,6 +489,7 @@ namespace Panak.Tests {
                     var window = new SettingsWindow();
                     Assert.IsNotNull(window.FindName("KofiButton"), "KofiButton must exist");
                     Assert.IsNotNull(window.FindName("CenterPopupCheckBox"), "CenterPopupCheckBox must exist");
+                    window.Close();
                 } catch (Exception ex) {
                     thrown = ex;
                 }
@@ -919,10 +922,75 @@ namespace Panak.Tests {
                 // Test applying settings
                 w.ApplyCurrentSettings();
                 Assert.IsNotNull(SettingsService.Instance.Current);
+                w.Close();
             });
             thread.SetApartmentState(System.Threading.ApartmentState.STA);
             thread.Start();
             thread.Join();
+        }
+
+        [TestMethod]
+        public void TestLogoDynamicColorsAndBitmapRendering() {
+            // Test at peach default hue
+            var (cContainer, cTriangle, cCloud, cShield, cEllipse) = IconGenerator.GetLogoDynamicColors(26.2, false);
+            Assert.AreNotEqual(Color.Empty, cContainer);
+            Assert.AreNotEqual(Color.Empty, cTriangle);
+            Assert.AreNotEqual(Color.Empty, cCloud);
+            Assert.AreNotEqual(Color.Empty, cShield);
+            Assert.AreNotEqual(Color.Empty, cEllipse);
+            Assert.AreEqual(255, cContainer.A);
+            Assert.AreEqual(255, cTriangle.A);
+            Assert.AreEqual(255, cCloud.A);
+            Assert.AreEqual(255, cShield.A);
+            Assert.AreEqual(255, cEllipse.A);
+
+            // Test rendering bitmap at different sizes
+            using var bmp32 = IconGenerator.RenderPanakLogoBitmap(32, 26.2, false);
+            Assert.IsNotNull(bmp32);
+            Assert.AreEqual(32, bmp32.Width);
+            Assert.AreEqual(32, bmp32.Height);
+
+            using var bmp48Dark = IconGenerator.RenderPanakLogoBitmap(48, 200.0, true);
+            Assert.IsNotNull(bmp48Dark);
+            Assert.AreEqual(48, bmp48Dark.Width);
+            Assert.AreEqual(48, bmp48Dark.Height);
+        }
+
+        [TestMethod]
+        public void TestFolderOpacitySettingAndLiveUpdate() {
+            var settings = new AppSettings();
+            Assert.AreEqual(0.85, settings.FolderOpacity, 0.001, "Default FolderOpacity should be 0.85");
+
+            settings.FolderOpacity = 0.50;
+            string json = System.Text.Json.JsonSerializer.Serialize(settings);
+            var deserialized = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
+            Assert.IsNotNull(deserialized);
+            Assert.AreEqual(0.50, deserialized.FolderOpacity, 0.001);
+
+            // Verify live update method does not crash when no popup is open
+            PanakManager.Instance.UpdateOpenPopupOpacity(0.75);
+        }
+
+        [TestMethod]
+        public void TestNewLocalizationKeysInAllSupportedLanguages() {
+            var loc = LocalizationService.Instance;
+            string[] keys = new[] { "GeneralFolderOpacity", "GeneralFolderOpacityDesc" };
+            string[] langs = new[] { "hy", "en", "ru", "fr", "es", "zh", "ar" };
+
+            foreach (var lang in langs) {
+                loc.CurrentLanguage = lang;
+                foreach (var k in keys) {
+                    string val = loc[k];
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(val), $"Localization key '{k}' must exist in language '{lang}'");
+                }
+            }
+        }
+
+        [TestMethod]
+        public async Task TestDetectOptimalLanguageReturnsValidLanguage() {
+            string detected = await LocalizationService.DetectOptimalLanguageAsync();
+            var valid = new HashSet<string> { "hy", "en", "ru", "fr", "es", "zh", "ar" };
+            Assert.IsTrue(valid.Contains(detected), $"Detected language '{detected}' must be one of the supported languages");
         }
     }
 }

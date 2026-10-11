@@ -9,6 +9,8 @@ using Panak.Services;
 namespace Panak.Views {
     public partial class InstallerWindow : Window {
         private readonly bool _isUninstallMode;
+        private bool _needsAutoDetect = false;
+        private bool _isUpdatingLanguage = false;
 
         public InstallerWindow(bool isUninstallMode = false) {
             InitializeComponent();
@@ -16,9 +18,15 @@ namespace Panak.Views {
             LoadLogoAndIcon();
 
             var settings = SettingsService.Instance.Current;
+            string lang = "hy";
             if (!string.IsNullOrEmpty(settings.Language)) {
-                LocalizationService.Instance.CurrentLanguage = settings.Language;
+                lang = settings.Language;
+                _needsAutoDetect = false;
+            } else {
+                _needsAutoDetect = true;
             }
+
+            SetSelectedLanguage(lang);
 
             string color = string.IsNullOrEmpty(settings.ThemeColor)
                 ? ShellHelper.GetDefaultPastelColorHex()
@@ -27,6 +35,39 @@ namespace Panak.Views {
             ApplyMaterialYouPalette(hue);
 
             ConfigureMode();
+
+            Loaded += InstallerWindow_Loaded;
+        }
+
+        private async void InstallerWindow_Loaded(object sender, RoutedEventArgs e) {
+            if (_needsAutoDetect) {
+                string detected = await LocalizationService.DetectOptimalLanguageAsync();
+                SetSelectedLanguage(detected);
+                ConfigureMode();
+            }
+        }
+
+        private void SetSelectedLanguage(string lang) {
+            _isUpdatingLanguage = true;
+            try {
+                foreach (System.Windows.Controls.ComboBoxItem item in LanguageComboBox.Items) {
+                    if (string.Equals(item.Tag?.ToString(), lang, StringComparison.OrdinalIgnoreCase)) {
+                        item.IsSelected = true;
+                        break;
+                    }
+                }
+                LocalizationService.Instance.CurrentLanguage = lang;
+            } finally {
+                _isUpdatingLanguage = false;
+            }
+        }
+
+        private void LanguageComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) {
+            if (_isUpdatingLanguage) return;
+            if (LanguageComboBox.SelectedItem is System.Windows.Controls.ComboBoxItem item && item.Tag is string lang) {
+                LocalizationService.Instance.CurrentLanguage = lang;
+                ConfigureMode();
+            }
         }
 
         private void LoadLogoAndIcon() {
