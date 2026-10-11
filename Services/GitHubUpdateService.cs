@@ -76,7 +76,7 @@ namespace Panak.Services {
         public GitHubUpdateService() {
             var asm = Assembly.GetExecutingAssembly();
             var ver = asm.GetName().Version;
-            CurrentVersion = ver != null ? new Version(ver.Major, Math.Max(0, ver.Minor), Math.Max(0, ver.Build)) : new Version(1, 5, 5);
+            CurrentVersion = ver != null ? new Version(ver.Major, Math.Max(0, ver.Minor), Math.Max(0, ver.Build)) : new Version(1, 6, 0);
             CurrentVersionString = $"{CurrentVersion.Major}.{CurrentVersion.Minor}.{CurrentVersion.Build}";
 
             _httpClient = new HttpClient();

@@ -755,8 +755,8 @@ namespace Panak.Tests {
         public void TestGitHubUpdateServiceVersionAndDefaults() {
             var updater = GitHubUpdateService.Instance;
             Assert.IsNotNull(updater);
-            Assert.AreEqual("1.5.5", updater.CurrentVersionString);
-            Assert.AreEqual(new Version(1, 5, 5), updater.CurrentVersion);
+            Assert.AreEqual("1.6.0", updater.CurrentVersionString);
+            Assert.AreEqual(new Version(1, 6, 0), updater.CurrentVersion);
             Assert.AreEqual(UpdateStatus.Idle, updater.Status);
         }
 

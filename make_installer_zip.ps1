@@ -1,7 +1,7 @@
 $baseDir = "c:\Users\hrant\Documents\GitHub\Panak"
 $staging = Join-Path $baseDir "staging_zip"
-$zipPath = Join-Path $baseDir "Panak-Installer-v1.5.5.zip"
-$publishZip = Join-Path $baseDir "publish\Panak-Installer-v1.5.5.zip"
+$zipPath = Join-Path $baseDir "Panak-Installer-v1.6.0.zip"
+$publishZip = Join-Path $baseDir "publish\Panak-Installer-v1.6.0.zip"
 
 if (Test-Path $staging) {
     Remove-Item -Recurse -Force $staging
@@ -12,8 +12,8 @@ Copy-Item (Join-Path $baseDir "publish\Setup.exe") -Destination $staging
 
 $readmeContent = @"
 ==================================================
-                 PANAK v1.5.5
-       Android-style Popup Folders for Windows
+                 PANAK v1.6.0
+       Material You Popup Folders for Windows
 ==================================================
 
 [Տեղադրում / Installation]
