@@ -1,0 +1,1015 @@
+<Window x:Class="Panak.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Panak Settings"
+        Height="630"
+        Width="540"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize">
+
+    <Window.Resources>
+        <!-- Material You (M3) Dynamic Color Brushes (Default to warm peach/caramel seed ~26°) -->
+        <SolidColorBrush x:Key="M3SurfaceBrush" Color="#FEF4EB"/>
+        <SolidColorBrush x:Key="M3SurfaceContainerBrush" Color="#FCDDC5"/>
+        <SolidColorBrush x:Key="M3CardBrush" Color="#FFF7F0"/>
+        <SolidColorBrush x:Key="M3PrimaryBrush" Color="#7A5427"/>
+        <SolidColorBrush x:Key="M3OnPrimaryBrush" Color="#FEF4EB"/>
+        <SolidColorBrush x:Key="M3OnSurfaceBrush" Color="#2B1D11"/>
+        <SolidColorBrush x:Key="M3OnSurfaceVariantBrush" Color="#6E5643"/>
+        <SolidColorBrush x:Key="M3TrackInactiveBrush" Color="#EED7C5"/>
+        <SolidColorBrush x:Key="M3ErrorContainerBrush" Color="#FFDAD6"/>
+        <SolidColorBrush x:Key="M3OnErrorContainerBrush" Color="#410002"/>
+        <SolidColorBrush x:Key="SettingsHueThumbBrush" Color="#FCDDC5"/>
+
+        <!-- Material 3 Section Card Style: Pure borderless elevated container -->
+        <Style x:Key="SectionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource M3CardBrush}"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="18,14"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Opacity="0.06" Color="#301A06"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 5 Shape Geometries -->
+        <StreamGeometry x:Key="GeomCircle">M 12,1 A 11,11 0 1 1 11.99,1 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeomSquircle">M 7,1 L 17,1 A 6,6 0 0 1 23,7 L 23,17 A 6,6 0 0 1 17,23 L 7,23 A 6,6 0 0 1 1,17 L 1,7 A 6,6 0 0 1 7,1 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeomClover">M 1,7 A 6,6 0 0 1 7,1 C 9.5,2.4 14.5,2.4 17,1 A 6,6 0 0 1 23,7 C 21.6,9.5 21.6,14.5 23,17 A 6,6 0 0 1 17,23 C 14.5,21.6 9.5,21.6 7,23 A 6,6 0 0 1 1,17 C 2.4,14.5 2.4,9.5 1,7 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeomScallop">M 12.00,0.80 Q 14.54,2.53 17.60,2.30 Q 18.93,5.07 21.70,6.40 Q 21.47,9.46 23.20,12.00 Q 21.47,14.54 21.70,17.60 Q 18.93,18.93 17.60,21.70 Q 14.54,21.47 12.00,23.20 Q 9.46,21.47 6.40,21.70 Q 5.07,18.93 2.30,17.60 Q 2.53,14.54 0.80,12.00 Q 2.53,9.46 2.30,6.40 Q 5.07,5.07 6.40,2.30 Q 9.46,2.53 12.00,0.80 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeomArch">M 1,12 A 11,11 0 0 1 23,12 L 23,19 A 4,4 0 0 1 19,23 L 5,23 A 4,4 0 0 1 1,19 Z</StreamGeometry>
+
+        <!-- Material 3 Shape Selector Radio Style -->
+        <Style x:Key="ShapeSelectorRadioStyle" TargetType="RadioButton">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid x:Name="RootGrid" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- Unselected soft container -->
+                            <Border x:Name="UnselectedBg" Width="34" Height="34" CornerRadius="17"
+                                    Background="{DynamicResource M3SurfaceContainerBrush}"
+                                    BorderThickness="0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            
+                            <!-- Selected primary badge -->
+                            <Border x:Name="SelectedBg" Width="34" Height="34" CornerRadius="12"
+                                    Background="{DynamicResource M3PrimaryBrush}"
+                                    BorderThickness="0" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.25" Color="#301A06"/>
+                                </Border.Effect>
+                            </Border>
+
+                            <!-- Shape silhouette path -->
+                            <Path x:Name="ShapePath" Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
+                                  Stretch="Uniform" Width="18" Height="18"
+                                  Fill="{DynamicResource M3PrimaryBrush}"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="UnselectedBg" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="SelectedBg" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="ShapePath" Property="Fill" Value="{DynamicResource M3OnPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RootGrid" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Settings Theme Segment Radio Style -->
+        <Style x:Key="SettingsThemeSegmentRadioStyle" TargetType="RadioButton">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="SegmentBorder" CornerRadius="11" Background="Transparent" Padding="6,4">
+                            <ContentPresenter x:Name="Presenter" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextElement.FontSize="12" TextElement.FontWeight="Medium"
+                                              TextElement.Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="SegmentBorder" Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
+                                <Setter TargetName="Presenter" Property="TextElement.Foreground" Value="{DynamicResource M3OnPrimaryBrush}"/>
+                                <Setter TargetName="Presenter" Property="TextElement.FontWeight" Value="SemiBold"/>
+                                <Setter TargetName="SegmentBorder" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.2" Color="#000000"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SegmentBorder" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Color Swatch Radio Style: Borderless with Material scaling & elevation -->
+        <Style x:Key="ColorSwatchStyle" TargetType="RadioButton">
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid x:Name="SwatchRoot">
+                            <!-- Material selected ring indicator -->
+                            <Ellipse x:Name="SelectionRing" Width="26" Height="26" Fill="{DynamicResource M3PrimaryBrush}" Visibility="Collapsed" Opacity="0.35"/>
+                            <Ellipse x:Name="InnerColor" Width="20" Height="20" Fill="{TemplateBinding Background}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="SelectionRing" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="InnerColor" Property="Width" Value="22"/>
+                                <Setter TargetName="InnerColor" Property="Height" Value="22"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SwatchRoot" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material 3 Hue Slider Styles: Pure borderless rainbow track -->
+        <Style x:Key="PastelHueThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Grid x:Name="HueThumbRoot" Width="22" Height="22">
+                            <Ellipse Fill="#FFFFFF">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.30" Color="#000000"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                            <Ellipse Width="12" Height="12" Fill="{DynamicResource SettingsHueThumbBrush}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HueThumbRoot" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PastelHueSliderStyle" TargetType="{x:Type Slider}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Slider}">
+                        <Grid VerticalAlignment="Center" Height="28">
+                            <Border Height="14" CornerRadius="7" BorderThickness="0" Margin="4,0,4,0">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop Color="#FCC5C5" Offset="0.0"/>
+                                        <GradientStop Color="#FCDDC5" Offset="0.073"/>
+                                        <GradientStop Color="#FCFCC5" Offset="0.166"/>
+                                        <GradientStop Color="#DFFCC5" Offset="0.25"/>
+                                        <GradientStop Color="#C5FCC5" Offset="0.333"/>
+                                        <GradientStop Color="#C5FCDD" Offset="0.416"/>
+                                        <GradientStop Color="#C5FCFC" Offset="0.5"/>
+                                        <GradientStop Color="#C5DDFC" Offset="0.583"/>
+                                        <GradientStop Color="#C5C5FC" Offset="0.666"/>
+                                        <GradientStop Color="#DDC5FC" Offset="0.75"/>
+                                        <GradientStop Color="#FCC5FC" Offset="0.833"/>
+                                        <GradientStop Color="#FCC5DD" Offset="0.916"/>
+                                        <GradientStop Color="#FCC5C5" Offset="1.0"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}" Opacity="0" Focusable="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Opacity="0" Focusable="False"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource PastelHueThumbStyle}"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material Design 3 Slider Style: Thick pill track with active tonal fill -->
+        <Style x:Key="MaterialSliderThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Grid x:Name="ThumbRoot" Width="22" Height="22">
+                            <Ellipse Fill="{DynamicResource M3PrimaryBrush}">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.25" Color="#301A06"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource M3OnPrimaryBrush}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbRoot" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MaterialSliderStyle" TargetType="{x:Type Slider}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Slider}">
+                        <Grid VerticalAlignment="Center" Height="28">
+                            <!-- Inactive Track -->
+                            <Border Height="12" CornerRadius="6" Background="{DynamicResource M3SurfaceContainerBrush}" BorderThickness="0" Margin="4,0,4,0"/>
+                            
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="12" CornerRadius="6" Background="{DynamicResource M3PrimaryBrush}" BorderThickness="0" Margin="4,0,-10,0"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource MaterialSliderThumbStyle}"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material Design 3 Toggle Switch Style: Borderless pill track with animated sliding expanding thumb -->
+        <Style x:Key="MaterialSwitchStyle" TargetType="CheckBox">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid x:Name="SwitchRoot" Width="52" Height="32" VerticalAlignment="Center">
+                            <!-- Inactive Track -->
+                            <Border x:Name="InactiveTrack" Width="52" Height="32" CornerRadius="16"
+                                    Background="{DynamicResource M3TrackInactiveBrush}"
+                                    BorderThickness="0"/>
+                            
+                            <!-- Active Track -->
+                            <Border x:Name="ActiveTrack" Width="52" Height="32" CornerRadius="16"
+                                    Background="{DynamicResource M3PrimaryBrush}"
+                                    BorderThickness="0" Opacity="0"/>
+
+                            <!-- Sliding Thumb -->
+                            <Canvas Width="52" Height="32" IsHitTestVisible="False">
+                                <Grid x:Name="ThumbGrid" Canvas.Left="6" Canvas.Top="4" Width="24" Height="24">
+                                    <Grid.RenderTransform>
+                                        <TranslateTransform x:Name="ThumbTranslate" X="0" Y="0"/>
+                                    </Grid.RenderTransform>
+
+                                    <!-- Inactive Thumb (16px circle) -->
+                                    <Ellipse x:Name="InactiveThumb" Width="16" Height="16"
+                                             Fill="{DynamicResource M3OnSurfaceVariantBrush}"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                    <!-- Active Thumb (24px circle) -->
+                                    <Ellipse x:Name="ActiveThumb" Width="24" Height="24"
+                                             Fill="{DynamicResource M3OnPrimaryBrush}"
+                                             Opacity="0"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Canvas>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ActiveTrack" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="InactiveTrack" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbTranslate" Storyboard.TargetProperty="X" To="16" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ActiveThumb" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="InactiveThumb" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ActiveTrack" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="InactiveTrack" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbTranslate" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ActiveThumb" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="InactiveThumb" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SwitchRoot" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material Design 3 ComboBox Style: Pill container, rotating chevron & elevated rounded popup -->
+        <Style x:Key="MaterialComboBoxItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemBorder" CornerRadius="12" Margin="4,2" Padding="12,8" Background="Transparent" BorderThickness="0">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MaterialComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource MaterialComboBoxItemStyle}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="DropDownToggle" Focusable="False" ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="ToggleBorder" Height="36" CornerRadius="18"
+                                                Background="{DynamicResource M3SurfaceContainerBrush}"
+                                                BorderThickness="0" Padding="14,0,12,0">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <ContentPresenter Grid.Column="0" Content="{TemplateBinding Content}"
+                                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                  HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                <Path x:Name="ChevronPath" Grid.Column="1" Data="M 0,0 L 4.5,4.5 L 9,0"
+                                                      Stroke="{DynamicResource M3PrimaryBrush}" StrokeThickness="2"
+                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ToggleBorder" Property="Opacity" Value="0.88"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <ContentPresenter IsHitTestVisible="False"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                  HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            </ToggleButton>
+
+                            <Popup x:Name="PART_Popup" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom" PopupAnimation="Slide">
+                                <Border x:Name="PopupBorder" MinWidth="{Binding ActualWidth, ElementName=DropDownToggle}"
+                                        Margin="0,4,0,0" CornerRadius="16"
+                                        Background="{DynamicResource M3SurfaceBrush}"
+                                        BorderThickness="0" Padding="4">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.16" Color="#301A06"/>
+                                    </Border.Effect>
+                                    <ScrollViewer MaxHeight="200" SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material 3 Button Styles: Borderless pills with responsive motion feedback -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="22,9"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.92"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.80"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="18,9"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DangerButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource M3ErrorContainerBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainerBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="18" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CloseIconButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Width="36" Height="36" CornerRadius="18" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- Main Window Surface: Pure borderless Material You card with soft ambient drop shadow -->
+    <Border x:Name="MainWindowBorder" Margin="14" CornerRadius="24" Background="{DynamicResource M3SurfaceBrush}" BorderThickness="0">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="32" ShadowDepth="6" Direction="270" Opacity="0.16" Color="#351B08"/>
+        </Border.Effect>
+        <Grid Margin="22">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="*"/>    <!-- Settings Scrollable Body -->
+                <RowDefinition Height="Auto"/> <!-- Footer Actions -->
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,16" MouseDown="Header_MouseDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="32" Height="32" CornerRadius="10" Margin="0,0,10,0" VerticalAlignment="Center" ClipToBounds="True">
+                        <Image x:Name="HeaderLogoImage" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Border>
+                    <TextBlock x:Name="TitleText" Text="Panak Settings" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Grid.Column="1" Style="{StaticResource CloseIconButtonStyle}" Content="✕" Width="36" Height="36" Click="CloseButton_Click"/>
+            </Grid>
+
+            <!-- Body -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14">
+                <StackPanel>
+                    <!-- Ko-fi Donation Support Card (Top of Settings) -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="☕" FontSize="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="SupportTitleText" Text="Աջակցել նախագծին (Ko-fi)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock x:Name="SupportDescText" Text="Աջակցեք Panak-ի զարգացմանը Ko-fi-ի միջոցով" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button x:Name="KofiButton" Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Content="☕ Ko-fi" VerticalAlignment="Center" Padding="18,8" FontWeight="Bold" Click="KofiButton_Click"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Language Selection with AI Notice -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock x:Name="LanguageLabel" Text="Language" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <Border Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="6" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="LanguageAiBadge" Text="Թարգմանված է ԱԲ-ով" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock x:Name="LanguageSubtext" Text="Հայերեն / English / Русский / Français / Español / 中文 / العربية" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3,0,0"/>
+                            </StackPanel>
+                            <ComboBox x:Name="LanguageComboBox" Grid.Column="1" Width="140" Style="{StaticResource MaterialComboBoxStyle}" SelectionChanged="LanguageComboBox_SelectionChanged">
+                                <ComboBoxItem Content="Հայերեն" Tag="hy"/>
+                                <ComboBoxItem Content="English" Tag="en"/>
+                                <ComboBoxItem Content="Русский" Tag="ru"/>
+                                <ComboBoxItem Content="Français" Tag="fr"/>
+                                <ComboBoxItem Content="Español" Tag="es"/>
+                                <ComboBoxItem Content="中文" Tag="zh"/>
+                                <ComboBoxItem Content="العربية" Tag="ar"/>
+                            </ComboBox>
+                        </Grid>
+                    </Border>
+
+                    <!-- Icon Shape -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="IconShapeLabel" Text="Default Icon Shape" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock Text="Android Adaptive Icon Shape" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="20" Padding="6,4" VerticalAlignment="Center" BorderThickness="0" SnapsToDevicePixels="True">
+                                <StackPanel x:Name="SettingsShapeSelectorPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <RadioButton x:Name="SettingsShapeCircle" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                 Tag="{StaticResource GeomCircle}" ToolTip="Circle" Click="SettingsShape_Click"/>
+                                    <RadioButton x:Name="SettingsShapeSquircle" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                 Tag="{StaticResource GeomSquircle}" ToolTip="Squircle" Click="SettingsShape_Click"/>
+                                    <RadioButton x:Name="SettingsShapeClover" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                 Tag="{StaticResource GeomClover}" ToolTip="Clover" Click="SettingsShape_Click"/>
+                                    <RadioButton x:Name="SettingsShapeScallop" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                 Tag="{StaticResource GeomScallop}" ToolTip="Scallop" Click="SettingsShape_Click"/>
+                                    <RadioButton x:Name="SettingsShapeArch" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                 Tag="{StaticResource GeomArch}" ToolTip="Arch" Click="SettingsShape_Click"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Theme Mode: Light | Dark | Auto -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <TextBlock x:Name="ThemeSectionLabel" Text="Theme" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                            <TextBlock x:Name="ThemeSectionDesc" Text="Light, Dark or System Theme" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,10"/>
+                            <Border Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="14" Padding="3" HorizontalAlignment="Stretch">
+                                <UniformGrid Columns="3" HorizontalAlignment="Stretch">
+                                    <RadioButton x:Name="SettingsThemeLight" GroupName="SettingsThemeGroup" Style="{StaticResource SettingsThemeSegmentRadioStyle}" Content="☀️ Light" Tag="Light" Click="SettingsTheme_Click"/>
+                                    <RadioButton x:Name="SettingsThemeDark" GroupName="SettingsThemeGroup" Style="{StaticResource SettingsThemeSegmentRadioStyle}" Content="🌙 Dark" Tag="Dark" Click="SettingsTheme_Click"/>
+                                    <RadioButton x:Name="SettingsThemeAuto" GroupName="SettingsThemeGroup" Style="{StaticResource SettingsThemeSegmentRadioStyle}" Content="⚙️ Auto" Tag="Auto" Click="SettingsTheme_Click"/>
+                                </UniformGrid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Default Folder Color & Real-time Hue Slider -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="DefaultColorLabel" Text="Default Folder Color" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock Text="Material You Real-time Dynamic Palette" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <Border x:Name="SettingsColorIndicator" Grid.Column="1" Width="26" Height="26" CornerRadius="13" Background="{DynamicResource M3SurfaceContainerBrush}" BorderThickness="0" VerticalAlignment="Center">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.25" Color="#301A06"/>
+                                    </Border.Effect>
+                                </Border>
+                            </Grid>
+
+                            <!-- Preset Pastel Swatches: Now with 8 colors -->
+                            <StackPanel x:Name="SettingsColorSwatchesPanel" Orientation="Horizontal" Margin="0,0,0,12">
+                                <RadioButton x:Name="SettingsAccentSwatch" GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCDDC5" Tag="#FCDDC5" ToolTip="Peach / Default" Checked="SettingsColorSwatch_Checked"/>
+                                <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#C5FCC5" Tag="#C5FCC5" ToolTip="Mint" Checked="SettingsColorSwatch_Checked"/>
+                                <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#C5FCFC" Tag="#C5FCFC" ToolTip="Cyan" Checked="SettingsColorSwatch_Checked"/>
+                                <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#C5DDFC" Tag="#C5DDFC" ToolTip="Sky Blue" Checked="SettingsColorSwatch_Checked"/>
+                                <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#DDC5FC" Tag="#DDC5FC" ToolTip="Lavender" Checked="SettingsColorSwatch_Checked"/>
+                                <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCC5FC" Tag="#FCC5FC" ToolTip="Lilac" Checked="SettingsColorSwatch_Checked"/>
+                                <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCC5DD" Tag="#FCC5DD" ToolTip="Rose" Checked="SettingsColorSwatch_Checked"/>
+                                <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCFCC5" Tag="#FCFCC5" ToolTip="Butter Yellow" Checked="SettingsColorSwatch_Checked"/>
+                            </StackPanel>
+
+                            <!-- Pastel Hue Slider Row: Panel updates in real time -->
+                            <Grid Margin="0,2,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="SettingsHueLabel" Text="Hue" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <Slider x:Name="SettingsHueSlider" Grid.Column="1"
+                                        Minimum="0" Maximum="360"
+                                        SmallChange="1" LargeChange="10"
+                                        Style="{StaticResource PastelHueSliderStyle}"
+                                        ValueChanged="SettingsHueSlider_ValueChanged"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Grid Columns -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="GridColumnsLabel" Text="Items per row (Grid count)" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock x:Name="GridColumnsValueText" Grid.Column="1" Text="5" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                            </Grid>
+                            <Slider x:Name="GridColumnsSlider" Minimum="3" Maximum="8" Value="5" IsSnapToTickEnabled="True" TickFrequency="1" Style="{StaticResource MaterialSliderStyle}" ValueChanged="GridColumnsSlider_ValueChanged"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Focus Mode & Dimming -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="FocusModeLabel" Text="Focus Mode" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="FocusModeDescText" Text="Dims background on popup open" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="FocusModeCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
+                            </Grid>
+                            <Grid Margin="0,8,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="FocusDimmingLabel" Text="Focus Dimming Opacity" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                                <TextBlock x:Name="FocusDimmingValueText" Grid.Column="1" Text="45%" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                            </Grid>
+                            <Slider x:Name="FocusDimmingSlider" Minimum="0" Maximum="80" Value="45" Style="{StaticResource MaterialSliderStyle}" ValueChanged="FocusDimmingSlider_ValueChanged"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Center Screen Popup Only (New Option) -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="CenterPopupLabel" Text="Center Screen Popup" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock x:Name="CenterPopupDescText" Text="Open folder popups in the center of the screen only" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="CenterPopupCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Lock Folders -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="LockFoldersLabel" Text="Lock Folders" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock x:Name="LockFoldersDescText" Text="Disable dragging or moving items" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="LockFoldersCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Right Double-Click & Space Quick Look -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="RightDoubleClickLabel" Text="Right Double-Click Open" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="RightDoubleClickDescText" Text="Open any Windows folder with right double-click" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="RightDoubleClickCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource M3SurfaceContainerBrush}" Margin="0,4,0,10" BorderThickness="0"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="SpaceQuickLookLabel" Text="Quick Look (Space key)" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="SpaceQuickLookDescText" Text="Press Space in Explorer to quickly view folder" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="SpaceQuickLookCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Combine Files On Drop (Android / iOS style) -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="CombineFilesLabel" Text="Combine Files on Drop" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock x:Name="CombineFilesDescText" Text="Drop a file onto another file to combine into a Panak folder" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="CombineFilesCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Auto-start & Shell Context Menu Integration -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="AutoStartLabel" Text="Start with Windows" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="AutoStartCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource M3SurfaceContainerBrush}" Margin="0,4,0,8" BorderThickness="0"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="ContextMenuStatusText" Text="Explorer context menu active" FontSize="12" Foreground="{DynamicResource M3PrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <Button x:Name="ReRegisterContextBtn" Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="Re-register" Padding="12,5" FontSize="11" Click="ReRegisterContextBtn_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- GitHub Real-time Updates -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="UpdatesSectionTitle" Text="Updates" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="UpdatesSectionDesc" Text="Real-time updates via GitHub Releases" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <Button x:Name="CheckUpdatesBtn" Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="Check for updates" Padding="14,6" FontSize="12" Click="CheckUpdatesBtn_Click"/>
+                            </Grid>
+
+                            <!-- Version & Status Row -->
+                            <Border Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="12" Padding="12,10" Margin="0,0,0,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock x:Name="UpdateStatusTitleText" Text="Current version: v1.0.0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                        <TextBlock x:Name="UpdateStatusDetailText" Text="You are using the latest version" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <TextBlock x:Name="UpdateStatusBadge" Grid.Column="1" Text="✓ Latest" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Update Available Card (Visible when update found) -->
+                            <Border x:Name="UpdateAvailableCard" Background="{DynamicResource M3CardBrush}" BorderBrush="{DynamicResource M3PrimaryBrush}" BorderThickness="1" CornerRadius="12" Padding="12,10" Margin="0,0,0,10" Visibility="Collapsed">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="NewVersionAvailableText" Text="New version available: v1.1.0" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                        <TextBlock x:Name="NewVersionDateText" Grid.Column="1" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                                    </Grid>
+                                    <TextBlock x:Name="ReleaseNotesHeader" Text="Release Notes:" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,0,0,4"/>
+                                    <ScrollViewer MaxHeight="80" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
+                                        <TextBlock x:Name="ReleaseNotesContentText" Text="" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    </ScrollViewer>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ProgressBar x:Name="UpdateProgressBar" Height="8" Margin="0,0,10,0" VerticalAlignment="Center" Visibility="Collapsed" Minimum="0" Maximum="100"/>
+                                        <Button x:Name="DownloadInstallBtn" Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Content="Download &amp; Install" Padding="16,6" FontSize="12" Click="DownloadInstallBtn_Click"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Auto Check Toggle -->
+                            <Grid Margin="0,2,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="AutoCheckUpdatesLabel" Text="Check for updates automatically" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="AutoCheckUpdatesDesc" Text="Periodically check GitHub in the background" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="AutoCheckUpdatesCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
+                            </Grid>
+
+                            <!-- GitHub Repository Input -->
+                            <Border Height="1" Background="{DynamicResource M3SurfaceContainerBrush}" Margin="0,4,0,8" BorderThickness="0"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="190"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="GitHubRepoLabel" Text="GitHub Repository" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
+                                <TextBox x:Name="GitHubRepoTextBox" Grid.Column="1" Text="hranthakobian/Panak" Padding="8,4" FontSize="12" BorderThickness="0" Background="{DynamicResource M3SurfaceContainerBrush}" Foreground="{DynamicResource M3OnSurfaceBrush}">
+                                    <TextBox.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="8"/>
+                                        </Style>
+                                    </TextBox.Resources>
+                                </TextBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Installer & Uninstaller Tools -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="InstallerSectionTitle" Text="Installation &amp; Setup" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock x:Name="InstallerSectionDesc" Text="Setup or remove Panak system integration" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="InstallAppBtn" Style="{StaticResource ActionButtonStyle}" Content="Install" Padding="14,6" FontSize="12" Margin="0,0,6,0" Click="InstallAppBtn_Click"/>
+                                <Button x:Name="UninstallAppBtn" Style="{StaticResource DangerButtonStyle}" Content="Uninstall" Padding="14,6" Click="UninstallAppBtn_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Footer -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Panak v1.0 • Android-style popup folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button x:Name="CancelBtn" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Margin="0,0,10,0" Click="CancelBtn_Click"/>
+                    <Button x:Name="SaveBtn" Style="{StaticResource ActionButtonStyle}" Content="Save" Click="SaveBtn_Click"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

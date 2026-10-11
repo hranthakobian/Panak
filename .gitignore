@@ -1,0 +1,8 @@
+bin/
+obj/
+publish/
+staging_panak/
+*.zip
+*.user
+*.suo
+.vs/

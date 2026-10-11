@@ -1,0 +1,398 @@
+<Window x:Class="Panak.Views.InstallerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Panak Setup"
+        Height="500"
+        Width="520"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize">
+
+    <Window.Resources>
+        <!-- Material You (M3) Dynamic Color Brushes (Default to warm peach/caramel seed ~26°) -->
+        <SolidColorBrush x:Key="M3SurfaceBrush" Color="#FEF4EB"/>
+        <SolidColorBrush x:Key="M3SurfaceContainerBrush" Color="#FCDDC5"/>
+        <SolidColorBrush x:Key="M3CardBrush" Color="#FFF7F0"/>
+        <SolidColorBrush x:Key="M3PrimaryBrush" Color="#7A5427"/>
+        <SolidColorBrush x:Key="M3OnPrimaryBrush" Color="#FEF4EB"/>
+        <SolidColorBrush x:Key="M3OnSurfaceBrush" Color="#2B1D11"/>
+        <SolidColorBrush x:Key="M3OnSurfaceVariantBrush" Color="#6E5643"/>
+        <SolidColorBrush x:Key="M3TrackInactiveBrush" Color="#EED7C5"/>
+        <SolidColorBrush x:Key="M3ErrorContainerBrush" Color="#FFDAD6"/>
+        <SolidColorBrush x:Key="M3OnErrorContainerBrush" Color="#410002"/>
+
+        <!-- Material 3 Section Card Style: Pure borderless elevated container -->
+        <Style x:Key="SectionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource M3CardBrush}"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Opacity="0.06" Color="#301A06"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Danger Warning Card Style -->
+        <Style x:Key="DangerCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource M3ErrorContainerBrush}"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,14"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Opacity="0.08" Color="#410002"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material Design 3 Toggle Switch Style: Borderless pill track with animated sliding expanding thumb -->
+        <Style x:Key="MaterialSwitchStyle" TargetType="CheckBox">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid x:Name="SwitchRoot" Width="52" Height="32" VerticalAlignment="Center">
+                            <!-- Inactive Track -->
+                            <Border x:Name="InactiveTrack" Width="52" Height="32" CornerRadius="16"
+                                    Background="{DynamicResource M3TrackInactiveBrush}"
+                                    BorderThickness="0"/>
+                            
+                            <!-- Active Track -->
+                            <Border x:Name="ActiveTrack" Width="52" Height="32" CornerRadius="16"
+                                    Background="{DynamicResource M3PrimaryBrush}"
+                                    BorderThickness="0" Opacity="0"/>
+
+                            <!-- Sliding Thumb -->
+                            <Canvas Width="52" Height="32" IsHitTestVisible="False">
+                                <Grid x:Name="ThumbGrid" Canvas.Left="6" Canvas.Top="4" Width="24" Height="24">
+                                    <Grid.RenderTransform>
+                                        <TranslateTransform x:Name="ThumbTranslate" X="0" Y="0"/>
+                                    </Grid.RenderTransform>
+
+                                    <!-- Inactive Thumb (16px circle) -->
+                                    <Ellipse x:Name="InactiveThumb" Width="16" Height="16"
+                                             Fill="{DynamicResource M3OnSurfaceVariantBrush}"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                    <!-- Active Thumb (24px circle) -->
+                                    <Ellipse x:Name="ActiveThumb" Width="24" Height="24"
+                                             Fill="{DynamicResource M3OnPrimaryBrush}"
+                                             Opacity="0"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Canvas>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ActiveTrack" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="InactiveTrack" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbTranslate" Storyboard.TargetProperty="X" To="16" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ActiveThumb" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="InactiveThumb" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ActiveTrack" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="InactiveTrack" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ThumbTranslate" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ActiveThumb" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="InactiveThumb" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SwitchRoot" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material 3 Button Styles: Borderless pills with responsive motion feedback -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="22,9"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.92"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.80"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="18,9"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DangerButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource M3ErrorContainerBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainerBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,9"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CloseIconButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Width="36" Height="36" CornerRadius="18" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource M3PrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- Main Window Surface: Borderless Material You card with soft ambient drop shadow -->
+    <Border x:Name="MainWindowBorder" Margin="14" CornerRadius="24" Background="{DynamicResource M3SurfaceBrush}" BorderThickness="0">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="32" ShadowDepth="6" Direction="270" Opacity="0.16" Color="#351B08"/>
+        </Border.Effect>
+
+        <Grid Margin="22">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="*"/>    <!-- Content Body -->
+                <RowDefinition Height="Auto"/> <!-- Footer Actions -->
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,16" MouseDown="Header_MouseDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="40" Height="40" CornerRadius="12" Margin="0,0,12,0" VerticalAlignment="Center" ClipToBounds="True">
+                        <Image x:Name="HeaderLogoImage" Width="40" Height="40" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="WizardTitleText" Text="Panak Setup" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                        <TextBlock x:Name="WizardSubtitleText" Text="Android-style Popup Folders for Windows" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+                <Button Grid.Column="1" Style="{StaticResource CloseIconButtonStyle}" Content="✕" Width="36" Height="36" Click="CancelButton_Click"/>
+            </Grid>
+
+            <!-- Body Content -->
+            <Grid Grid.Row="1" Margin="0,0,0,14">
+                <!-- Install View -->
+                <StackPanel x:Name="InstallPanel">
+                    <!-- Feature Intro Card -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <TextBlock x:Name="InstallIntroText"
+                                   Text="Install Panak to enjoy Android-style popup folder widgets, dynamic 2x2 preview icons, right double-click quick look, and Windows Explorer context menu integration."
+                                   FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" LineHeight="17"/>
+                    </Border>
+
+                    <!-- Desktop Shortcut Option -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="DesktopShortcutTitleText" Text="Create Desktop Shortcut" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock x:Name="DesktopShortcutDescText" Text="Quick access directly from your desktop" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="DesktopShortcutCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Start Menu Shortcut Option -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="StartMenuShortcutTitleText" Text="Create Start Menu Shortcut" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock x:Name="StartMenuShortcutDescText" Text="Add Panak to the Windows Start Menu" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="StartMenuShortcutCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Auto Start with Windows Option -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="AutoStartTitleText" Text="Start with Windows" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock x:Name="AutoStartDescText" Text="Launch automatically on Windows startup" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <CheckBox x:Name="AutoStartCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- Uninstall View -->
+                <StackPanel x:Name="UninstallPanel" Visibility="Collapsed">
+                    <!-- Warning Card -->
+                    <Border Style="{StaticResource DangerCardStyle}">
+                        <StackPanel>
+                            <TextBlock x:Name="UninstallIntroText" Text="Are you sure you want to remove Panak from your computer?"
+                                       FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3OnErrorContainerBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Components Removal List Card -->
+                    <Border Style="{StaticResource SectionCardStyle}" Padding="16,14">
+                        <StackPanel>
+                            <TextBlock x:Name="UninstallWillRemoveText" Text="This will remove the following components:"
+                                       FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}" Margin="0,0,0,8"/>
+                            <StackPanel Margin="6,0,0,0">
+                                <TextBlock x:Name="UninstallItemContextMenuText" Text="• Windows Explorer context menu items" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3"/>
+                                <TextBlock x:Name="UninstallItemShortcutsText" Text="• Desktop and Start Menu shortcuts" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3"/>
+                                <TextBlock x:Name="UninstallItemStartupText" Text="• Automatic startup configuration" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3"/>
+                                <TextBlock x:Name="UninstallItemFilesText" Text="• Program files and registry entries" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Completed View -->
+                <StackPanel x:Name="CompletedPanel" Visibility="Collapsed" VerticalAlignment="Center">
+                    <Border Style="{StaticResource SectionCardStyle}" Padding="24,28">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Border Width="60" Height="60" CornerRadius="30" Background="{DynamicResource M3SurfaceContainerBrush}" HorizontalAlignment="Center" Margin="0,0,0,14">
+                                <TextBlock x:Name="StatusEmoji" Text="🎉" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock x:Name="StatusTitle" Text="Operation Completed!" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center" TextAlignment="Center"/>
+                            <TextBlock x:Name="StatusSubtitle" Text="Panak is now ready to use." FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" HorizontalAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <!-- Footer Actions -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="CancelActionBtn" Grid.Column="0" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Click="CancelButton_Click"/>
+                <TextBlock Grid.Column="1" Text="Panak v1.0 • Android-style popup folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="MainActionBtn" Style="{StaticResource ActionButtonStyle}" Content="Install Now" Click="MainActionBtn_Click"/>
+                    <Button x:Name="FinishBtn" Style="{StaticResource ActionButtonStyle}" Content="Finish" Visibility="Collapsed" Click="FinishBtn_Click"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

@@ -1,0 +1,198 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media.Imaging;
+using Panak.Services;
+
+namespace Panak.Views {
+    public partial class InstallerWindow : Window {
+        private readonly bool _isUninstallMode;
+
+        public InstallerWindow(bool isUninstallMode = false) {
+            InitializeComponent();
+            _isUninstallMode = isUninstallMode;
+            LoadLogoAndIcon();
+
+            var settings = SettingsService.Instance.Current;
+            if (!string.IsNullOrEmpty(settings.Language)) {
+                LocalizationService.Instance.CurrentLanguage = settings.Language;
+            }
+
+            string color = string.IsNullOrEmpty(settings.ThemeColor)
+                ? ShellHelper.GetDefaultPastelColorHex()
+                : settings.ThemeColor;
+            double hue = ShellHelper.GetHueFromHex(color);
+            ApplyMaterialYouPalette(hue);
+
+            ConfigureMode();
+        }
+
+        private void LoadLogoAndIcon() {
+            try {
+                var uri = new Uri("pack://application:,,,/PanakLogo.png", UriKind.Absolute);
+                var bi = new BitmapImage(uri);
+                HeaderLogoImage.Source = bi;
+                Icon = bi;
+                return;
+            } catch { }
+
+            try {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string[] candidates = {
+                    Path.Combine(baseDir, "PanakLogo.png"),
+                    Path.Combine(baseDir, "Panak logo.png"),
+                    Path.Combine(baseDir, "Panak.ico")
+                };
+                foreach (var file in candidates) {
+                    if (File.Exists(file)) {
+                        var bi = new BitmapImage(new Uri(file, UriKind.Absolute));
+                        HeaderLogoImage.Source = bi;
+                        Icon = bi;
+                        return;
+                    }
+                }
+            } catch { }
+        }
+
+        public void ApplyMaterialYouPalette(double hue) {
+            try {
+                hue = (hue % 360.0 + 360.0) % 360.0;
+
+                var (surfaceColor, containerColor, primaryColor) = ShellHelper.GetMaterialYouTonalPalette(hue);
+                var cardColor = ShellHelper.ColorFromHsl(hue, 0.60, 0.94);
+                var onSurfaceColor = ShellHelper.ColorFromHsl(hue, 0.40, 0.16);
+                var onSurfaceVariantColor = ShellHelper.ColorFromHsl(hue, 0.28, 0.42);
+                var trackInactiveColor = ShellHelper.ColorFromHsl(hue, 0.45, 0.84);
+
+                System.Windows.Media.Color toWpf(System.Drawing.Color c) =>
+                    System.Windows.Media.Color.FromArgb(c.A, c.R, c.G, c.B);
+
+                var wpfSurface = toWpf(surfaceColor);
+                var wpfContainer = toWpf(containerColor);
+                var wpfCard = toWpf(cardColor);
+                var wpfPrimary = toWpf(primaryColor);
+                var wpfOnSurface = toWpf(onSurfaceColor);
+                var wpfOnSurfaceVariant = toWpf(onSurfaceVariantColor);
+                var wpfTrackInactive = toWpf(trackInactiveColor);
+                var wpfOnPrimary = System.Windows.Media.Color.FromRgb(0xFE, 0xF4, 0xEB);
+
+                // Update dynamic brushes in Resources so styles and templates adapt in real time
+                Resources["M3SurfaceBrush"] = new System.Windows.Media.SolidColorBrush(wpfSurface);
+                Resources["M3SurfaceContainerBrush"] = new System.Windows.Media.SolidColorBrush(wpfContainer);
+                Resources["M3CardBrush"] = new System.Windows.Media.SolidColorBrush(wpfCard);
+                Resources["M3PrimaryBrush"] = new System.Windows.Media.SolidColorBrush(wpfPrimary);
+                Resources["M3OnPrimaryBrush"] = new System.Windows.Media.SolidColorBrush(wpfOnPrimary);
+                Resources["M3OnSurfaceBrush"] = new System.Windows.Media.SolidColorBrush(wpfOnSurface);
+                Resources["M3OnSurfaceVariantBrush"] = new System.Windows.Media.SolidColorBrush(wpfOnSurfaceVariant);
+                Resources["M3TrackInactiveBrush"] = new System.Windows.Media.SolidColorBrush(wpfTrackInactive);
+
+                if (MainWindowBorder != null) {
+                    MainWindowBorder.Background = new System.Windows.Media.SolidColorBrush(wpfSurface);
+                }
+            } catch { }
+        }
+
+        private void ConfigureMode() {
+            var loc = LocalizationService.Instance;
+            if (_isUninstallMode) {
+                Title = loc["UninstallerTitle"];
+                WizardTitleText.Text = loc["UninstallerTitle"];
+                WizardSubtitleText.Text = loc["UninstallDesc"];
+                InstallPanel.Visibility = Visibility.Collapsed;
+                UninstallPanel.Visibility = Visibility.Visible;
+                MainActionBtn.Content = loc["Uninstall"];
+                MainActionBtn.Style = (Style)FindResource("DangerButtonStyle");
+            } else {
+                Title = loc["InstallerTitle"];
+                WizardTitleText.Text = loc["InstallerTitle"];
+                WizardSubtitleText.Text = loc["InstallDesc"];
+                InstallPanel.Visibility = Visibility.Visible;
+                UninstallPanel.Visibility = Visibility.Collapsed;
+                MainActionBtn.Content = loc["Install"];
+                MainActionBtn.Style = (Style)FindResource("ActionButtonStyle");
+            }
+
+            CancelActionBtn.Content = loc["Cancel"];
+            FinishBtn.Content = loc["Finish"];
+
+            InstallIntroText.Text = loc["InstallIntroDesc"];
+            DesktopShortcutTitleText.Text = loc["DesktopShortcut"];
+            DesktopShortcutDescText.Text = loc["DesktopShortcutDesc"];
+            StartMenuShortcutTitleText.Text = loc["StartMenuShortcut"];
+            StartMenuShortcutDescText.Text = loc["StartMenuShortcutDesc"];
+            AutoStartTitleText.Text = loc["AutoStart"];
+            AutoStartDescText.Text = loc["AutoStartDesc"];
+
+            UninstallIntroText.Text = loc["UninstallConfirm"];
+            UninstallWillRemoveText.Text = loc["UninstallWillRemove"];
+            UninstallItemContextMenuText.Text = "• " + loc["UninstallItemContextMenu"];
+            UninstallItemShortcutsText.Text = "• " + loc["UninstallItemShortcuts"];
+            UninstallItemStartupText.Text = "• " + loc["UninstallItemStartup"];
+            UninstallItemFilesText.Text = "• " + loc["UninstallItemFiles"];
+        }
+
+        private void MainActionBtn_Click(object sender, RoutedEventArgs e) {
+            var loc = LocalizationService.Instance;
+
+            if (_isUninstallMode) {
+                bool success = InstallerService.Uninstall();
+                ShowCompleted(success, loc["UninstalledSuccess"], "Uninstallation failed.");
+            } else {
+                bool desktop = DesktopShortcutCheckBox.IsChecked ?? true;
+                bool startMenu = StartMenuShortcutCheckBox.IsChecked ?? true;
+                bool autoStart = AutoStartCheckBox.IsChecked ?? true;
+
+                bool success = InstallerService.Install(desktop, startMenu, autoStart);
+                ShowCompleted(success, loc["InstalledSuccess"], "Installation failed.");
+            }
+        }
+
+        private void ShowCompleted(bool success, string successMsg, string failMsg) {
+            InstallPanel.Visibility = Visibility.Collapsed;
+            UninstallPanel.Visibility = Visibility.Collapsed;
+            MainActionBtn.Visibility = Visibility.Collapsed;
+            CancelActionBtn.Visibility = Visibility.Collapsed;
+            CompletedPanel.Visibility = Visibility.Visible;
+            FinishBtn.Visibility = Visibility.Visible;
+
+            var loc = LocalizationService.Instance;
+            if (success) {
+                StatusEmoji.Text = "🎉";
+                StatusTitle.Text = successMsg;
+                StatusSubtitle.Text = _isUninstallMode ? loc["UninstalledSuccess"] : loc["ReadyToUse"];
+            } else {
+                StatusEmoji.Text = "⚠️";
+                StatusTitle.Text = failMsg;
+                StatusSubtitle.Text = "Please ensure no files are currently locked and try again.";
+            }
+        }
+
+        private void FinishBtn_Click(object sender, RoutedEventArgs e) {
+            if (!_isUninstallMode) {
+                // If installed, launch background app from install directory if available
+                string targetDir = InstallerService.GetInstallDirectory();
+                string exe = System.IO.Path.Combine(targetDir, "Panak.exe");
+                if (System.IO.File.Exists(exe)) {
+                    Process.Start(new ProcessStartInfo {
+                        FileName = exe,
+                        Arguments = "--background",
+                        UseShellExecute = true
+                    });
+                }
+            }
+            Application.Current.Shutdown();
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e) {
+            Close();
+        }
+
+        private void Header_MouseDown(object sender, MouseButtonEventArgs e) {
+            if (e.LeftButton == MouseButtonState.Pressed) {
+                DragMove();
+            }
+        }
+    }
+}
