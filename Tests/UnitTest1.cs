@@ -776,6 +776,7 @@ namespace Panak.Tests {
             Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo("https://github.com/hranthakobian/Panak/"));
             Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo("github.com/hranthakobian/Panak"));
             Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo("hranthakobian/Panak"));
+            Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo(@"hranthakobian\Panak"));
             Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo(null));
             Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo(""));
         }

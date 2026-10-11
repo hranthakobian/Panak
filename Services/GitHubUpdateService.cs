@@ -33,7 +33,7 @@ namespace Panak.Services {
             if (string.IsNullOrWhiteSpace(repo)) {
                 return TargetRepository;
             }
-            repo = repo.Trim();
+            repo = repo.Trim().Replace('\\', '/');
             if (repo.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase)) {
                 repo = repo.Substring("https://github.com/".Length);
             } else if (repo.StartsWith("http://github.com/", StringComparison.OrdinalIgnoreCase)) {
@@ -113,78 +113,164 @@ namespace Panak.Services {
                 string url = $"https://api.github.com/repos/{repo}/releases/latest";
                 using var response = await _httpClient.GetAsync(url);
 
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound) {
-                    // No releases found yet on GitHub
-                    SetStatus(UpdateStatus.UpToDate, "No releases published on GitHub repository yet.");
-                    SaveLastCheckTime();
-                    return false;
-                }
-
-                response.EnsureSuccessStatusCode();
-                string json = await response.Content.ReadAsStringAsync();
-
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                string rawTag = root.TryGetProperty("tag_name", out var tagProp) ? tagProp.GetString() ?? "" : "";
-                string tagName = rawTag.TrimStart('v', 'V');
-                ReleaseTitle = root.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : rawTag;
-                ReleaseNotes = root.TryGetProperty("body", out var bodyProp) ? bodyProp.GetString() : "";
-
-                if (root.TryGetProperty("published_at", out var pubProp) && pubProp.TryGetDateTime(out var pubDate)) {
-                    PublishedAt = pubDate;
-                }
-
-                // Look for release assets (installer exe or zip)
-                DownloadUrl = null;
-                if (root.TryGetProperty("assets", out var assetsProp) && assetsProp.ValueKind == JsonValueKind.Array) {
-                    foreach (var asset in assetsProp.EnumerateArray()) {
-                        string assetName = asset.TryGetProperty("name", out var aName) ? aName.GetString() ?? "" : "";
-                        string assetUrl = asset.TryGetProperty("browser_download_url", out var aUrl) ? aUrl.GetString() ?? "" : "";
-
-                        if (assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
-                            assetName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
-                            DownloadUrl = assetUrl;
-                            break;
-                        }
+                if (response.IsSuccessStatusCode) {
+                    string json = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    if (ProcessReleaseElement(root, repo)) {
+                        return true;
                     }
-                }
-
-                // Fallback to zipball if no specific asset
-                if (string.IsNullOrEmpty(DownloadUrl) && root.TryGetProperty("zipball_url", out var zipProp)) {
-                    DownloadUrl = zipProp.GetString();
-                }
-
-                LatestVersionString = tagName;
-                if (Version.TryParse(tagName, out var parsedVersion)) {
-                    LatestVersion = parsedVersion;
-                } else if (tagName.Contains('.')) {
-                    string[] parts = tagName.Split('.');
-                    int major = parts.Length > 0 && int.TryParse(parts[0], out int mj) ? mj : 1;
-                    int minor = parts.Length > 1 && int.TryParse(parts[1], out int mn) ? mn : 0;
-                    int build = parts.Length > 2 && int.TryParse(parts[2], out int bd) ? bd : 0;
-                    LatestVersion = new Version(major, minor, build);
-                } else {
-                    LatestVersion = new Version(1, 0, 0);
-                }
-
-                SaveLastCheckTime();
-
-                if (LatestVersion > CurrentVersion) {
-                    SetStatus(UpdateStatus.UpdateAvailable);
-                    Application.Current?.Dispatcher.BeginInvoke(() => {
-                        UpdateAvailableEvent?.Invoke(LatestVersionString ?? "New", ReleaseNotes ?? "");
-                    });
-                    return true;
-                } else {
                     SetStatus(UpdateStatus.UpToDate);
                     return false;
                 }
+
+                // If /releases/latest returned 404 (e.g. no official releases published yet, or only pre-releases)
+                // Fallback 1: Check /releases array (catches pre-releases or recent releases)
+                try {
+                    string relUrl = $"https://api.github.com/repos/{repo}/releases";
+                    using var relResp = await _httpClient.GetAsync(relUrl);
+                    if (relResp.IsSuccessStatusCode) {
+                        string relJson = await relResp.Content.ReadAsStringAsync();
+                        using var relDoc = JsonDocument.Parse(relJson);
+                        if (relDoc.RootElement.ValueKind == JsonValueKind.Array) {
+                            foreach (var relItem in relDoc.RootElement.EnumerateArray()) {
+                                if (ProcessReleaseElement(relItem, repo)) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                } catch { }
+
+                // Fallback 2: Check /tags
+                try {
+                    string tagUrl = $"https://api.github.com/repos/{repo}/tags";
+                    using var tagResp = await _httpClient.GetAsync(tagUrl);
+                    if (tagResp.IsSuccessStatusCode) {
+                        string tagJson = await tagResp.Content.ReadAsStringAsync();
+                        using var tagDoc = JsonDocument.Parse(tagJson);
+                        if (tagDoc.RootElement.ValueKind == JsonValueKind.Array) {
+                            foreach (var tagItem in tagDoc.RootElement.EnumerateArray()) {
+                                string rawName = tagItem.TryGetProperty("name", out var np) ? np.GetString() ?? "" : "";
+                                string tagClean = rawName.TrimStart('v', 'V');
+                                if (TryParseVersion(tagClean, out var parsedVer) && parsedVer > CurrentVersion) {
+                                    LatestVersion = parsedVer;
+                                    LatestVersionString = tagClean;
+                                    ReleaseTitle = $"Panak v{tagClean}";
+                                    ReleaseNotes = $"Tag {rawName} published on GitHub.";
+                                    DownloadUrl = tagItem.TryGetProperty("zipball_url", out var zp) ? zp.GetString() : $"https://github.com/{repo}/archive/refs/tags/{rawName}.zip";
+                                    SaveLastCheckTime();
+                                    SetStatus(UpdateStatus.UpdateAvailable);
+                                    Application.Current?.Dispatcher.BeginInvoke(() => {
+                                        UpdateAvailableEvent?.Invoke(LatestVersionString ?? "New", ReleaseNotes ?? "");
+                                    });
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                } catch { }
+
+                // Fallback 3: Check remote Panak.csproj on main branch
+                try {
+                    string rawUrl = $"https://raw.githubusercontent.com/{repo}/main/Panak.csproj";
+                    using var rawResp = await _httpClient.GetAsync(rawUrl);
+                    if (rawResp.IsSuccessStatusCode) {
+                        string csprojContent = await rawResp.Content.ReadAsStringAsync();
+                        var match = System.Text.RegularExpressions.Regex.Match(csprojContent, @"<Version>([^<]+)</Version>");
+                        if (match.Success) {
+                            string remoteVerStr = match.Groups[1].Value.Trim();
+                            if (TryParseVersion(remoteVerStr, out var parsedVer) && parsedVer > CurrentVersion) {
+                                LatestVersion = parsedVer;
+                                LatestVersionString = remoteVerStr;
+                                ReleaseTitle = $"Panak v{remoteVerStr}";
+                                ReleaseNotes = $"New version {remoteVerStr} detected on GitHub repository main branch.";
+                                DownloadUrl = $"https://github.com/{repo}/archive/refs/heads/main.zip";
+                                SaveLastCheckTime();
+                                SetStatus(UpdateStatus.UpdateAvailable);
+                                Application.Current?.Dispatcher.BeginInvoke(() => {
+                                    UpdateAvailableEvent?.Invoke(LatestVersionString ?? "New", ReleaseNotes ?? "");
+                                });
+                                return true;
+                            }
+                        }
+                    }
+                } catch { }
+
+                SetStatus(UpdateStatus.UpToDate, "No new updates found.");
+                SaveLastCheckTime();
+                return false;
             } catch (Exception ex) {
                 ErrorMessage = ex.Message;
                 SetStatus(UpdateStatus.Error, ex.Message);
                 return false;
             }
+        }
+
+        private bool ProcessReleaseElement(JsonElement root, string repo) {
+            string rawTag = root.TryGetProperty("tag_name", out var tagProp) ? tagProp.GetString() ?? "" : "";
+            string tagName = rawTag.TrimStart('v', 'V');
+            ReleaseTitle = root.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : rawTag;
+            ReleaseNotes = root.TryGetProperty("body", out var bodyProp) ? bodyProp.GetString() : "";
+
+            if (root.TryGetProperty("published_at", out var pubProp) && pubProp.TryGetDateTime(out var pubDate)) {
+                PublishedAt = pubDate;
+            }
+
+            // Look for release assets (installer exe or zip)
+            DownloadUrl = null;
+            if (root.TryGetProperty("assets", out var assetsProp) && assetsProp.ValueKind == JsonValueKind.Array) {
+                foreach (var asset in assetsProp.EnumerateArray()) {
+                    string assetName = asset.TryGetProperty("name", out var aName) ? aName.GetString() ?? "" : "";
+                    string assetUrl = asset.TryGetProperty("browser_download_url", out var aUrl) ? aUrl.GetString() ?? "" : "";
+
+                    if (assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
+                        assetName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
+                        DownloadUrl = assetUrl;
+                        break;
+                    }
+                }
+            }
+
+            // Fallback to zipball if no specific asset
+            if (string.IsNullOrEmpty(DownloadUrl) && root.TryGetProperty("zipball_url", out var zipProp)) {
+                DownloadUrl = zipProp.GetString();
+            }
+
+            LatestVersionString = tagName;
+            if (!TryParseVersion(tagName, out var parsedVersion)) {
+                parsedVersion = new Version(1, 0, 0);
+            }
+            LatestVersion = parsedVersion;
+
+            SaveLastCheckTime();
+
+            if (LatestVersion > CurrentVersion) {
+                SetStatus(UpdateStatus.UpdateAvailable);
+                Application.Current?.Dispatcher.BeginInvoke(() => {
+                    UpdateAvailableEvent?.Invoke(LatestVersionString ?? "New", ReleaseNotes ?? "");
+                });
+                return true;
+            }
+            return false;
+        }
+
+        public static bool TryParseVersion(string verStr, out Version version) {
+            verStr = verStr.TrimStart('v', 'V').Trim();
+            if (Version.TryParse(verStr, out var v)) {
+                version = v;
+                return true;
+            }
+            if (verStr.Contains('.')) {
+                string[] parts = verStr.Split('.');
+                int major = parts.Length > 0 && int.TryParse(parts[0], out int mj) ? mj : 1;
+                int minor = parts.Length > 1 && int.TryParse(parts[1], out int mn) ? mn : 0;
+                int build = parts.Length > 2 && int.TryParse(parts[2], out int bd) ? bd : 0;
+                version = new Version(major, minor, build);
+                return true;
+            }
+            version = new Version(1, 0, 0);
+            return false;
         }
 
         public async Task<bool> DownloadAndApplyUpdateAsync(Action<double>? progressCallback = null) {
@@ -267,10 +353,13 @@ namespace Panak.Services {
                     }
                     ZipFile.ExtractToDirectory(filePath, extractDir);
 
-                    string[] exeCandidates = Directory.GetFiles(extractDir, "Panak*.exe", SearchOption.AllDirectories);
-                    if (exeCandidates.Length > 0) {
+                    string[] exeCandidates = Directory.GetFiles(extractDir, "*.exe", SearchOption.AllDirectories);
+                    string? targetExe = exeCandidates.FirstOrDefault(e => Path.GetFileName(e).Equals("Setup.exe", StringComparison.OrdinalIgnoreCase))
+                                     ?? exeCandidates.FirstOrDefault(e => Path.GetFileName(e).StartsWith("Panak", StringComparison.OrdinalIgnoreCase))
+                                     ?? exeCandidates.FirstOrDefault();
+                    if (!string.IsNullOrEmpty(targetExe)) {
                         Process.Start(new ProcessStartInfo {
-                            FileName = exeCandidates[0],
+                            FileName = targetExe,
                             Arguments = "--install-silent",
                             UseShellExecute = true
                         });
