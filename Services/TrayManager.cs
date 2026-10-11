@@ -2,11 +2,13 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using Panak.Views;
@@ -178,32 +180,48 @@ namespace Panak.Services {
             return IntPtr.Zero;
         }
 
-        private void ShowContextMenu() {
+        public ContextMenu BuildContextMenu() {
             var loc = LocalizationService.Instance;
             var settings = SettingsService.Instance.Current;
 
             bool isDark = (settings.ThemeMode == "Dark") || (settings.ThemeMode != "Light" && ShellHelper.IsWindowsDarkTheme());
             string themeColor = string.IsNullOrEmpty(settings.ThemeColor) ? ShellHelper.GetDefaultPastelColorHex() : settings.ThemeColor;
             double hue = ShellHelper.GetHueFromHex(themeColor);
+            hue = (hue % 360.0 + 360.0) % 360.0;
 
-            System.Windows.Media.Color bgSurface, fgOnSurface, primaryColor, borderCol, hoverBg, sepCol;
+            System.Windows.Media.Color toWpf(System.Drawing.Color c) =>
+                System.Windows.Media.Color.FromArgb(c.A, c.R, c.G, c.B);
+
+            System.Windows.Media.Color bgSurface, fgOnSurface, primaryColor, containerColor, borderCol, hoverBg, sepCol;
             if (isDark) {
-                bgSurface = System.Windows.Media.Color.FromArgb(242, 28, 27, 34);
-                fgOnSurface = System.Windows.Media.Color.FromRgb(248, 250, 252);
-                var pCol = ShellHelper.ColorFromHsl(hue, 0.70, 0.72);
-                primaryColor = System.Windows.Media.Color.FromRgb(pCol.R, pCol.G, pCol.B);
-                borderCol = System.Windows.Media.Color.FromArgb(45, 255, 255, 255);
-                hoverBg = System.Windows.Media.Color.FromArgb(50, primaryColor.R, primaryColor.G, primaryColor.B);
-                sepCol = System.Windows.Media.Color.FromArgb(30, 255, 255, 255);
+                // Exactly identical to SettingsWindow's M3SurfaceBrush background in dark mode
+                bgSurface = toWpf(ShellHelper.ColorFromHsl(hue, 0.16, 0.11));
+                containerColor = toWpf(ShellHelper.ColorFromHsl(hue, 0.20, 0.18));
+                primaryColor = toWpf(ShellHelper.ColorFromHsl(hue, 0.70, 0.72));
+                fgOnSurface = System.Windows.Media.Color.FromRgb(0xE6, 0xE1, 0xE5);
+                borderCol = System.Windows.Media.Color.FromArgb(40, 255, 255, 255);
+                hoverBg = containerColor;
+                sepCol = System.Windows.Media.Color.FromArgb(28, 255, 255, 255);
             } else {
+                // Exactly identical to SettingsWindow's M3SurfaceBrush background in light mode
                 var (sCol, cCol, pCol) = ShellHelper.GetMaterialYouTonalPalette(hue);
-                bgSurface = System.Windows.Media.Color.FromArgb(248, sCol.R, sCol.G, sCol.B);
-                fgOnSurface = System.Windows.Media.Color.FromRgb(30, 41, 59);
-                primaryColor = System.Windows.Media.Color.FromRgb(pCol.R, pCol.G, pCol.B);
-                borderCol = System.Windows.Media.Color.FromArgb(50, 0, 0, 0);
-                hoverBg = System.Windows.Media.Color.FromArgb(40, primaryColor.R, primaryColor.G, primaryColor.B);
-                sepCol = System.Windows.Media.Color.FromArgb(25, 0, 0, 0);
+                var onSurfaceColor = ShellHelper.ColorFromHsl(hue, 0.40, 0.16);
+                bgSurface = toWpf(sCol);
+                containerColor = toWpf(cCol);
+                primaryColor = toWpf(pCol);
+                fgOnSurface = toWpf(onSurfaceColor);
+                borderCol = System.Windows.Media.Color.FromArgb(32, 0, 0, 0);
+                hoverBg = containerColor;
+                sepCol = System.Windows.Media.Color.FromArgb(20, 0, 0, 0);
             }
+
+            string hex(System.Windows.Media.Color c) => $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+            string bgSurfaceHex = hex(bgSurface);
+            string borderHex = hex(borderCol);
+            string hoverHex = hex(hoverBg);
+            string primaryHex = hex(primaryColor);
+            string onSurfaceHex = hex(fgOnSurface);
+            string sepHex = hex(sepCol);
 
             ContextMenu menu = new ContextMenu {
                 Background = System.Windows.Media.Brushes.Transparent,
@@ -211,78 +229,257 @@ namespace Panak.Services {
                 Padding = new Thickness(0),
                 Placement = PlacementMode.MousePoint,
                 SnapsToDevicePixels = true,
-                UseLayoutRounding = true
+                UseLayoutRounding = true,
+                FocusVisualStyle = null
             };
 
-            // Custom ContextMenu Template with rounded Card & DropShadow
-            var menuTemplate = new ControlTemplate(typeof(ContextMenu));
-            var borderFactory = new FrameworkElementFactory(typeof(Border));
-            borderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(14));
-            borderFactory.SetValue(Border.BackgroundProperty, new SolidColorBrush(bgSurface));
-            borderFactory.SetValue(Border.BorderBrushProperty, new SolidColorBrush(borderCol));
-            borderFactory.SetValue(Border.BorderThicknessProperty, new Thickness(1));
-            borderFactory.SetValue(Border.PaddingProperty, new Thickness(5));
-            borderFactory.SetValue(Border.MinWidthProperty, 175.0);
-            borderFactory.SetValue(UIElement.EffectProperty, new DropShadowEffect {
-                BlurRadius = 18,
-                ShadowDepth = 3,
-                Direction = 270,
-                Opacity = 0.30,
-                Color = System.Windows.Media.Colors.Black
-            });
+            string menuTemplateXaml = $@"
+<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+                 xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
+                 TargetType='{{x:Type ContextMenu}}'>
+    <Border x:Name='MenuBorder'
+            Margin='12'
+            CornerRadius='16'
+            Background='{bgSurfaceHex}'
+            BorderBrush='{borderHex}'
+            BorderThickness='1'
+            Padding='6'
+            MinWidth='195'
+            RenderTransformOrigin='0.5, 0.5'
+            Opacity='0'>
+        <Border.RenderTransform>
+            <ScaleTransform ScaleX='0.88' ScaleY='0.88'/>
+        </Border.RenderTransform>
+        <Border.Effect>
+            <DropShadowEffect BlurRadius='24' ShadowDepth='4' Direction='270' Opacity='0.25' Color='#000000'/>
+        </Border.Effect>
+        <StackPanel IsItemsHost='True'/>
+    </Border>
+    <ControlTemplate.Triggers>
+        <EventTrigger RoutedEvent='FrameworkElement.Loaded'>
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName='MenuBorder'
+                                     Storyboard.TargetProperty='Opacity'
+                                     From='0' To='1' Duration='0:0:0.18'>
+                        <DoubleAnimation.EasingFunction>
+                            <CubicEase EasingMode='EaseOut'/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation Storyboard.TargetName='MenuBorder'
+                                     Storyboard.TargetProperty='(UIElement.RenderTransform).(ScaleTransform.ScaleX)'
+                                     From='0.88' To='1.0' Duration='0:0:0.24'>
+                        <DoubleAnimation.EasingFunction>
+                            <BackEase Amplitude='0.22' EasingMode='EaseOut'/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation Storyboard.TargetName='MenuBorder'
+                                     Storyboard.TargetProperty='(UIElement.RenderTransform).(ScaleTransform.ScaleY)'
+                                     From='0.88' To='1.0' Duration='0:0:0.24'>
+                        <DoubleAnimation.EasingFunction>
+                            <BackEase Amplitude='0.22' EasingMode='EaseOut'/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </ControlTemplate.Triggers>
+</ControlTemplate>";
 
-            var panelFactory = new FrameworkElementFactory(typeof(StackPanel));
-            panelFactory.SetValue(StackPanel.IsItemsHostProperty, true);
-            borderFactory.AppendChild(panelFactory);
-            menuTemplate.VisualTree = borderFactory;
-            menu.Template = menuTemplate;
+            menu.Template = (ControlTemplate)XamlReader.Parse(menuTemplateXaml);
 
             MenuItem CreateItem(string icon, string header, RoutedEventHandler onClick) {
                 MenuItem item = new MenuItem {
                     Header = header,
                     Cursor = Cursors.Hand,
-                    Height = 34
+                    Height = 36,
+                    FocusVisualStyle = null
                 };
 
-                var itemTemplate = new ControlTemplate(typeof(MenuItem));
-                var itemBorder = new FrameworkElementFactory(typeof(Border), "ItemBorder");
-                itemBorder.SetValue(Border.CornerRadiusProperty, new CornerRadius(10));
-                itemBorder.SetValue(Border.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
-                itemBorder.SetValue(Border.PaddingProperty, new Thickness(10, 0, 12, 0));
+                string escapedIcon = SecurityElement.Escape(icon ?? "");
+                string escapedHeader = SecurityElement.Escape(header ?? "");
 
-                var grid = new FrameworkElementFactory(typeof(Grid));
-                var colIcon = new FrameworkElementFactory(typeof(ColumnDefinition));
-                colIcon.SetValue(ColumnDefinition.WidthProperty, new GridLength(24));
-                var colText = new FrameworkElementFactory(typeof(ColumnDefinition));
-                colText.SetValue(ColumnDefinition.WidthProperty, new GridLength(1, GridUnitType.Star));
-                grid.AppendChild(colIcon);
-                grid.AppendChild(colText);
+                string itemTemplateXaml = $@"
+<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+                 xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
+                 TargetType='{{x:Type MenuItem}}'>
+    <Grid x:Name='ItemRoot' Margin='0,1' Cursor='Hand' RenderTransformOrigin='0.5, 0.5'>
+        <Grid.RenderTransform>
+            <ScaleTransform ScaleX='1.0' ScaleY='1.0'/>
+        </Grid.RenderTransform>
+        <Border x:Name='ItemBorder'
+                CornerRadius='10'
+                Padding='10,0,12,0'
+                Height='36'>
+            <Border.Background>
+                <SolidColorBrush Color='Transparent'/>
+            </Border.Background>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width='26'/>
+                    <ColumnDefinition Width='*'/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock x:Name='IconText'
+                           Text='{escapedIcon}'
+                           FontSize='13'
+                           VerticalAlignment='Center'
+                           HorizontalAlignment='Center'
+                           Grid.Column='0'
+                           RenderTransformOrigin='0.5, 0.5'>
+                    <TextBlock.RenderTransform>
+                        <ScaleTransform ScaleX='1.0' ScaleY='1.0'/>
+                    </TextBlock.RenderTransform>
+                </TextBlock>
 
-                var iconBlock = new FrameworkElementFactory(typeof(TextBlock));
-                iconBlock.SetValue(TextBlock.TextProperty, icon);
-                iconBlock.SetValue(TextBlock.FontSizeProperty, 12.0);
-                iconBlock.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
-                iconBlock.SetValue(Grid.ColumnProperty, 0);
-                grid.AppendChild(iconBlock);
+                <TextBlock x:Name='HeaderText'
+                           Text='{escapedHeader}'
+                           FontSize='12.5'
+                           FontWeight='Medium'
+                           VerticalAlignment='Center'
+                           Grid.Column='1'
+                           Margin='4,0,0,0'>
+                    <TextBlock.Foreground>
+                        <SolidColorBrush Color='{onSurfaceHex}'/>
+                    </TextBlock.Foreground>
+                    <TextBlock.RenderTransform>
+                        <TranslateTransform X='0'/>
+                    </TextBlock.RenderTransform>
+                </TextBlock>
+            </Grid>
+        </Border>
+    </Grid>
+    <ControlTemplate.Triggers>
+        <Trigger Property='IsHighlighted' Value='True'>
+            <Trigger.EnterActions>
+                <BeginStoryboard>
+                    <Storyboard>
+                        <ColorAnimation Storyboard.TargetName='ItemBorder'
+                                        Storyboard.TargetProperty='(Border.Background).(SolidColorBrush.Color)'
+                                        To='{hoverHex}' Duration='0:0:0.15'>
+                            <ColorAnimation.EasingFunction>
+                                <CubicEase EasingMode='EaseOut'/>
+                            </ColorAnimation.EasingFunction>
+                        </ColorAnimation>
+                        <ColorAnimation Storyboard.TargetName='HeaderText'
+                                        Storyboard.TargetProperty='(TextBlock.Foreground).(SolidColorBrush.Color)'
+                                        To='{primaryHex}' Duration='0:0:0.15'>
+                            <ColorAnimation.EasingFunction>
+                                <CubicEase EasingMode='EaseOut'/>
+                            </ColorAnimation.EasingFunction>
+                        </ColorAnimation>
+                        <DoubleAnimation Storyboard.TargetName='IconText'
+                                         Storyboard.TargetProperty='(UIElement.RenderTransform).(ScaleTransform.ScaleX)'
+                                         To='1.18' Duration='0:0:0.18'>
+                            <DoubleAnimation.EasingFunction>
+                                <BackEase Amplitude='0.3' EasingMode='EaseOut'/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetName='IconText'
+                                         Storyboard.TargetProperty='(UIElement.RenderTransform).(ScaleTransform.ScaleY)'
+                                         To='1.18' Duration='0:0:0.18'>
+                            <DoubleAnimation.EasingFunction>
+                                <BackEase Amplitude='0.3' EasingMode='EaseOut'/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetName='HeaderText'
+                                         Storyboard.TargetProperty='(UIElement.RenderTransform).(TranslateTransform.X)'
+                                         To='3' Duration='0:0:0.15'>
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode='EaseOut'/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </Trigger.EnterActions>
+            <Trigger.ExitActions>
+                <BeginStoryboard>
+                    <Storyboard>
+                        <ColorAnimation Storyboard.TargetName='ItemBorder'
+                                        Storyboard.TargetProperty='(Border.Background).(SolidColorBrush.Color)'
+                                        To='Transparent' Duration='0:0:0.14'>
+                            <ColorAnimation.EasingFunction>
+                                <CubicEase EasingMode='EaseOut'/>
+                            </ColorAnimation.EasingFunction>
+                        </ColorAnimation>
+                        <ColorAnimation Storyboard.TargetName='HeaderText'
+                                        Storyboard.TargetProperty='(TextBlock.Foreground).(SolidColorBrush.Color)'
+                                        To='{onSurfaceHex}' Duration='0:0:0.14'>
+                            <ColorAnimation.EasingFunction>
+                                <CubicEase EasingMode='EaseOut'/>
+                            </ColorAnimation.EasingFunction>
+                        </ColorAnimation>
+                        <DoubleAnimation Storyboard.TargetName='IconText'
+                                         Storyboard.TargetProperty='(UIElement.RenderTransform).(ScaleTransform.ScaleX)'
+                                         To='1.0' Duration='0:0:0.14'>
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode='EaseOut'/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetName='IconText'
+                                         Storyboard.TargetProperty='(UIElement.RenderTransform).(ScaleTransform.ScaleY)'
+                                         To='1.0' Duration='0:0:0.14'>
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode='EaseOut'/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetName='HeaderText'
+                                         Storyboard.TargetProperty='(UIElement.RenderTransform).(TranslateTransform.X)'
+                                         To='0' Duration='0:0:0.14'>
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode='EaseOut'/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </Trigger.ExitActions>
+        </Trigger>
+        <Trigger Property='IsPressed' Value='True'>
+            <Trigger.EnterActions>
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName='ItemRoot'
+                                         Storyboard.TargetProperty='(UIElement.RenderTransform).(ScaleTransform.ScaleX)'
+                                         To='0.95' Duration='0:0:0.06'>
+                            <DoubleAnimation.EasingFunction>
+                                <QuadraticEase EasingMode='EaseOut'/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetName='ItemRoot'
+                                         Storyboard.TargetProperty='(UIElement.RenderTransform).(ScaleTransform.ScaleY)'
+                                         To='0.95' Duration='0:0:0.06'>
+                            <DoubleAnimation.EasingFunction>
+                                <QuadraticEase EasingMode='EaseOut'/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </Trigger.EnterActions>
+            <Trigger.ExitActions>
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName='ItemRoot'
+                                         Storyboard.TargetProperty='(UIElement.RenderTransform).(ScaleTransform.ScaleX)'
+                                         To='1.0' Duration='0:0:0.14'>
+                            <DoubleAnimation.EasingFunction>
+                                <BackEase Amplitude='0.25' EasingMode='EaseOut'/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetName='ItemRoot'
+                                         Storyboard.TargetProperty='(UIElement.RenderTransform).(ScaleTransform.ScaleY)'
+                                         To='1.0' Duration='0:0:0.14'>
+                            <DoubleAnimation.EasingFunction>
+                                <BackEase Amplitude='0.25' EasingMode='EaseOut'/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </Trigger.ExitActions>
+        </Trigger>
+    </ControlTemplate.Triggers>
+</ControlTemplate>";
 
-                var headerBlock = new FrameworkElementFactory(typeof(TextBlock), "HeaderText");
-                headerBlock.SetValue(TextBlock.TextProperty, header);
-                headerBlock.SetValue(TextBlock.FontSizeProperty, 12.0);
-                headerBlock.SetValue(TextBlock.FontWeightProperty, FontWeights.Medium);
-                headerBlock.SetValue(TextBlock.ForegroundProperty, new SolidColorBrush(fgOnSurface));
-                headerBlock.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
-                headerBlock.SetValue(Grid.ColumnProperty, 1);
-                grid.AppendChild(headerBlock);
-
-                itemBorder.AppendChild(grid);
-                itemTemplate.VisualTree = itemBorder;
-
-                var trigger = new Trigger { Property = MenuItem.IsHighlightedProperty, Value = true };
-                trigger.Setters.Add(new Setter(Border.BackgroundProperty, new SolidColorBrush(hoverBg), "ItemBorder"));
-                trigger.Setters.Add(new Setter(TextBlock.ForegroundProperty, new SolidColorBrush(primaryColor), "HeaderText"));
-                itemTemplate.Triggers.Add(trigger);
-
-                item.Template = itemTemplate;
+                item.Template = (ControlTemplate)XamlReader.Parse(itemTemplateXaml);
                 item.Click += onClick;
                 return item;
             }
@@ -290,14 +487,15 @@ namespace Panak.Services {
             Separator CreateSeparator() {
                 Separator sep = new Separator {
                     Height = 1,
-                    Margin = new Thickness(6, 4, 6, 4)
+                    Margin = new Thickness(0, 3, 0, 3)
                 };
-                var sepTemplate = new ControlTemplate(typeof(Separator));
-                var sepBorder = new FrameworkElementFactory(typeof(Border));
-                sepBorder.SetValue(Border.HeightProperty, 1.0);
-                sepBorder.SetValue(Border.BackgroundProperty, new SolidColorBrush(sepCol));
-                sepTemplate.VisualTree = sepBorder;
-                sep.Template = sepTemplate;
+                string sepTemplateXaml = $@"
+<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+                 xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
+                 TargetType='{{x:Type Separator}}'>
+    <Border Height='1' Margin='8,2,8,2' Background='{sepHex}' CornerRadius='0.5'/>
+</ControlTemplate>";
+                sep.Template = (ControlTemplate)XamlReader.Parse(sepTemplateXaml);
                 return sep;
             }
 
@@ -318,6 +516,11 @@ namespace Panak.Services {
 
             menu.Items.Add(CreateItem("✕", loc["Exit"], (s, e) => ExitRequested?.Invoke()));
 
+            return menu;
+        }
+
+        private void ShowContextMenu() {
+            var menu = BuildContextMenu();
             if (_hwndSource != null) {
                 ShellHelper.SetForegroundWindow(_hwndSource.Handle);
             }
