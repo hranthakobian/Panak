@@ -8,6 +8,8 @@ namespace Panak.Models {
         public bool IsLocked { get; set; } = false;
         public bool RightDoubleClickEnabled { get; set; } = true;
         public bool SpaceQuickLookEnabled { get; set; } = true;
+        public string QuickLookHotkey { get; set; } = "Space";
+        public string ClosePopupHotkey { get; set; } = "Escape";
         public bool AutoStart { get; set; } = true;
         public string ThemeColor { get; set; } = Services.ShellHelper.GetDefaultPastelColorHex();
         public string ThemeMode { get; set; } = "Auto";

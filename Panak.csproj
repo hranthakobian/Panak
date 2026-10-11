@@ -10,8 +10,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>Panak</RootNamespace>
     <AssemblyName>Panak</AssemblyName>
-    <Version>1.6.0</Version>
-    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <Version>1.7.0</Version>
+    <AssemblyVersion>1.7.0.0</AssemblyVersion>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <ApplicationIcon>Panak.ico</ApplicationIcon>
   </PropertyGroup>
@@ -23,9 +23,13 @@
 
   <ItemGroup>
     <Resource Include="PanakLogo.png" />
+    <Resource Include="SettingsLogo.png" />
     <Resource Include="PanakSetupLogo.png" />
     <Resource Include="Panak logo.png" Link="PanakLogoLinked.png" />
     <Resource Include="Panak.ico" />
+    <None Include="SettingsLogo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="PanakLogo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

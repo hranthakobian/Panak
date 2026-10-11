@@ -1,7 +1,7 @@
 $baseDir = "c:\Users\hrant\Documents\GitHub\Panak"
 $staging = Join-Path $baseDir "staging_zip"
-$zipPath = Join-Path $baseDir "Panak-Installer-v1.6.0.zip"
-$publishZip = Join-Path $baseDir "publish\Panak-Installer-v1.6.0.zip"
+$zipPath = Join-Path $baseDir "Panak-Installer-v1.7.0.zip"
+$publishZip = Join-Path $baseDir "publish\Panak-Installer-v1.7.0.zip"
 
 if (Test-Path $staging) {
     Remove-Item -Recurse -Force $staging
@@ -12,7 +12,7 @@ Copy-Item (Join-Path $baseDir "publish\Setup.exe") -Destination $staging
 
 $readmeContent = @"
 ==================================================
-                 PANAK v1.6.0
+                 PANAK v1.7.0
        Material You Popup Folders for Windows
 ==================================================
 
@@ -22,7 +22,7 @@ $readmeContent = @"
 3. Սեղմեք «Տեղադրել» (Install)
 
 [Հիմնական հնարավորություններ / Features]
-• Անդրոիդ ոճի թղթապանակներ Windows-ի աշխատասեղանին
+• Ժամանակակից Material 3 Expressive ոճի թղթապանակներ Windows-ի աշխատասեղանին
 • Մկնիկի աջ կոճակի կրկնակի սեղմումով (Right double-click) արագ բացում
 • Ֆայլերի միավորում թղթապանակի մեջ (Combine files on drag-drop)
 • Dynamic 2x2 preview icon engine

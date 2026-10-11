@@ -60,6 +60,13 @@ namespace Panak.Services {
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string? lpModuleName);
 
+        [DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
+
+        private const int VK_SHIFT_KEY = 0x10;
+        private const int VK_CONTROL_KEY = 0x11;
+        private const int VK_MENU_KEY = 0x12; // Alt
+
         private IntPtr _mouseHook = IntPtr.Zero;
         private IntPtr _keyboardHook = IntPtr.Zero;
 
@@ -276,6 +283,72 @@ namespace Panak.Services {
         return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
     }
 
+        public static bool MatchesHotkey(string? hotkeyString, uint vkCode) {
+            if (string.IsNullOrWhiteSpace(hotkeyString)) return false;
+
+            var parts = hotkeyString.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return false;
+
+            bool reqCtrl = false;
+            bool reqAlt = false;
+            bool reqShift = false;
+            string mainKeyName = "";
+
+            foreach (var part in parts) {
+                if (part.Equals("Ctrl", StringComparison.OrdinalIgnoreCase) || part.Equals("Control", StringComparison.OrdinalIgnoreCase)) {
+                    reqCtrl = true;
+                } else if (part.Equals("Alt", StringComparison.OrdinalIgnoreCase)) {
+                    reqAlt = true;
+                } else if (part.Equals("Shift", StringComparison.OrdinalIgnoreCase)) {
+                    reqShift = true;
+                } else {
+                    mainKeyName = part;
+                }
+            }
+
+            if (string.IsNullOrEmpty(mainKeyName)) {
+                return false;
+            }
+
+            // Check modifiers
+            bool isCtrlPressed = (GetAsyncKeyState(VK_CONTROL_KEY) & 0x8000) != 0;
+            bool isAltPressed = (GetAsyncKeyState(VK_MENU_KEY) & 0x8000) != 0;
+            bool isShiftPressed = (GetAsyncKeyState(VK_SHIFT_KEY) & 0x8000) != 0;
+
+            if (reqCtrl != isCtrlPressed) return false;
+            if (reqAlt != isAltPressed) return false;
+            if (reqShift != isShiftPressed) return false;
+
+            // Check main key
+            uint targetVk = ConvertKeyNameToVk(mainKeyName);
+            return vkCode == targetVk;
+        }
+
+        public static uint ConvertKeyNameToVk(string keyName) {
+            if (string.IsNullOrWhiteSpace(keyName)) return 0;
+            string norm = keyName.Trim();
+
+            if (norm.Equals("Space", StringComparison.OrdinalIgnoreCase) || norm.Equals("␣", StringComparison.OrdinalIgnoreCase)) return 0x20;
+            if (norm.Equals("Escape", StringComparison.OrdinalIgnoreCase) || norm.Equals("Esc", StringComparison.OrdinalIgnoreCase)) return 0x1B;
+            if (norm.Equals("Tab", StringComparison.OrdinalIgnoreCase)) return 0x09;
+            if (norm.Equals("Return", StringComparison.OrdinalIgnoreCase) || norm.Equals("Enter", StringComparison.OrdinalIgnoreCase)) return 0x0D;
+            if (norm.Equals("Back", StringComparison.OrdinalIgnoreCase) || norm.Equals("Backspace", StringComparison.OrdinalIgnoreCase)) return 0x08;
+
+            if (Enum.TryParse<System.Windows.Input.Key>(norm, true, out var wpfKey)) {
+                int vk = System.Windows.Input.KeyInterop.VirtualKeyFromKey(wpfKey);
+                if (vk > 0) return (uint)vk;
+            }
+
+            if (norm.Length == 1) {
+                char ch = char.ToUpperInvariant(norm[0]);
+                if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
+                    return (uint)ch;
+                }
+            }
+
+            return 0;
+        }
+
         private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam) {
             if (nCode >= 0 && wParam.ToInt32() == WM_KEYDOWN) {
                 try {
@@ -283,14 +356,17 @@ namespace Panak.Services {
 
                     bool isPopupOpen = IsPopupOpenFunc?.Invoke() ?? false;
 
-                    if (hookStruct.vkCode == VK_ESCAPE && isPopupOpen) {
+                    string closeHotkey = SettingsService.Instance.Current.ClosePopupHotkey ?? "Escape";
+                    string quickLookHotkey = SettingsService.Instance.Current.QuickLookHotkey ?? "Space";
+
+                    if (isPopupOpen && MatchesHotkey(closeHotkey, hookStruct.vkCode)) {
                         Application.Current.Dispatcher.Invoke(() => {
                             CloseRequested?.Invoke();
                         });
                         return (IntPtr)1;
                     }
 
-                    if (hookStruct.vkCode == VK_SPACE) {
+                    if (MatchesHotkey(quickLookHotkey, hookStruct.vkCode)) {
                         if (isPopupOpen) {
                             Application.Current.Dispatcher.Invoke(() => {
                                 CloseRequested?.Invoke();
@@ -305,7 +381,7 @@ namespace Panak.Services {
                                     Application.Current.Dispatcher.Invoke(() => {
                                         SpaceQuickLookTriggered?.Invoke(item.Value);
                                     });
-                                    return (IntPtr)1; // Swallow space
+                                    return (IntPtr)1; // Swallow key
                                 }
                             }
                         }

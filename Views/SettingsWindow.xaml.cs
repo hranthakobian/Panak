@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Panak.Models;
 using Panak.Services;
@@ -16,6 +17,9 @@ namespace Panak.Views {
         private string _selectedThemeMode = "Auto";
         private string _initialColor = ShellHelper.DefaultPastelColorHex;
         private string _initialThemeMode = "Auto";
+        private string _currentQuickLookHotkey = "Space";
+        private string _currentClosePopupHotkey = "Escape";
+        private string? _recordingTarget = null;
 
         public SettingsWindow() {
             InitializeComponent();
@@ -34,7 +38,7 @@ namespace Panak.Views {
 
         private void LoadLogoAndIcon() {
             try {
-                var uri = new Uri("pack://application:,,,/PanakLogo.png", UriKind.Absolute);
+                var uri = new Uri("pack://application:,,,/SettingsLogo.png", UriKind.Absolute);
                 var bi = new BitmapImage(uri);
                 Icon = bi;
                 return;
@@ -43,6 +47,7 @@ namespace Panak.Views {
             try {
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string[] candidates = {
+                    Path.Combine(baseDir, "SettingsLogo.png"),
                     Path.Combine(baseDir, "PanakLogo.png"),
                     Path.Combine(baseDir, "Panak logo.png"),
                     Path.Combine(baseDir, "Panak.ico")
@@ -261,6 +266,11 @@ namespace Panak.Views {
             bool registered = ContextMenuRegistry.IsRegistered();
             var loc = LocalizationService.Instance;
             ContextMenuStatusText.Text = registered ? loc["ContextMenuInstalled"] : "Not registered in Explorer";
+
+            _currentQuickLookHotkey = s.QuickLookHotkey ?? "Space";
+            _currentClosePopupHotkey = s.ClosePopupHotkey ?? "Escape";
+            UpdateKeyBadgesUI();
+
             UpdateUpdateUI();
         }
 
@@ -285,7 +295,6 @@ namespace Panak.Views {
             SettingsThemeDark.Content = loc["ThemeDark"];
             SettingsThemeAuto.Content = loc["ThemeAuto"];
             DefaultColorLabel.Text = loc["DefaultFolderColor"];
-            SettingsHueLabel.Text = loc["Hue"];
             GeneralFolderOpacityLabel.Text = loc["GeneralFolderOpacity"];
             GeneralFolderOpacityDescText.Text = loc["GeneralFolderOpacityDesc"];
             GridColumnsLabel.Text = loc["ItemsPerRow"];
@@ -300,6 +309,14 @@ namespace Panak.Views {
             RightDoubleClickDescText.Text = loc["RightDoubleClickDesc"];
             SpaceQuickLookLabel.Text = loc["SpaceQuickLook"];
             SpaceQuickLookDescText.Text = loc["SpaceQuickLookDesc"];
+            if (KeyRebindingLabel != null) KeyRebindingLabel.Text = loc["KeyRebinding"];
+            if (KeyRebindingDescText != null) KeyRebindingDescText.Text = loc["KeyRebindingDesc"];
+            if (ResetKeysBtn != null) ResetKeysBtn.Content = loc["ResetKeys"];
+            if (QuickLookKeyRowLabel != null) QuickLookKeyRowLabel.Text = loc["QuickLookKeyRow"];
+            if (QuickLookKeyRowDesc != null) QuickLookKeyRowDesc.Text = loc["QuickLookKeyRowDesc"];
+            if (ClosePopupKeyRowLabel != null) ClosePopupKeyRowLabel.Text = loc["ClosePopupKeyRow"];
+            if (ClosePopupKeyRowDesc != null) ClosePopupKeyRowDesc.Text = loc["ClosePopupKeyRowDesc"];
+            UpdateKeyBadgesUI();
             CombineFilesLabel.Text = loc["CombineFilesOnDrop"];
             CombineFilesDescText.Text = loc["CombineFilesOnDropDesc"];
             AutoStartLabel.Text = loc["AutoStart"];
@@ -449,6 +466,8 @@ namespace Panak.Views {
             s.OpenInCenterOnly = CenterPopupCheckBox.IsChecked ?? false;
             s.RightDoubleClickEnabled = RightDoubleClickCheckBox.IsChecked ?? true;
             s.SpaceQuickLookEnabled = SpaceQuickLookCheckBox.IsChecked ?? true;
+            s.QuickLookHotkey = _currentQuickLookHotkey;
+            s.ClosePopupHotkey = _currentClosePopupHotkey;
             s.CombineFilesOnDrop = CombineFilesCheckBox.IsChecked ?? true;
             s.AutoStart = AutoStartCheckBox.IsChecked ?? false;
             s.AutoCheckUpdates = AutoCheckUpdatesCheckBox.IsChecked ?? true;
@@ -600,6 +619,133 @@ namespace Panak.Views {
                     Application.Current.Shutdown();
                 } else {
                     MessageBox.Show("Uninstall encountered an issue.", "Panak", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+        }
+
+        private void RenderKeyBadges(StackPanel container, string hotkey, string target) {
+            container.Children.Clear();
+
+            bool isRecording = (_recordingTarget == target);
+            if (isRecording) {
+                var recBtn = new Button {
+                    Style = (Style)FindResource("KeycapBadgeButtonStyle"),
+                    Content = LocalizationService.Instance["PressAnyKey"],
+                    Tag = target,
+                    BorderThickness = new Thickness(2),
+                    BorderBrush = (Brush)FindResource("M3PrimaryBrush"),
+                    Background = (Brush)FindResource("M3SurfaceContainerBrush")
+                };
+                recBtn.Click += KeyBadgeButton_Click;
+                container.Children.Add(recBtn);
+                return;
+            }
+
+            var parts = hotkey.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) parts = new[] { "None" };
+
+            for (int i = 0; i < parts.Length; i++) {
+                if (i > 0) {
+                    var plusText = new TextBlock {
+                        Text = "+",
+                        FontSize = 12,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = (Brush)FindResource("M3OnSurfaceVariantBrush"),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Margin = new Thickness(4, 0, 4, 0)
+                    };
+                    container.Children.Add(plusText);
+                }
+
+                string keyName = parts[i];
+                if (keyName.Equals("Escape", StringComparison.OrdinalIgnoreCase)) keyName = "Esc";
+                else if (keyName.Equals("Return", StringComparison.OrdinalIgnoreCase)) keyName = "Enter";
+
+                var btn = new Button {
+                    Style = (Style)FindResource("KeycapBadgeButtonStyle"),
+                    Content = keyName,
+                    Tag = target
+                };
+                btn.Click += KeyBadgeButton_Click;
+                container.Children.Add(btn);
+            }
+        }
+
+        private void KeyBadgeButton_Click(object sender, RoutedEventArgs e) {
+            if (sender is Button btn && btn.Tag is string target) {
+                if (_recordingTarget == target) {
+                    _recordingTarget = null;
+                } else {
+                    _recordingTarget = target;
+                }
+                UpdateKeyBadgesUI();
+            }
+        }
+
+        private void ResetKeysBtn_Click(object sender, RoutedEventArgs e) {
+            _recordingTarget = null;
+            _currentQuickLookHotkey = "Space";
+            _currentClosePopupHotkey = "Escape";
+            UpdateKeyBadgesUI();
+        }
+
+        private void UpdateKeyBadgesUI() {
+            if (QuickLookKeysContainer != null) {
+                RenderKeyBadges(QuickLookKeysContainer, _currentQuickLookHotkey, "QuickLook");
+            }
+            if (ClosePopupKeysContainer != null) {
+                RenderKeyBadges(ClosePopupKeysContainer, _currentClosePopupHotkey, "ClosePopup");
+            }
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e) {
+            if (_recordingTarget == null) return;
+
+            Key key = (e.Key == Key.System) ? e.SystemKey : e.Key;
+            if (key == Key.LeftCtrl || key == Key.RightCtrl ||
+                key == Key.LeftAlt || key == Key.RightAlt ||
+                key == Key.LeftShift || key == Key.RightShift ||
+                key == Key.LWin || key == Key.RWin) {
+                return;
+            }
+
+            var parts = new List<string>();
+            if ((Keyboard.Modifiers & ModifierKeys.Control) != 0) parts.Add("Ctrl");
+            if ((Keyboard.Modifiers & ModifierKeys.Alt) != 0) parts.Add("Alt");
+            if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0) parts.Add("Shift");
+
+            string keyStr = key.ToString();
+            if (key == Key.Escape) keyStr = "Escape";
+            else if (key == Key.Space) keyStr = "Space";
+
+            parts.Add(keyStr);
+            string finalHotkey = string.Join(" + ", parts);
+
+            if (_recordingTarget == "QuickLook") {
+                _currentQuickLookHotkey = finalHotkey;
+            } else if (_recordingTarget == "ClosePopup") {
+                _currentClosePopupHotkey = finalHotkey;
+            }
+
+            _recordingTarget = null;
+            UpdateKeyBadgesUI();
+            e.Handled = true;
+        }
+
+        private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e) {
+            if (_recordingTarget != null) {
+                var source = e.OriginalSource as DependencyObject;
+                bool isInside = false;
+                while (source != null) {
+                    if (source is Button b && (string)b.Tag == _recordingTarget) {
+                        isInside = true;
+                        break;
+                    }
+                    source = VisualTreeHelper.GetParent(source);
+                }
+                if (!isInside) {
+                    _recordingTarget = null;
+                    UpdateKeyBadgesUI();
                 }
             }
         }

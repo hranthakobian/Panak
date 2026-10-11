@@ -755,8 +755,8 @@ namespace Panak.Tests {
         public void TestGitHubUpdateServiceVersionAndDefaults() {
             var updater = GitHubUpdateService.Instance;
             Assert.IsNotNull(updater);
-            Assert.AreEqual("1.6.0", updater.CurrentVersionString);
-            Assert.AreEqual(new Version(1, 6, 0), updater.CurrentVersion);
+            Assert.AreEqual("1.7.0", updater.CurrentVersionString);
+            Assert.AreEqual(new Version(1, 7, 0), updater.CurrentVersion);
             Assert.AreEqual(UpdateStatus.Idle, updater.Status);
         }
 
@@ -992,6 +992,74 @@ namespace Panak.Tests {
             string detected = await LocalizationService.DetectOptimalLanguageAsync();
             var valid = new HashSet<string> { "hy", "en", "ru", "fr", "es", "zh", "ar" };
             Assert.IsTrue(valid.Contains(detected), $"Detected language '{detected}' must be one of the supported languages");
+        }
+
+        [TestMethod]
+        public void TestKeyRebindingSettingsSerialization() {
+            var s = new AppSettings {
+                QuickLookHotkey = "Ctrl + Space",
+                ClosePopupHotkey = "Q"
+            };
+            string json = System.Text.Json.JsonSerializer.Serialize(s);
+            var deserialized = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
+            Assert.IsNotNull(deserialized);
+            Assert.AreEqual("Ctrl + Space", deserialized.QuickLookHotkey);
+            Assert.AreEqual("Q", deserialized.ClosePopupHotkey);
+        }
+
+        [TestMethod]
+        public void TestHookServiceHotkeyMatching() {
+            Assert.IsTrue(HookService.MatchesHotkey("Space", 0x20));
+            Assert.IsTrue(HookService.MatchesHotkey("Escape", 0x1B));
+            Assert.IsTrue(HookService.MatchesHotkey("Esc", 0x1B));
+            Assert.IsTrue(HookService.MatchesHotkey("Tab", 0x09));
+            Assert.IsFalse(HookService.MatchesHotkey("Space", 0x1B));
+        }
+
+        [TestMethod]
+        public void TestSettingsWindowUiRebindingAndRoundedCorners() {
+            var thread = new System.Threading.Thread(() => {
+                var w = new SettingsWindow();
+
+                // 1. Verify DangerButtonStyle has rounded corners (CornerRadius 20)
+                var dangerStyle = (System.Windows.Style)w.FindResource("DangerButtonStyle");
+                Assert.IsNotNull(dangerStyle, "DangerButtonStyle must exist");
+
+                // 2. Verify KeycapBadgeButtonStyle exists
+                var keycapStyle = (System.Windows.Style)w.FindResource("KeycapBadgeButtonStyle");
+                Assert.IsNotNull(keycapStyle, "KeycapBadgeButtonStyle must exist");
+
+                // 3. Verify Hue slider is full width (Stretch)
+                Assert.AreEqual(System.Windows.HorizontalAlignment.Stretch, w.SettingsHueSlider.HorizontalAlignment);
+
+                // 4. Verify Uninstall button has DangerButtonStyle
+                Assert.AreEqual(dangerStyle, w.UninstallAppBtn.Style);
+
+                // 5. Verify Rebinding containers exist
+                Assert.IsNotNull(w.QuickLookKeysContainer);
+                Assert.IsNotNull(w.ClosePopupKeysContainer);
+                Assert.IsTrue(w.QuickLookKeysContainer.Children.Count > 0, "QuickLookKeysContainer must have keycap badge children");
+
+                w.Close();
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+        }
+
+        [TestMethod]
+        public void TestKeyRebindingLocalizationKeysInAllLanguages() {
+            var loc = LocalizationService.Instance;
+            string[] keys = new[] { "KeyRebinding", "KeyRebindingDesc", "QuickLookKeyRow", "ClosePopupKeyRow", "PressAnyKey", "ResetKeys" };
+            string[] langs = new[] { "hy", "en", "ru", "fr", "es", "zh", "ar" };
+
+            foreach (var lang in langs) {
+                loc.CurrentLanguage = lang;
+                foreach (var k in keys) {
+                    string val = loc[k];
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(val), $"Key '{k}' must exist in language '{lang}'");
+                }
+            }
         }
     }
 }

@@ -8,7 +8,9 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        PreviewMouseDown="Window_PreviewMouseDown">
 
     <Window.Resources>
         <!-- Material You (M3) Dynamic Color Brushes (Default to warm peach/caramel seed ~26°) -->
@@ -717,7 +719,7 @@
             </Setter>
         </Style>
 
-        <!-- Danger Button: Very sharp corners (CornerRadius="4") per user request -->
+        <!-- Danger Button: Fully rounded pill corners (CornerRadius="20") -->
         <Style x:Key="DangerButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource M3ErrorContainerBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource M3OnErrorContainerBrush}"/>
@@ -729,7 +731,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}" RenderTransformOrigin="0.5,0.5">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}" RenderTransformOrigin="0.5,0.5">
                             <Border.RenderTransform>
                                 <ScaleTransform x:Name="BtnScale" ScaleX="1.0" ScaleY="1.0"/>
                             </Border.RenderTransform>
@@ -779,6 +781,48 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        
+        <!-- Material 3 Rounded Square Keycap Button Style -->
+        <Style x:Key="KeycapBadgeButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource M3TrackInactiveBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinWidth" Value="34"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="9,0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="KeycapBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="9"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="4" ShadowDepth="1.5" Direction="270" Opacity="0.12" Color="#000000"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="KeycapBorder" Property="Background" Value="{DynamicResource M3CardBrush}"/>
+                                <Setter TargetName="KeycapBorder" Property="BorderBrush" Value="{DynamicResource M3PrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="KeycapBorder" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <!-- Main Window Surface: Pure borderless Material You card with soft ambient drop shadow -->
@@ -799,24 +843,27 @@
                     <!-- Dynamic Vector Panak SVG Logo -->
                     <Viewbox Width="32" Height="32" Margin="0,0,10,0" VerticalAlignment="Center">
                         <Canvas Width="88" Height="88" Clip="M 0,0 L 88,0 L 88,88 L 0,88 Z">
-                            <!-- 1. Scalloped badge base -->
-                            <Path Data="M59.4086 1.20571C76.2803 -3.9745 92.0771 11.8223 86.8969 28.694C84.4429 36.6874 87.7289 45.4262 94.7578 49.638C109.589 58.5255 104.707 80.4907 87.4938 82.5202C80.2882 83.3707 74.3913 88.7341 73.3424 95.9084C70.8385 113.033 49.3306 120.021 37.1517 107.842C31.9682 102.658 24.1166 101.096 17.3822 103.913C1.58784 110.518 -12.1813 94.0204 -8.51433 77.4093C-6.95462 70.3444 -10.7416 63.153 -17.6163 60.1268C-33.7402 53.0315 -30.7067 30.2285 -13.0617 27.385C-5.55627 26.1755 0.340623 20.2786 1.5501 12.7731C4.39366 -4.87189 27.1966 -7.90544 34.2919 8.21849C37.3181 15.0932 44.5095 18.8802 51.5744 17.3205C54.5779 16.6575 57.3406 14.4754 59.4086 1.20571Z"
+                            <!-- 1. Scalloped container badge base -->
+                            <Path Data="M59.4086 1.20571C76.2803 -3.9745 92.0771 11.8223 86.8968 28.694L84.1639 37.595C82.8719 41.8029 82.8719 46.3016 84.1639 50.5095L86.8968 59.4105C92.0771 76.2822 76.2803 92.079 59.4086 86.8988L50.5076 84.1659C46.2997 82.8739 41.8009 82.8739 37.593 84.1659L28.6921 86.8988C11.8203 92.079 -3.97645 76.2822 1.20376 59.4105L3.93668 50.5095C5.22865 46.3016 5.22865 41.8029 3.93668 37.595L1.20376 28.694C-3.97645 11.8223 11.8203 -3.9745 28.692 1.20571L37.593 3.93863C41.8009 5.23061 46.2997 5.23061 50.5076 3.93863L59.4086 1.20571Z"
                                   Fill="{DynamicResource LogoContainerBrush}"/>
-                            <!-- 2. Dark brown cloud/flower bottom shape -->
-                            <Path Data="M23.0319 48.198C22.6105 47.9547 22.0911 48.0264 21.751 48.3752C21.4109 48.7239 21.328 49.2678 21.5463 49.7161C22.2599 51.1818 23.0366 52.8837 23.3686 54.7677C23.6934 56.6111 23.6338 58.2618 23.4072 59.6106C22.8466 62.9463 20.3015 65.4914 16.9658 66.052C15.617 66.2786 13.9663 66.3382 12.083 66.0062C10.239 65.6814 8.57709 64.912 7.15139 64.2117C6.70308 63.9922 6.15918 64.0751 5.81043 64.4152C5.46168 64.7554 5.39003 65.2748 5.6333 65.6962C7.30151 68.5855 10.0245 72.3364 14.3411 73.0975C19.7431 74.05 25.1064 70.9535 27.4239 65.7369C29.2801 61.5583 28.5292 56.5925 26.2415 52.0169C25.3265 50.1867 24.1678 48.854 23.0319 48.198Z"
+                            <!-- 2. Dark brown flower/scallop bottom-left shape -->
+                            <Path Data="M23.0319 48.198C24.8429 45.2673 29.1571 45.2673 30.9681 48.198C31.9209 49.7399 33.7031 50.5863 35.5195 50.3597C38.9718 49.9288 41.6617 53.2555 40.4677 56.4791C39.8394 58.1752 40.2795 60.0771 41.5918 61.3364C44.0858 63.7298 43.1258 67.878 39.8258 68.9672C38.0895 69.5402 36.8562 71.0654 36.6761 72.8624C36.3338 76.2778 32.4467 78.1239 29.5259 76.2585C27.989 75.2769 26.011 75.2769 24.4741 76.2585C21.5533 78.1239 17.6662 76.2778 17.3239 72.8624C17.1438 71.0654 15.9105 69.5402 14.1742 68.9672C10.8742 67.878 9.91423 63.7298 12.4082 61.3364C13.7205 60.0771 14.1606 58.1752 13.5323 56.4791C12.3383 53.2555 15.0282 49.9288 18.4805 50.3597C20.2969 50.5863 22.0791 49.7399 23.0319 48.198Z"
                                   Fill="{DynamicResource LogoCloudBrush}"/>
-                            <!-- 3. Upper left triangle/petal shape -->
-                            <Path Data="M22.303 11.7907C17.5146 15.8077 19.3402 23.5186 25.4309 25.0487C31.5217 26.5788 35.8055 20.3702 32.7483 14.8879C29.6912 9.40552 27.0913 7.77372 22.303 11.7907Z"
+                            <!-- 3. Upper left triangle shape -->
+                            <Path Data="M22.303 11.7907C24.3905 8.06977 29.6095 8.06976 31.697 11.7907L42.2653 30.6279C44.3528 34.3488 41.7434 39 37.5683 39H16.4317C12.2566 39 9.64716 34.3488 11.7347 30.6279L22.303 11.7907Z"
                                   Fill="{DynamicResource LogoTriangleBrush}"/>
-                            <!-- 4. Lower right shield/bell shape -->
-                            <Path Data="M60.69 47.1992C54.4069 47.1992 49.3129 52.2932 49.3129 58.5763C49.3129 64.8594 54.4069 77.0674 60.69 77.0674C66.973 77.0674 72.0671 64.8594 72.0671 58.5763C72.0671 52.2932 66.973 47.1992 60.69 47.1992Z"
+                            <!-- 4. Lower right shield shape -->
+                            <Path Data="M60.69 47.1992C62.9839 45.6003 66.0161 45.6003 68.31 47.1992L78.0961 54.0203C80.5738 55.7472 81.6123 58.9305 80.6373 61.8093L77.0467 72.4109C76.117 75.1559 73.5649 77 70.6955 77H58.3045C55.4351 77 52.883 75.1559 51.9533 72.4109L48.3627 61.8093C47.3877 58.9305 48.4262 55.7472 50.9039 54.0203L60.69 47.1992Z"
                                   Fill="{DynamicResource LogoShieldBrush}"/>
                             <!-- 5. Rotated ellipse shape -->
-                            <Path Data="M57.4394 24.3126C57.4394 18.6811 49.3925 14.1153 39.466 14.1153C29.5395 14.1153 21.4927 18.6811 21.4927 24.3126C21.4927 29.9442 29.5395 34.5099 39.466 34.5099C49.3925 34.5099 57.4394 29.9442 57.4394 24.3126Z"
-                                  Fill="{DynamicResource LogoEllipseBrush}">
-                                <Path.RenderTransform>
-                                    <MatrixTransform Matrix="0.643794, -0.765199, 0.765199, 0.643794, 24.0322, 57.2536"/>
-                                </Path.RenderTransform>
+                            <Path Fill="{DynamicResource LogoEllipseBrush}">
+                                <Path.Data>
+                                    <EllipseGeometry Center="63.5067,24.3126" RadiusX="17.9667" RadiusY="10.1973">
+                                        <EllipseGeometry.Transform>
+                                            <RotateTransform Angle="-49.923" CenterX="63.5067" CenterY="24.3126"/>
+                                        </EllipseGeometry.Transform>
+                                    </EllipseGeometry>
+                                </Path.Data>
                             </Path>
                         </Canvas>
                     </Viewbox>
@@ -946,19 +993,14 @@
                                 <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCFCC5" Tag="#FCFCC5" ToolTip="Butter Yellow" Checked="SettingsColorSwatch_Checked"/>
                             </StackPanel>
 
-                            <!-- Pastel Hue Slider Row: Panel updates in real time -->
-                            <Grid Margin="0,2,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="SettingsHueLabel" Text="Hue" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <Slider x:Name="SettingsHueSlider" Grid.Column="1"
-                                        Minimum="0" Maximum="360"
-                                        SmallChange="1" LargeChange="10"
-                                        Style="{StaticResource PastelHueSliderStyle}"
-                                        ValueChanged="SettingsHueSlider_ValueChanged"/>
-                            </Grid>
+                            <!-- Pastel Hue Slider: Panel updates in real time (Stretched full width) -->
+                            <Slider x:Name="SettingsHueSlider"
+                                    HorizontalAlignment="Stretch"
+                                    Margin="0,4,0,0"
+                                    Minimum="0" Maximum="360"
+                                    SmallChange="1" LargeChange="10"
+                                    Style="{StaticResource PastelHueSliderStyle}"
+                                    ValueChanged="SettingsHueSlider_ValueChanged"/>
                         </StackPanel>
                     </Border>
 
@@ -1080,6 +1122,51 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Key Shortcuts & Rebinding (Ստեղների վերագրանցում) -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+                                    <TextBlock x:Name="KeyRebindingLabel" Text="Ստեղների վերագրանցում" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="KeyRebindingDescText" Text="Կարգավորեք ստեղնաշարի հիմնական դյուրանցումները" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <Button x:Name="ResetKeysBtn" Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="Վերականգնել" Padding="12,5" FontSize="11" VerticalAlignment="Center" Click="ResetKeysBtn_Click"/>
+                            </Grid>
+
+                            <!-- Quick Look Hotkey Row -->
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="QuickLookKeyRowLabel" Text="Արագ դիտում (Quick Look)" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="QuickLookKeyRowDesc" Text="Explorer-ում ընտրված պանակի արագ բացում" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,1,0,0"/>
+                                </StackPanel>
+                                <StackPanel x:Name="QuickLookKeysContainer" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <Border Height="1" Background="{DynamicResource M3SurfaceContainerBrush}" Margin="0,2,0,10" BorderThickness="0"/>
+
+                            <!-- Close Popup Hotkey Row -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="ClosePopupKeyRowLabel" Text="Փակել փոփափը (Close Popup)" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="ClosePopupKeyRowDesc" Text="Բացված պանակի փոփափը փակելու ստեղն" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,1,0,0"/>
+                                </StackPanel>
+                                <StackPanel x:Name="ClosePopupKeysContainer" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Combine Files On Drop (Android / iOS style) -->
                     <Border Style="{StaticResource SectionCardStyle}">
                         <Grid>
@@ -1141,7 +1228,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock x:Name="UpdateStatusTitleText" Text="Current version: v1.6.0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                        <TextBlock x:Name="UpdateStatusTitleText" Text="Current version: v1.7.0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                                         <TextBlock x:Name="UpdateStatusDetailText" Text="You are using the latest version" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <TextBlock x:Name="UpdateStatusBadge" Grid.Column="1" Text="✓ Latest" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}" VerticalAlignment="Center"/>
@@ -1214,7 +1301,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Panak v1.6.0 • Material You Folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="Panak v1.7.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button x:Name="CancelBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Margin="0,0,10,0" Click="CancelBtn_Click"/>
                     <Button x:Name="ApplyBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Apply" Margin="0,0,10,0" Click="ApplyBtn_Click"/>
