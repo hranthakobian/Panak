@@ -4,7 +4,9 @@
 <p align="center">
   <img src="https://jveaaytpcviwuvpgdvxl.supabase.co/storage/v1/object/public/gallery/1791732538203_Panak_logo_-_Copy.png" alt="Panak Logo" width="512" />
 </p>
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/R0R828IT50)
+
 ---
 
 **Panak** is a modern, smooth, and lightweight utility for Windows (C# / .NET 8 WPF) that brings the convenience and aesthetic of **Android OS / Material You Folder Widgets** to the Windows desktop.
