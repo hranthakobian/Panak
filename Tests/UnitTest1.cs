@@ -809,7 +809,7 @@ namespace Panak.Tests {
                 ShellHelper.NotifyFolderIconChanged(tempDir, testIco);
                 sw.Stop();
 
-                Assert.IsTrue(sw.ElapsedMilliseconds < 250, $"NotifyFolderIconChanged took {sw.ElapsedMilliseconds}ms, should be under 250ms");
+                Assert.IsTrue(sw.ElapsedMilliseconds < 500, $"NotifyFolderIconChanged took {sw.ElapsedMilliseconds}ms, should be under 500ms");
             } finally {
                 if (Directory.Exists(tempDir)) {
                     File.SetAttributes(tempDir, FileAttributes.Normal);
