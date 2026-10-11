@@ -21,9 +21,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="..\PanakLogo.png" Link="PanakLogo.png" />
+    <Resource Include="..\PanakSetupLogo.png" Link="PanakSetupLogo.png" />
     <Resource Include="Panak.ico" />
-    <EmbeddedResource Include="..\PanakLogo.png" Link="PanakLogoEmbedded.png" />
+    <EmbeddedResource Include="..\PanakSetupLogo.png" Link="PanakSetupLogoEmbedded.png" />
   </ItemGroup>
 
   <ItemGroup>

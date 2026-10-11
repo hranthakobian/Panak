@@ -38,6 +38,16 @@ namespace Panak.Setup {
                     }
                 }
                 await StandaloneInstallerService.InstallAsync(targetDir, createDesktopShortcut: true, createStartMenuShortcut: true, autoStart: true);
+                try {
+                    string exe = System.IO.Path.Combine(targetDir, "Panak.exe");
+                    if (System.IO.File.Exists(exe)) {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {
+                            FileName = exe,
+                            Arguments = "--background",
+                            UseShellExecute = true
+                        });
+                    }
+                } catch { }
                 Shutdown();
                 return;
             }

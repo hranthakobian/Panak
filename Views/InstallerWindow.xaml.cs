@@ -31,7 +31,7 @@ namespace Panak.Views {
 
         private void LoadLogoAndIcon() {
             try {
-                var uri = new Uri("pack://application:,,,/PanakLogo.png", UriKind.Absolute);
+                var uri = new Uri("pack://application:,,,/PanakSetupLogo.png", UriKind.Absolute);
                 var bi = new BitmapImage(uri);
                 HeaderLogoImage.Source = bi;
                 Icon = bi;
@@ -41,6 +41,8 @@ namespace Panak.Views {
             try {
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string[] candidates = {
+                    Path.Combine(baseDir, "PanakSetupLogo.png"),
+                    Path.Combine(baseDir, "Panak setup logo.png"),
                     Path.Combine(baseDir, "PanakLogo.png"),
                     Path.Combine(baseDir, "Panak logo.png"),
                     Path.Combine(baseDir, "Panak.ico")

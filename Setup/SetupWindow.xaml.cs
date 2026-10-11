@@ -30,8 +30,10 @@ namespace Panak.Setup {
             try {
                 var asm = typeof(SetupWindow).Assembly;
                 string? resName = asm.GetManifestResourceNames()
-                    .FirstOrDefault(n => n.EndsWith("PanakLogoEmbedded.png", StringComparison.OrdinalIgnoreCase) ||
-                                         n.EndsWith("Panak logo.png", StringComparison.OrdinalIgnoreCase));
+                    .FirstOrDefault(n => n.EndsWith("PanakSetupLogoEmbedded.png", StringComparison.OrdinalIgnoreCase) ||
+                                         n.EndsWith("PanakSetupLogo.png", StringComparison.OrdinalIgnoreCase) ||
+                                         n.EndsWith("Panak setup logo.png", StringComparison.OrdinalIgnoreCase) ||
+                                         n.EndsWith("PanakLogoEmbedded.png", StringComparison.OrdinalIgnoreCase));
                 if (!string.IsNullOrEmpty(resName)) {
                     using var stream = asm.GetManifestResourceStream(resName);
                     if (stream != null) {
@@ -55,11 +57,19 @@ namespace Panak.Setup {
 
             try {
                 string exeDir = AppDomain.CurrentDomain.BaseDirectory;
-                string localPng = Path.Combine(exeDir, "Panak logo.png");
-                if (File.Exists(localPng)) {
-                    var bi = new System.Windows.Media.Imaging.BitmapImage(new Uri(localPng, UriKind.Absolute));
-                    HeaderLogoImage.Source = bi;
-                    Icon = bi;
+                string[] candidates = {
+                    Path.Combine(exeDir, "PanakSetupLogo.png"),
+                    Path.Combine(exeDir, "Panak setup logo.png"),
+                    Path.Combine(exeDir, "PanakLogo.png"),
+                    Path.Combine(exeDir, "Panak logo.png")
+                };
+                foreach (var localPng in candidates) {
+                    if (File.Exists(localPng)) {
+                        var bi = new System.Windows.Media.Imaging.BitmapImage(new Uri(localPng, UriKind.Absolute));
+                        HeaderLogoImage.Source = bi;
+                        Icon = bi;
+                        return;
+                    }
                 }
             } catch { }
         }

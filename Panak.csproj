@@ -22,9 +22,16 @@
 
   <ItemGroup>
     <Resource Include="PanakLogo.png" />
+    <Resource Include="PanakSetupLogo.png" />
     <Resource Include="Panak logo.png" Link="PanakLogoLinked.png" />
     <Resource Include="Panak.ico" />
     <None Include="PanakLogo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="PanakSetupLogo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Panak setup logo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Panak logo.png">
