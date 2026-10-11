@@ -586,7 +586,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="CancelActionBtn" Grid.Column="0" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Click="CancelButton_Click"/>
-                <TextBlock Grid.Column="1" Text="Panak v1.7.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
+                <TextBlock Grid.Column="1" Text="Panak v1.7.1" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Button x:Name="MainActionBtn" Style="{StaticResource ActionButtonStyle}" Content="Install Now" Click="MainActionBtn_Click"/>
                     <Button x:Name="FinishBtn" Style="{StaticResource ActionButtonStyle}" Content="Finish" Visibility="Collapsed" Click="FinishBtn_Click"/>

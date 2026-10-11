@@ -10,8 +10,8 @@
     <ApplicationManifest>..\app.manifest</ApplicationManifest>
     <RootNamespace>Panak.Setup</RootNamespace>
     <AssemblyName>Setup</AssemblyName>
-    <Version>1.7.0</Version>
-    <AssemblyVersion>1.7.0.0</AssemblyVersion>
+    <Version>1.7.1</Version>
+    <AssemblyVersion>1.7.1.0</AssemblyVersion>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <ApplicationIcon>Panak.ico</ApplicationIcon>
   </PropertyGroup>
