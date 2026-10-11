@@ -766,6 +766,18 @@ namespace Panak.Tests {
         }
 
         [TestMethod]
+        public void TestTargetRepositoryAndNormalization() {
+            Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.TargetRepository);
+            Assert.AreEqual("https://github.com/hranthakobian/Panak", GitHubUpdateService.TargetRepositoryUrl);
+            Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo("https://github.com/hranthakobian/Panak"));
+            Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo("https://github.com/hranthakobian/Panak/"));
+            Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo("github.com/hranthakobian/Panak"));
+            Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo("hranthakobian/Panak"));
+            Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo(null));
+            Assert.AreEqual("hranthakobian/Panak", GitHubUpdateService.NormalizeRepo(""));
+        }
+
+        [TestMethod]
         public void TestUpdateLocalizationKeys() {
             var loc = LocalizationService.Instance;
             string[] updateKeys = new[] {

@@ -9,11 +9,6 @@ if (Test-Path $staging) {
 New-Item -ItemType Directory -Path $staging | Out-Null
 
 Copy-Item (Join-Path $baseDir "publish\Setup.exe") -Destination $staging
-Copy-Item (Join-Path $baseDir "Panak logo.png") -Destination $staging
-Copy-Item (Join-Path $baseDir "PanakLogo.png") -Destination $staging
-Copy-Item (Join-Path $baseDir "Panak.ico") -Destination $staging
-Copy-Item (Join-Path $baseDir "Panak setup logo.png") -Destination $staging
-Copy-Item (Join-Path $baseDir "PanakSetupLogo.png") -Destination $staging
 
 $readmeContent = @"
 ==================================================

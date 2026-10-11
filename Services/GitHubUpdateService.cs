@@ -23,8 +23,34 @@ namespace Panak.Services {
     }
 
     public class GitHubUpdateService : IDisposable {
+        public const string TargetRepository = "hranthakobian/Panak";
+        public const string TargetRepositoryUrl = "https://github.com/hranthakobian/Panak";
+
         private static GitHubUpdateService? _instance;
         public static GitHubUpdateService Instance => _instance ??= new GitHubUpdateService();
+
+        public static string NormalizeRepo(string? repo) {
+            if (string.IsNullOrWhiteSpace(repo)) {
+                return TargetRepository;
+            }
+            repo = repo.Trim();
+            if (repo.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase)) {
+                repo = repo.Substring("https://github.com/".Length);
+            } else if (repo.StartsWith("http://github.com/", StringComparison.OrdinalIgnoreCase)) {
+                repo = repo.Substring("http://github.com/".Length);
+            } else if (repo.StartsWith("github.com/", StringComparison.OrdinalIgnoreCase)) {
+                repo = repo.Substring("github.com/".Length);
+            }
+            repo = repo.Trim('/');
+            if (repo.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) {
+                repo = repo.Substring(0, repo.Length - 4);
+            }
+            var parts = repo.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2) {
+                return $"{parts[0]}/{parts[1]}";
+            }
+            return TargetRepository;
+        }
 
         private readonly HttpClient _httpClient;
         private System.Threading.Timer? _periodicTimer;
@@ -80,10 +106,8 @@ namespace Panak.Services {
             SetStatus(UpdateStatus.Checking);
             ErrorMessage = null;
 
-            string repo = SettingsService.Instance.Current.GitHubRepo?.Trim() ?? "hranthakobian/Panak";
-            if (string.IsNullOrWhiteSpace(repo) || !repo.Contains('/')) {
-                repo = "hranthakobian/Panak";
-            }
+            string rawRepo = SettingsService.Instance.Current.GitHubRepo;
+            string repo = string.IsNullOrWhiteSpace(rawRepo) ? TargetRepository : NormalizeRepo(rawRepo);
 
             try {
                 string url = $"https://api.github.com/repos/{repo}/releases/latest";

@@ -947,7 +947,7 @@
                             </Border>
 
                             <!-- Auto Check Toggle -->
-                            <Grid Margin="0,2,0,8">
+                            <Grid Margin="0,2,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
@@ -957,23 +957,6 @@
                                     <TextBlock x:Name="AutoCheckUpdatesDesc" Text="Periodically check GitHub in the background" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <CheckBox x:Name="AutoCheckUpdatesCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
-                            </Grid>
-
-                            <!-- GitHub Repository Input -->
-                            <Border Height="1" Background="{DynamicResource M3SurfaceContainerBrush}" Margin="0,4,0,8" BorderThickness="0"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="190"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="GitHubRepoLabel" Text="GitHub Repository" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
-                                <TextBox x:Name="GitHubRepoTextBox" Grid.Column="1" Text="hranthakobian/Panak" Padding="8,4" FontSize="12" BorderThickness="0" Background="{DynamicResource M3SurfaceContainerBrush}" Foreground="{DynamicResource M3OnSurfaceBrush}">
-                                    <TextBox.Resources>
-                                        <Style TargetType="Border">
-                                            <Setter Property="CornerRadius" Value="8"/>
-                                        </Style>
-                                    </TextBox.Resources>
-                                </TextBox>
                             </Grid>
                         </StackPanel>
                     </Border>

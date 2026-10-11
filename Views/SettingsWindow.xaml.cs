@@ -212,7 +212,6 @@ namespace Panak.Views {
             CombineFilesCheckBox.IsChecked = s.CombineFilesOnDrop;
             AutoStartCheckBox.IsChecked = InstallerService.IsAutoStartEnabled() || s.AutoStart;
             AutoCheckUpdatesCheckBox.IsChecked = s.AutoCheckUpdates;
-            GitHubRepoTextBox.Text = string.IsNullOrEmpty(s.GitHubRepo) ? "hranthakobian/Panak" : s.GitHubRepo;
 
             // Context Menu status
             bool registered = ContextMenuRegistry.IsRegistered();
@@ -262,7 +261,6 @@ namespace Panak.Views {
             CheckUpdatesBtn.Content = loc["CheckForUpdates"];
             AutoCheckUpdatesLabel.Text = loc["AutoCheckUpdates"];
             AutoCheckUpdatesDesc.Text = loc["AutoCheckUpdatesDesc"];
-            GitHubRepoLabel.Text = loc["GitHubRepo"];
             ReleaseNotesHeader.Text = loc["ReleaseNotes"] + ":";
             DownloadInstallBtn.Content = loc["DownloadAndInstall"];
             SaveBtn.Content = loc["Save"];
@@ -386,7 +384,7 @@ namespace Panak.Views {
             s.CombineFilesOnDrop = CombineFilesCheckBox.IsChecked ?? true;
             s.AutoStart = AutoStartCheckBox.IsChecked ?? false;
             s.AutoCheckUpdates = AutoCheckUpdatesCheckBox.IsChecked ?? true;
-            s.GitHubRepo = GitHubRepoTextBox.Text.Trim();
+            s.GitHubRepo = GitHubUpdateService.TargetRepository;
 
             // Handle auto-start setting
             string exe = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
@@ -466,7 +464,7 @@ namespace Panak.Views {
         }
 
         private async void CheckUpdatesBtn_Click(object sender, RoutedEventArgs e) {
-            SettingsService.Instance.Current.GitHubRepo = GitHubRepoTextBox.Text.Trim();
+            SettingsService.Instance.Current.GitHubRepo = GitHubUpdateService.TargetRepository;
             SettingsService.Instance.Save();
 
             CheckUpdatesBtn.IsEnabled = false;
