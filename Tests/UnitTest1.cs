@@ -19,7 +19,7 @@ namespace Panak.Tests {
                 "Language", "RightDoubleClick", "SpaceQuickLook", "Install", "Uninstall",
                 "ConvertToPanak", "RevertToRegular", "AlwaysOpenWithPanak",
                 "CombineFilesOnDrop", "CombineFilesOnDropDesc", "CollectIntoPanakFolder",
-                "Hue", "DefaultFolderColor",
+                "Hue", "DefaultFolderColor", "Apply",
                 "LanguageAiNote", "CenterPopupOnly", "CenterPopupOnlyDesc", "Support", "SupportDesc", "DonateOnKofi"
             };
 
@@ -898,6 +898,27 @@ namespace Panak.Tests {
                 var lightMenu = tm.BuildContextMenu();
                 Assert.IsNotNull(lightMenu);
                 Assert.IsTrue(lightMenu.Items.Count >= 4, "Light menu must contain items");
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+        }
+
+        [TestMethod]
+        public void TestSettingsWindowApplyAndRealTimePaletteUpdate() {
+            var thread = new System.Threading.Thread(() => {
+                var w = new SettingsWindow();
+                Assert.IsNotNull(w.ApplyBtn, "ApplyBtn must exist in SettingsWindow");
+                Assert.IsFalse(string.IsNullOrWhiteSpace(w.ApplyBtn.Content?.ToString()), "ApplyBtn must have content");
+
+                // Test palette update in real-time
+                w.ApplyMaterialYouPalette(140.0); // Greenish hue
+                Assert.IsNotNull(w.Resources["M3PrimaryBrush"]);
+                Assert.IsNotNull(w.Resources["SettingsHueThumbBrush"]);
+
+                // Test applying settings
+                w.ApplyCurrentSettings();
+                Assert.IsNotNull(SettingsService.Instance.Current);
             });
             thread.SetApartmentState(System.Threading.ApartmentState.STA);
             thread.Start();

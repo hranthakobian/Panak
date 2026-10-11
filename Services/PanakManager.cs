@@ -35,6 +35,22 @@ namespace Panak.Services {
             return IntPtr.Zero;
         }
 
+        public void UpdateOpenPopupThemeColor(string hexColor) {
+            if (_isOpen && _popupWindow != null && _popupWindow.IsVisible) {
+                _popupWindow.Dispatcher.Invoke(() => {
+                    _popupWindow.ApplyThemeColor(hexColor);
+                });
+            }
+        }
+
+        public void UpdateOpenPopupThemeMode(string mode) {
+            if (_isOpen && _popupWindow != null && _popupWindow.IsVisible) {
+                _popupWindow.Dispatcher.Invoke(() => {
+                    _popupWindow.ApplyThemeMode(mode);
+                });
+            }
+        }
+
         public PanakManager() {
             ScanDesktopForPanakFolders();
         }

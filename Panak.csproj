@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.Drawing.Common" Version="8.0.8" />
+    <InternalsVisibleTo Include="Panak.Tests" />
   </ItemGroup>
 
   <ItemGroup>

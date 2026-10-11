@@ -71,6 +71,9 @@ namespace Panak.Views {
         private void OnSettingsChanged(AppSettings s) {
             Dispatcher.Invoke(() => {
                 ApplyThemeMode(s.ThemeMode ?? "Auto");
+                if (_itemsUniformGrid != null) {
+                    _itemsUniformGrid.Columns = GetConfiguredColumns();
+                }
             });
         }
 
@@ -488,7 +491,7 @@ namespace Panak.Views {
             return $"{bytes} B";
         }
 
-        private void ApplyThemeColor(string hexColor) {
+        public void ApplyThemeColor(string hexColor) {
             try {
                 var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hexColor);
                 // Vibrant, rich tint layer (~38% opacity)
@@ -497,12 +500,12 @@ namespace Panak.Views {
                 // Thin sleek scrollbar thumb matching folder theme color
                 var thumbColor = System.Windows.Media.Color.FromArgb(150, color.R, color.G, color.B);
                 var hoverColor = System.Windows.Media.Color.FromArgb(220, color.R, color.G, color.B);
-                if (Resources["PanakScrollBarThumbBrush"] is SolidColorBrush tb) {
+                if (Resources["PanakScrollBarThumbBrush"] is SolidColorBrush tb && !tb.IsFrozen) {
                     tb.Color = thumbColor;
                 } else {
                     Resources["PanakScrollBarThumbBrush"] = new SolidColorBrush(thumbColor);
                 }
-                if (Resources["PanakScrollBarThumbHoverBrush"] is SolidColorBrush hb) {
+                if (Resources["PanakScrollBarThumbHoverBrush"] is SolidColorBrush hb && !hb.IsFrozen) {
                     hb.Color = hoverColor;
                 } else {
                     Resources["PanakScrollBarThumbHoverBrush"] = new SolidColorBrush(hoverColor);
@@ -1272,64 +1275,68 @@ namespace Panak.Views {
             }
         }
 
-        private void ApplyThemeMode(string mode) {
-            bool isDark = mode == "Dark" || (mode != "Light" && ShellHelper.IsWindowsDarkTheme());
-            _isCurrentThemeDark = isDark;
+        public void ApplyThemeMode(string mode) {
+            try {
+                bool isDark = mode == "Dark" || (mode != "Light" && ShellHelper.IsWindowsDarkTheme());
+                _isCurrentThemeDark = isDark;
 
-            ApplyThemeBackground();
+                ApplyThemeBackground();
 
-            var textColor = isDark ? System.Windows.Media.Color.FromRgb(248, 250, 252) : System.Windows.Media.Color.FromRgb(15, 23, 42);
-            var subtextColor = isDark ? System.Windows.Media.Color.FromRgb(148, 163, 184) : System.Windows.Media.Color.FromRgb(100, 116, 139);
+                var textColor = isDark ? System.Windows.Media.Color.FromRgb(248, 250, 252) : System.Windows.Media.Color.FromRgb(15, 23, 42);
+                var subtextColor = isDark ? System.Windows.Media.Color.FromRgb(148, 163, 184) : System.Windows.Media.Color.FromRgb(100, 116, 139);
 
-            if (Resources["PopupTextBrush"] is SolidColorBrush ptb) {
-                ptb.Color = textColor;
-            } else {
-                Resources["PopupTextBrush"] = new SolidColorBrush(textColor);
-            }
-            if (Resources["PopupSubtextBrush"] is SolidColorBrush psb) {
-                psb.Color = subtextColor;
-            } else {
-                Resources["PopupSubtextBrush"] = new SolidColorBrush(subtextColor);
-            }
+                if (Resources["PopupTextBrush"] is SolidColorBrush ptb && !ptb.IsFrozen) {
+                    ptb.Color = textColor;
+                } else {
+                    Resources["PopupTextBrush"] = new SolidColorBrush(textColor);
+                }
+                if (Resources["PopupSubtextBrush"] is SolidColorBrush psb && !psb.IsFrozen) {
+                    psb.Color = subtextColor;
+                } else {
+                    Resources["PopupSubtextBrush"] = new SolidColorBrush(subtextColor);
+                }
 
-            if (FolderItemsControl != null) {
-                FolderItemsControl.Foreground = new SolidColorBrush(textColor);
-            }
+                if (FolderItemsControl != null) {
+                    FolderItemsControl.Foreground = new SolidColorBrush(textColor);
+                }
 
-            if (isDark) {
-                // Dark Theme
-                CardBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(56, 255, 255, 255));
-                CardBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0));
+                if (isDark) {
+                    // Dark Theme
+                    CardBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(56, 255, 255, 255));
+                    CardBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0));
 
-                FolderTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
-                EmptyTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Colors.White);
-                EmptySubtext.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
-                EditNameLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
-                ColorThemeLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
-                AlwaysPanakCheckBox.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
+                    FolderTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
+                    EmptyTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Colors.White);
+                    EmptySubtext.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
+                    EditNameLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
+                    ColorThemeLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
+                    AlwaysPanakCheckBox.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
 
-                Resources["PopupHeaderBtnBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(37, 255, 255, 255));
-                Resources["PopupHeaderBtnFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(226, 232, 240));
-                Resources["PopupItemBadgeBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(37, 255, 255, 255));
-                Resources["PopupItemBadgeFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
-                Resources["PopupItemHoverBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(45, 255, 255, 255));
-            } else {
-                // Light Theme
-                CardBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
-                CardBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 255, 255, 255));
+                    Resources["PopupHeaderBtnBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(37, 255, 255, 255));
+                    Resources["PopupHeaderBtnFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(226, 232, 240));
+                    Resources["PopupItemBadgeBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(37, 255, 255, 255));
+                    Resources["PopupItemBadgeFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
+                    Resources["PopupItemHoverBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(45, 255, 255, 255));
+                } else {
+                    // Light Theme
+                    CardBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
+                    CardBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 255, 255, 255));
 
-                FolderTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
-                EmptyTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
-                EmptySubtext.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 116, 139));
-                EditNameLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
-                ColorThemeLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
-                AlwaysPanakCheckBox.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
+                    FolderTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
+                    EmptyTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
+                    EmptySubtext.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 116, 139));
+                    EditNameLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
+                    ColorThemeLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
+                    AlwaysPanakCheckBox.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
 
-                Resources["PopupHeaderBtnBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(25, 0, 0, 0));
-                Resources["PopupHeaderBtnFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 41, 59));
-                Resources["PopupItemBadgeBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 0, 0, 0));
-                Resources["PopupItemBadgeFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
-                Resources["PopupItemHoverBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 0, 0, 0));
+                    Resources["PopupHeaderBtnBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(25, 0, 0, 0));
+                    Resources["PopupHeaderBtnFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 41, 59));
+                    Resources["PopupItemBadgeBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 0, 0, 0));
+                    Resources["PopupItemBadgeFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
+                    Resources["PopupItemHoverBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 0, 0, 0));
+                }
+            } catch {
+                // Ignore theme application errors
             }
         }
 

@@ -1004,8 +1004,9 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Panak v1.0 • Android-style popup folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button x:Name="CancelBtn" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Margin="0,0,10,0" Click="CancelBtn_Click"/>
-                    <Button x:Name="SaveBtn" Style="{StaticResource ActionButtonStyle}" Content="Save" Click="SaveBtn_Click"/>
+                    <Button x:Name="CancelBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Margin="0,0,10,0" Click="CancelBtn_Click"/>
+                    <Button x:Name="ApplyBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Apply" Margin="0,0,10,0" Click="ApplyBtn_Click"/>
+                    <Button x:Name="SaveBtn" x:FieldModifier="public" Style="{StaticResource ActionButtonStyle}" Content="Save" Click="SaveBtn_Click"/>
                 </StackPanel>
             </Grid>
         </Grid>

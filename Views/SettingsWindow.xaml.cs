@@ -14,6 +14,8 @@ namespace Panak.Views {
         private string _selectedShape = "Squircle";
         private string _selectedColor = ShellHelper.DefaultPastelColorHex;
         private string _selectedThemeMode = "Auto";
+        private string _initialColor = ShellHelper.DefaultPastelColorHex;
+        private string _initialThemeMode = "Auto";
 
         public SettingsWindow() {
             InitializeComponent();
@@ -101,13 +103,11 @@ namespace Panak.Views {
                     wpfTrackInactive = toWpf(trackInactiveColor);
                 }
 
-                // Update dynamic brushes in Resources in place so styles, templates and existing controls adapt instantly
+                // Update dynamic brushes in Resources with frozen brushes so DynamicResource bindings update reliably across all templates
                 void SetBrush(string key, System.Windows.Media.Color col) {
-                    if (Resources[key] is System.Windows.Media.SolidColorBrush scb) {
-                        scb.Color = col;
-                    } else {
-                        Resources[key] = new System.Windows.Media.SolidColorBrush(col);
-                    }
+                    var brush = new System.Windows.Media.SolidColorBrush(col);
+                    brush.Freeze();
+                    Resources[key] = brush;
                 }
 
                 SetBrush("M3SurfaceBrush", wpfSurface);
@@ -118,13 +118,20 @@ namespace Panak.Views {
                 SetBrush("M3OnSurfaceBrush", wpfOnSurface);
                 SetBrush("M3OnSurfaceVariantBrush", wpfOnSurfaceVariant);
                 SetBrush("M3TrackInactiveBrush", wpfTrackInactive);
-                SetBrush("SettingsHueThumbBrush", wpfContainer);
+
+                System.Windows.Media.Color selColor;
+                try {
+                    selColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_selectedColor);
+                } catch {
+                    selColor = wpfPrimary;
+                }
+                SetBrush("SettingsHueThumbBrush", selColor);
 
                 if (MainWindowBorder != null) {
                     MainWindowBorder.Background = new System.Windows.Media.SolidColorBrush(wpfSurface);
                 }
                 if (SettingsColorIndicator != null) {
-                    SettingsColorIndicator.Background = new System.Windows.Media.SolidColorBrush(wpfContainer);
+                    SettingsColorIndicator.Background = new System.Windows.Media.SolidColorBrush(selColor);
                 }
                 if (LanguageComboBox != null) {
                     LanguageComboBox.Foreground = new System.Windows.Media.SolidColorBrush(wpfOnSurface);
@@ -139,6 +146,8 @@ namespace Panak.Views {
 
             // Theme Mode
             _selectedThemeMode = string.IsNullOrEmpty(s.ThemeMode) ? "Auto" : s.ThemeMode;
+            _initialColor = _selectedColor;
+            _initialThemeMode = _selectedThemeMode;
             if (string.Equals(_selectedThemeMode, "Light", StringComparison.OrdinalIgnoreCase)) {
                 SettingsThemeLight.IsChecked = true;
             } else if (string.Equals(_selectedThemeMode, "Dark", StringComparison.OrdinalIgnoreCase)) {
@@ -275,6 +284,7 @@ namespace Panak.Views {
             ReleaseNotesHeader.Text = loc["ReleaseNotes"] + ":";
             DownloadInstallBtn.Content = loc["DownloadAndInstall"];
             SaveBtn.Content = loc["Save"];
+            ApplyBtn.Content = loc["Apply"];
             CancelBtn.Content = loc["Cancel"];
             InstallAppBtn.Content = loc["Install"];
             UninstallAppBtn.Content = loc["Uninstall"];
@@ -298,6 +308,10 @@ namespace Panak.Views {
                 } finally {
                     _isInitializing = false;
                 }
+
+                if (PanakManager.Instance.IsPopupOpen) {
+                    PanakManager.Instance.UpdateOpenPopupThemeColor(_selectedColor);
+                }
             }
         }
 
@@ -306,6 +320,10 @@ namespace Panak.Views {
             string pastelHex = ShellHelper.ColorFromPastelHueHex(e.NewValue);
             _selectedColor = pastelHex;
             ApplyMaterialYouPalette(e.NewValue);
+
+            if (PanakManager.Instance.IsPopupOpen) {
+                PanakManager.Instance.UpdateOpenPopupThemeColor(_selectedColor);
+            }
 
             bool matched = false;
             foreach (var child in SettingsColorSwatchesPanel.Children) {
@@ -348,6 +366,10 @@ namespace Panak.Views {
                 _selectedThemeMode = mode;
                 double hue = ShellHelper.GetHueFromHex(_selectedColor);
                 ApplyMaterialYouPalette(hue);
+
+                if (PanakManager.Instance.IsPopupOpen) {
+                    PanakManager.Instance.UpdateOpenPopupThemeMode(_selectedThemeMode);
+                }
             }
         }
 
@@ -374,7 +396,7 @@ namespace Panak.Views {
             }
         }
 
-        private void SaveBtn_Click(object sender, RoutedEventArgs e) {
+        public void ApplyCurrentSettings() {
             var s = SettingsService.Instance.Current;
 
             if (LanguageComboBox.SelectedItem is ComboBoxItem langItem && langItem.Tag is string lang) {
@@ -402,6 +424,19 @@ namespace Panak.Views {
             InstallerService.SetAutoStart(exe, s.AutoStart);
 
             SettingsService.Instance.SaveSettings(s);
+            PanakManager.Instance.UpdateOpenPopupThemeColor(s.ThemeColor);
+            PanakManager.Instance.UpdateOpenPopupThemeMode(s.ThemeMode);
+
+            _initialColor = _selectedColor;
+            _initialThemeMode = _selectedThemeMode;
+        }
+
+        private void ApplyBtn_Click(object sender, RoutedEventArgs e) {
+            ApplyCurrentSettings();
+        }
+
+        private void SaveBtn_Click(object sender, RoutedEventArgs e) {
+            ApplyCurrentSettings();
             Close();
         }
 
@@ -500,10 +535,18 @@ namespace Panak.Views {
         }
 
         private void CancelBtn_Click(object sender, RoutedEventArgs e) {
+            if (PanakManager.Instance.IsPopupOpen) {
+                PanakManager.Instance.UpdateOpenPopupThemeColor(_initialColor);
+                PanakManager.Instance.UpdateOpenPopupThemeMode(_initialThemeMode);
+            }
             Close();
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e) {
+            if (PanakManager.Instance.IsPopupOpen) {
+                PanakManager.Instance.UpdateOpenPopupThemeColor(_initialColor);
+                PanakManager.Instance.UpdateOpenPopupThemeMode(_initialThemeMode);
+            }
             Close();
         }
 
