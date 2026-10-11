@@ -51,92 +51,100 @@
             </Setter>
         </Style>
 
-        <!-- Material Design 3 Toggle Switch Style: Borderless pill track with animated sliding expanding thumb -->
+        <!-- Modern Sleek ScrollBar Style -->
+        <Style x:Key="ModernScrollThumb" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border x:Name="ThumbBorder" CornerRadius="3"
+                                Background="{DynamicResource M3PrimaryBrush}"
+                                Opacity="0.55"
+                                Margin="1,0,1,0"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Opacity" Value="0.90"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Opacity" Value="1.0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="{x:Type ScrollBar}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Width" Value="6"/>
+            <Setter Property="MinWidth" Value="6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ModernScrollThumb}"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="False"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material Design 3 Expressive Toggle Switch Style (matching Panak folder popup) -->
         <Style x:Key="MaterialSwitchStyle" TargetType="CheckBox">
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
-                        <Grid x:Name="SwitchRoot" Width="52" Height="32" VerticalAlignment="Center">
-                            <!-- Inactive Track -->
-                            <Border x:Name="InactiveTrack" Width="52" Height="32" CornerRadius="16"
-                                    Background="{DynamicResource M3TrackInactiveBrush}"
-                                    BorderThickness="0"/>
-                            
-                            <!-- Active Track -->
-                            <Border x:Name="ActiveTrack" Width="52" Height="32" CornerRadius="16"
-                                    Background="{DynamicResource M3PrimaryBrush}"
-                                    BorderThickness="0" Opacity="0"/>
-
-                            <!-- Sliding Thumb -->
-                            <Canvas Width="52" Height="32" IsHitTestVisible="False">
-                                <Grid x:Name="ThumbGrid" Canvas.Left="6" Canvas.Top="4" Width="24" Height="24">
-                                    <Grid.RenderTransform>
-                                        <TranslateTransform x:Name="ThumbTranslate" X="0" Y="0"/>
-                                    </Grid.RenderTransform>
-
-                                    <!-- Inactive Thumb (16px circle) -->
-                                    <Ellipse x:Name="InactiveThumb" Width="16" Height="16"
-                                             Fill="{DynamicResource M3OnSurfaceVariantBrush}"
-                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
-                                    <!-- Active Thumb (24px circle) -->
-                                    <Ellipse x:Name="ActiveThumb" Width="24" Height="24"
-                                             Fill="{DynamicResource M3OnPrimaryBrush}"
-                                             Opacity="0"
-                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Grid>
-                            </Canvas>
+                        <Grid Background="Transparent" VerticalAlignment="Center">
+                            <!-- Switch Track (44x24 pill) -->
+                            <Border x:Name="SwitchTrack" Width="44" Height="24" CornerRadius="12"
+                                    BorderThickness="2" BorderBrush="{DynamicResource M3TrackInactiveBrush}" Background="{DynamicResource M3TrackInactiveBrush}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <!-- Switch Thumb Container -->
+                                <Canvas Width="40" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
+                                    <!-- Unchecked Thumb: 14x14 at left -->
+                                    <Border x:Name="SwitchThumb" Width="14" Height="14" CornerRadius="7"
+                                            Background="{DynamicResource M3OnSurfaceVariantBrush}" Canvas.Left="2" Canvas.Top="3">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.3" Color="#000000"/>
+                                        </Border.Effect>
+                                    </Border>
+                                    <!-- Checked Icon: subtle vector check inside thumb -->
+                                    <Path x:Name="CheckIcon" Data="M 1,4 L 3.5,6.5 L 7.5,1.5"
+                                          Stroke="{DynamicResource M3PrimaryBrush}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Canvas.Left="26" Canvas.Top="6" Visibility="Collapsed"/>
+                                </Canvas>
+                            </Border>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ActiveTrack" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="InactiveTrack" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="ThumbTranslate" Storyboard.TargetProperty="X" To="16" Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="ActiveThumb" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="InactiveThumb" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.18">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ActiveTrack" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="InactiveTrack" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="ThumbTranslate" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="ActiveThumb" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.18">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="InactiveThumb" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
+                                <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
+                                <Setter TargetName="SwitchTrack" Property="BorderBrush" Value="{DynamicResource M3PrimaryBrush}"/>
+                                <Setter TargetName="SwitchThumb" Property="Canvas.Left" Value="21"/>
+                                <Setter TargetName="SwitchThumb" Property="Width" Value="18"/>
+                                <Setter TargetName="SwitchThumb" Property="Height" Value="18"/>
+                                <Setter TargetName="SwitchThumb" Property="CornerRadius" Value="9"/>
+                                <Setter TargetName="SwitchThumb" Property="Canvas.Top" Value="1"/>
+                                <Setter TargetName="SwitchThumb" Property="Background" Value="{DynamicResource M3OnPrimaryBrush}"/>
+                                <Setter TargetName="CheckIcon" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="SwitchRoot" Property="Opacity" Value="0.9"/>
+                                <Setter TargetName="SwitchTrack" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

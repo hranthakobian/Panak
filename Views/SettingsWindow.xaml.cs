@@ -101,22 +101,33 @@ namespace Panak.Views {
                     wpfTrackInactive = toWpf(trackInactiveColor);
                 }
 
-                // Update dynamic brushes in Resources so styles and templates adapt in real time
-                Resources["M3SurfaceBrush"] = new System.Windows.Media.SolidColorBrush(wpfSurface);
-                Resources["M3SurfaceContainerBrush"] = new System.Windows.Media.SolidColorBrush(wpfContainer);
-                Resources["M3CardBrush"] = new System.Windows.Media.SolidColorBrush(wpfCard);
-                Resources["M3PrimaryBrush"] = new System.Windows.Media.SolidColorBrush(wpfPrimary);
-                Resources["M3OnPrimaryBrush"] = new System.Windows.Media.SolidColorBrush(wpfOnPrimary);
-                Resources["M3OnSurfaceBrush"] = new System.Windows.Media.SolidColorBrush(wpfOnSurface);
-                Resources["M3OnSurfaceVariantBrush"] = new System.Windows.Media.SolidColorBrush(wpfOnSurfaceVariant);
-                Resources["M3TrackInactiveBrush"] = new System.Windows.Media.SolidColorBrush(wpfTrackInactive);
-                Resources["SettingsHueThumbBrush"] = new System.Windows.Media.SolidColorBrush(wpfContainer);
+                // Update dynamic brushes in Resources in place so styles, templates and existing controls adapt instantly
+                void SetBrush(string key, System.Windows.Media.Color col) {
+                    if (Resources[key] is System.Windows.Media.SolidColorBrush scb) {
+                        scb.Color = col;
+                    } else {
+                        Resources[key] = new System.Windows.Media.SolidColorBrush(col);
+                    }
+                }
+
+                SetBrush("M3SurfaceBrush", wpfSurface);
+                SetBrush("M3SurfaceContainerBrush", wpfContainer);
+                SetBrush("M3CardBrush", wpfCard);
+                SetBrush("M3PrimaryBrush", wpfPrimary);
+                SetBrush("M3OnPrimaryBrush", wpfOnPrimary);
+                SetBrush("M3OnSurfaceBrush", wpfOnSurface);
+                SetBrush("M3OnSurfaceVariantBrush", wpfOnSurfaceVariant);
+                SetBrush("M3TrackInactiveBrush", wpfTrackInactive);
+                SetBrush("SettingsHueThumbBrush", wpfContainer);
 
                 if (MainWindowBorder != null) {
                     MainWindowBorder.Background = new System.Windows.Media.SolidColorBrush(wpfSurface);
                 }
                 if (SettingsColorIndicator != null) {
                     SettingsColorIndicator.Background = new System.Windows.Media.SolidColorBrush(wpfContainer);
+                }
+                if (LanguageComboBox != null) {
+                    LanguageComboBox.Foreground = new System.Windows.Media.SolidColorBrush(wpfOnSurface);
                 }
             } catch { }
         }

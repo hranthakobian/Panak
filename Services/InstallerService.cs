@@ -63,6 +63,23 @@ namespace Panak.Services {
                             // Ignore if identical
                         }
                     }
+
+                    // Ensure Panak.ShellExt files are also copied if located in adjacent build output
+                    string[] shellExtCandidates = new[] {
+                        Path.Combine(baseDir, "Panak.ShellExt.comhost.dll"),
+                        Path.Combine(baseDir, "..", "..", "..", "Panak.ShellExt", "bin", "Release", "net8.0-windows", "Panak.ShellExt.comhost.dll"),
+                        Path.Combine(baseDir, "..", "..", "..", "Panak.ShellExt", "bin", "Debug", "net8.0-windows", "Panak.ShellExt.comhost.dll")
+                    };
+                    foreach (var cand in shellExtCandidates) {
+                        if (File.Exists(cand)) {
+                            string candDir = Path.GetDirectoryName(cand)!;
+                            foreach (var f in Directory.GetFiles(candDir, "Panak.ShellExt.*")) {
+                                string df = Path.Combine(targetDir, Path.GetFileName(f));
+                                try { File.Copy(f, df, true); } catch { }
+                            }
+                            break;
+                        }
+                    }
                 }
 
                 string targetExe = Path.Combine(targetDir, "Panak.exe");
@@ -92,7 +109,7 @@ namespace Panak.Services {
                 using (var key = Registry.CurrentUser.CreateSubKey(UNINSTALL_REG_KEY)) {
                     key.SetValue("DisplayName", "Panak - Android-style Folders");
                     key.SetValue("DisplayIcon", $"\"{targetExe}\",0");
-                    key.SetValue("DisplayVersion", "1.0.0");
+                    key.SetValue("DisplayVersion", "1.5.0");
                     key.SetValue("Publisher", "Panak Team");
                     key.SetValue("InstallLocation", targetDir);
                     key.SetValue("UninstallString", $"\"{targetExe}\" --uninstall");

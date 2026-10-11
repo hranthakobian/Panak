@@ -495,8 +495,18 @@ namespace Panak.Views {
                 TintLayer.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(95, color.R, color.G, color.B));
 
                 // Thin sleek scrollbar thumb matching folder theme color
-                Resources["PanakScrollBarThumbBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(150, color.R, color.G, color.B));
-                Resources["PanakScrollBarThumbHoverBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, color.R, color.G, color.B));
+                var thumbColor = System.Windows.Media.Color.FromArgb(150, color.R, color.G, color.B);
+                var hoverColor = System.Windows.Media.Color.FromArgb(220, color.R, color.G, color.B);
+                if (Resources["PanakScrollBarThumbBrush"] is SolidColorBrush tb) {
+                    tb.Color = thumbColor;
+                } else {
+                    Resources["PanakScrollBarThumbBrush"] = new SolidColorBrush(thumbColor);
+                }
+                if (Resources["PanakScrollBarThumbHoverBrush"] is SolidColorBrush hb) {
+                    hb.Color = hoverColor;
+                } else {
+                    Resources["PanakScrollBarThumbHoverBrush"] = new SolidColorBrush(hoverColor);
+                }
 
                 Resources["CurrentHueThumbBrush"] = new SolidColorBrush(color);
 
@@ -1268,6 +1278,24 @@ namespace Panak.Views {
 
             ApplyThemeBackground();
 
+            var textColor = isDark ? System.Windows.Media.Color.FromRgb(248, 250, 252) : System.Windows.Media.Color.FromRgb(15, 23, 42);
+            var subtextColor = isDark ? System.Windows.Media.Color.FromRgb(148, 163, 184) : System.Windows.Media.Color.FromRgb(100, 116, 139);
+
+            if (Resources["PopupTextBrush"] is SolidColorBrush ptb) {
+                ptb.Color = textColor;
+            } else {
+                Resources["PopupTextBrush"] = new SolidColorBrush(textColor);
+            }
+            if (Resources["PopupSubtextBrush"] is SolidColorBrush psb) {
+                psb.Color = subtextColor;
+            } else {
+                Resources["PopupSubtextBrush"] = new SolidColorBrush(subtextColor);
+            }
+
+            if (FolderItemsControl != null) {
+                FolderItemsControl.Foreground = new SolidColorBrush(textColor);
+            }
+
             if (isDark) {
                 // Dark Theme
                 CardBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(56, 255, 255, 255));
@@ -1280,8 +1308,6 @@ namespace Panak.Views {
                 ColorThemeLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
                 AlwaysPanakCheckBox.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
 
-                Resources["PopupTextBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
-                Resources["PopupSubtextBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
                 Resources["PopupHeaderBtnBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(37, 255, 255, 255));
                 Resources["PopupHeaderBtnFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(226, 232, 240));
                 Resources["PopupItemBadgeBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(37, 255, 255, 255));
@@ -1299,8 +1325,6 @@ namespace Panak.Views {
                 ColorThemeLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
                 AlwaysPanakCheckBox.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
 
-                Resources["PopupTextBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
-                Resources["PopupSubtextBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 116, 139));
                 Resources["PopupHeaderBtnBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(25, 0, 0, 0));
                 Resources["PopupHeaderBtnFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 41, 59));
                 Resources["PopupItemBadgeBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 0, 0, 0));

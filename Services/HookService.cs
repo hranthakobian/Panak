@@ -81,23 +81,15 @@ namespace Panak.Services {
         private POINT _leftDragStartPt;
         private bool _isLeftDragging = false;
 
-        // Right drag & drop
-        private POINT _rightDragStartPt;
-        private bool _isRightDragging = false;
-        private List<string>? _rightDragFiles;
-
         public event Action<ExplorerHelper.ItemInfo>? LeftDoubleClickTriggered;
         public event Action<ExplorerHelper.ItemInfo>? RightDoubleClickTriggered;
         public event Action<ExplorerHelper.ItemInfo>? SpaceQuickLookTriggered;
         public event Action? CloseRequested;
         public event Action<List<string>, string, Rect>? FileDroppedOnOtherFile;
-        public event Action<List<string>, string, Point>? RightDragDropCollectRequested;
 
         public Func<bool>? IsPopupOpenFunc { get; set; }
         public Func<bool>? IsPopupWithinGracePeriodFunc { get; set; }
         public Func<IntPtr>? GetPopupHwndFunc { get; set; }
-        public Func<bool>? IsRightDragMenuOpenFunc { get; set; }
-        public Action? CloseRightDragMenuAction { get; set; }
 
         public HookService() {
             _mouseProc = MouseHookCallback;
@@ -130,14 +122,8 @@ namespace Panak.Services {
                 try {
                     int msg = wParam.ToInt32();
 
-                // Detect click outside active folder popup or right-drag menu
+                // Detect click outside active folder popup
                 if (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN) {
-                    if (IsRightDragMenuOpenFunc?.Invoke() == true) {
-                        Application.Current.Dispatcher.BeginInvoke(() => {
-                            CloseRightDragMenuAction?.Invoke();
-                        });
-                    }
-
                     if (IsPopupOpenFunc?.Invoke() == true) {
                         if (IsPopupWithinGracePeriodFunc?.Invoke() != true) {
                             IntPtr popupHwnd = GetPopupHwndFunc?.Invoke() ?? IntPtr.Zero;
@@ -171,13 +157,6 @@ namespace Panak.Services {
                                     _leftDragSelectedFiles = ExplorerHelper.GetActiveExplorerSelectedPaths();
                                 }
                             }
-                        }
-                    }
-                    if (_rightDragFiles != null && !_isRightDragging) {
-                        int dx = Math.Abs(hookStruct.pt.x - _rightDragStartPt.x);
-                        int dy = Math.Abs(hookStruct.pt.y - _rightDragStartPt.y);
-                        if (dx > 8 || dy > 8) {
-                            _isRightDragging = true;
                         }
                     }
                 } else if (msg == WM_LBUTTONDOWN) {
@@ -265,38 +244,9 @@ namespace Panak.Services {
                         _leftDragSourceItem = null;
                         _leftDragSelectedFiles = null;
                     }
-                } else if (msg == WM_RBUTTONDOWN) {
-                    MSLLHOOKSTRUCT hookStruct = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
-                    _rightDragStartPt = hookStruct.pt;
-                    _isRightDragging = false;
-                    _rightDragFiles = ExplorerHelper.GetActiveExplorerSelectedPaths();
-                    if (_rightDragFiles == null || _rightDragFiles.Count == 0) {
-                        var curItem = ExplorerHelper.GetItemUnderCursor();
-                        if (curItem != null && !string.IsNullOrEmpty(curItem.Value.Path)) {
-                            _rightDragFiles = new List<string> { curItem.Value.Path! };
-                        }
-                    }
                 } else if (msg == WM_RBUTTONUP) {
                     MSLLHOOKSTRUCT hookStruct = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
-                    if (_isRightDragging) {
-                        var files = _rightDragFiles ?? new List<string>();
-                        if (files.Count == 0) {
-                            files = ExplorerHelper.GetActiveExplorerSelectedPaths();
-                        }
-                        if (files.Count > 0) {
-                            var dropPt = new Point(hookStruct.pt.x, hookStruct.pt.y);
-                            var targetItem = ExplorerHelper.GetItemUnderCursor();
-                            string? targetDir = null;
-                            if (targetItem != null && targetItem.Value.IsFolder && Directory.Exists(targetItem.Value.Path)) {
-                                targetDir = targetItem.Value.Path;
-                            }
-                            Application.Current.Dispatcher.BeginInvoke(() => {
-                                RightDragDropCollectRequested?.Invoke(files, targetDir ?? string.Empty, dropPt);
-                            });
-                        }
-                        _isRightDragging = false;
-                        _rightDragFiles = null;
-                    } else if (SettingsService.Instance.Current.RightDoubleClickEnabled) {
+                    if (SettingsService.Instance.Current.RightDoubleClickEnabled) {
                         uint doubleClickTime = ShellHelper.GetDoubleClickTime();
                         int maxDeltaX = ShellHelper.GetSystemMetrics(ShellHelper.SM_CXDOUBLECLK);
                         int maxDeltaY = ShellHelper.GetSystemMetrics(ShellHelper.SM_CYDOUBLECLK);

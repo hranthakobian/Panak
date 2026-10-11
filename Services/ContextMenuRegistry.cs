@@ -73,6 +73,32 @@ namespace Panak.Services {
                     cmd.SetValue("", $"\"{exePath}\" --open \"%1\"");
                 }
 
+                // 5. DragDropHandlers for right-click drag and drop (like 7-Zip & WinRAR)
+                string dir = Path.GetDirectoryName(exePath) ?? string.Empty;
+                string comhostPath = Path.Combine(dir, "Panak.ShellExt.comhost.dll");
+                if (!File.Exists(comhostPath)) {
+                    string devPath = Path.Combine(dir, "..", "..", "..", "Panak.ShellExt", "bin", "Debug", "net8.0-windows", "Panak.ShellExt.comhost.dll");
+                    if (File.Exists(devPath)) {
+                        comhostPath = Path.GetFullPath(devPath);
+                    }
+                }
+
+                if (File.Exists(comhostPath)) {
+                    string clsid = "{E5A7B812-3D4C-4A2E-8910-1F2D3C4E5A6B}";
+                    using (var clsidKey = Registry.CurrentUser.CreateSubKey($@"{HKCU_CLASSES}\CLSID\{clsid}")) {
+                        clsidKey.SetValue("", "Panak DragDrop Handler");
+                        using var inprocKey = clsidKey.CreateSubKey("InprocServer32");
+                        inprocKey.SetValue("", comhostPath);
+                        inprocKey.SetValue("ThreadingModel", "Apartment");
+                    }
+
+                    string[] dragDropRoots = new[] { "Directory", "Folder", "Drive" };
+                    foreach (var root in dragDropRoots) {
+                        using var handlerKey = Registry.CurrentUser.CreateSubKey($@"{HKCU_CLASSES}\{root}\shellex\DragDropHandlers\Panak");
+                        handlerKey.SetValue("", clsid);
+                    }
+                }
+
                 ShellHelper.NotifyShellAssocChanged();
             } catch {
                 // Ignore registry access error
@@ -81,6 +107,13 @@ namespace Panak.Services {
 
         public static void UnregisterAll() {
             try {
+                string clsid = "{E5A7B812-3D4C-4A2E-8910-1F2D3C4E5A6B}";
+                string[] dragDropRoots = new[] { "Directory", "Folder", "Drive" };
+                foreach (var root in dragDropRoots) {
+                    Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\{root}\shellex\DragDropHandlers\Panak", false);
+                }
+                Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\CLSID\{clsid}", false);
+
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\*\shell\PanakCreate", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Directory\shell\PanakOpen", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Directory\shell\PanakConvert", false);

@@ -10,8 +10,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>Panak</RootNamespace>
     <AssemblyName>Panak</AssemblyName>
-    <Version>1.0.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Version>1.5.0</Version>
+    <AssemblyVersion>1.5.0.0</AssemblyVersion>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <ApplicationIcon>Panak.ico</ApplicationIcon>
   </PropertyGroup>
@@ -48,6 +48,21 @@
     <Compile Remove="Setup\**" />
     <Page Remove="Setup\**" />
     <None Remove="Setup\**" />
+    <Compile Remove="Panak.ShellExt\**" />
+    <EmbeddedResource Remove="Panak.ShellExt\**" />
+    <None Remove="Panak.ShellExt\**" />
+    <Page Remove="Panak.ShellExt\**" />
   </ItemGroup>
+
+  <Target Name="CopyShellExtFiles" AfterTargets="Build;Publish">
+    <ItemGroup>
+      <ShellExtBinFiles Include="Panak.ShellExt\bin\$(Configuration)\net8.0-windows\Panak.ShellExt.comhost.dll" />
+      <ShellExtBinFiles Include="Panak.ShellExt\bin\$(Configuration)\net8.0-windows\Panak.ShellExt.dll" />
+      <ShellExtBinFiles Include="Panak.ShellExt\bin\$(Configuration)\net8.0-windows\Panak.ShellExt.deps.json" />
+      <ShellExtBinFiles Include="Panak.ShellExt\bin\$(Configuration)\net8.0-windows\Panak.ShellExt.runtimeconfig.json" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ShellExtBinFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="Exists('%(FullPath)')" />
+    <Copy SourceFiles="@(ShellExtBinFiles)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" Condition="'$(PublishDir)' != '' and Exists('%(FullPath)')" />
+  </Target>
 
 </Project>

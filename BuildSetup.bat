@@ -10,11 +10,16 @@ echo [1/5] Stopping any running instances...
 taskkill /F /IM Panak.exe 2>nul
 taskkill /F /IM Setup.exe 2>nul
 
-echo [2/5] Publishing Panak application...
+echo [2/5] Publishing Panak application and Shell Extension...
 if exist "staging_panak" rmdir /S /Q "staging_panak"
 dotnet publish -c Release -r win-x64 --self-contained false -o staging_panak Panak.csproj
 if %ERRORLEVEL% neq 0 (
     echo Error publishing Panak.
+    exit /b %ERRORLEVEL%
+)
+dotnet publish -c Release -r win-x64 --self-contained false -o staging_panak Panak.ShellExt\Panak.ShellExt.csproj
+if %ERRORLEVEL% neq 0 (
+    echo Error publishing Panak.ShellExt.
     exit /b %ERRORLEVEL%
 )
 

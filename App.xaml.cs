@@ -16,7 +16,6 @@ namespace Panak {
         private HookService? _hookService;
         private TrayManager? _trayManager;
         private SettingsWindow? _settingsWindow;
-        private RightDragDropMenuWindow? _rightDragMenuWindow;
 
         protected override void OnStartup(StartupEventArgs e) {
             try {
@@ -128,30 +127,12 @@ namespace Panak {
                     PanakManager.Instance.OpenFolder(item.Path, item.BoundingBox);
                 }
             };
-
-            _hookService.IsRightDragMenuOpenFunc = () => _rightDragMenuWindow != null && _rightDragMenuWindow.IsVisible;
-            _hookService.CloseRightDragMenuAction = () => {
-                _rightDragMenuWindow?.Close();
-                _rightDragMenuWindow = null;
-            };
-
             _hookService.FileDroppedOnOtherFile += (files, targetPath, bounds) => {
                 Task.Delay(150).ContinueWith(_ => {
                     Dispatcher.Invoke(() => {
                         string parentDir = Path.GetDirectoryName(targetPath) ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                         PanakManager.Instance.CollectFilesIntoPanakFolder(files.ToArray(), parentDir, bounds);
                     });
-                });
-            };
-
-            _hookService.RightDragDropCollectRequested += (files, targetDir, dropPt) => {
-                Dispatcher.Invoke(() => {
-                    _rightDragMenuWindow?.Close();
-                    _rightDragMenuWindow = new RightDragDropMenuWindow();
-                    _rightDragMenuWindow.CollectAction = (f, dir, pt) => {
-                        PanakManager.Instance.CollectFilesIntoPanakFolder(f.ToArray(), dir, new Rect(pt.X - 30, pt.Y - 30, 60, 60));
-                    };
-                    _rightDragMenuWindow.ShowMenu(files, targetDir, dropPt);
                 });
             };
 
@@ -183,6 +164,21 @@ namespace Panak {
                 SingleInstanceIpc.SendCommand($"CONVERT|{args[1]}|{cx}|{cy}");
             } else if (args.Length >= 2 && args[0].Equals("--new", StringComparison.OrdinalIgnoreCase)) {
                 SingleInstanceIpc.SendCommand($"NEW|{args[1]}|{cx}|{cy}");
+            } else if (args.Length >= 2 && args[0].Equals("--collect-file", StringComparison.OrdinalIgnoreCase)) {
+                string tempFile = args[1];
+                string targetDir = args.Length >= 3 ? args[2] : string.Empty;
+                if (args.Length >= 5 && int.TryParse(args[3], out int argX) && int.TryParse(args[4], out int argY)) {
+                    cx = argX;
+                    cy = argY;
+                }
+                if (File.Exists(tempFile)) {
+                    string[] files = File.ReadAllLines(tempFile);
+                    try { File.Delete(tempFile); } catch { }
+                    if (files.Length > 0) {
+                        string filePayload = string.Join("*", files);
+                        SingleInstanceIpc.SendCommand($"COLLECT|{targetDir}|{cx}|{cy}|{filePayload}");
+                    }
+                }
             } else if (args.Length >= 1 && args[0].Equals("--settings", StringComparison.OrdinalIgnoreCase)) {
                 SingleInstanceIpc.SendCommand("SETTINGS");
             } else if (args.Length >= 1 && args[0].Equals("--background", StringComparison.OrdinalIgnoreCase)) {
@@ -208,6 +204,22 @@ namespace Panak {
                 OpenFolderFromPath(args[1], clickPt);
             } else if (args.Length >= 2 && args[0].Equals("--new", StringComparison.OrdinalIgnoreCase)) {
                 CreateAndOpenNewInDir(args[1], clickPt);
+            } else if (args.Length >= 2 && args[0].Equals("--collect-file", StringComparison.OrdinalIgnoreCase)) {
+                string tempFile = args[1];
+                string targetDir = args.Length >= 3 ? args[2] : string.Empty;
+                if (args.Length >= 5 && double.TryParse(args[3], out double argX) && double.TryParse(args[4], out double argY)) {
+                    clickPt = new Point(argX, argY);
+                }
+                if (File.Exists(tempFile)) {
+                    string[] files = File.ReadAllLines(tempFile);
+                    try { File.Delete(tempFile); } catch { }
+                    if (files.Length > 0) {
+                        Rect bounds = clickPt != null
+                            ? new Rect(clickPt.Value.X - 30, clickPt.Value.Y - 30, 60, 60)
+                            : new Rect(100, 100, 60, 60);
+                        PanakManager.Instance.CollectFilesIntoPanakFolder(files, targetDir, bounds);
+                    }
+                }
             } else if (args.Length >= 1 && args[0].Equals("--settings", StringComparison.OrdinalIgnoreCase)) {
                 ShowSettings();
             } else if (args.Length == 0 || !args[0].Equals("--background", StringComparison.OrdinalIgnoreCase)) {
@@ -244,6 +256,19 @@ namespace Panak {
                     }
                     case "NEW": {
                         CreateAndOpenNewInDir(payload, clickPt);
+                        break;
+                    }
+                    case "COLLECT": {
+                        string targetDir = payload;
+                        string[] files = parts.Length > 4
+                            ? parts[4].Split(new[] { '*' }, StringSplitOptions.RemoveEmptyEntries)
+                            : Array.Empty<string>();
+                        if (files.Length > 0) {
+                            Rect bounds = clickPt != null
+                                ? new Rect(clickPt.Value.X - 30, clickPt.Value.Y - 30, 60, 60)
+                                : new Rect(100, 100, 60, 60);
+                            PanakManager.Instance.CollectFilesIntoPanakFolder(files, targetDir, bounds);
+                        }
                         break;
                     }
                     case "SETTINGS": {

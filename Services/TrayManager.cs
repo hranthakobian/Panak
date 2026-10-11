@@ -4,8 +4,13 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Effects;
 using Panak.Views;
+using Panak.Models;
 
 namespace Panak.Services {
     public class TrayManager : IDisposable {
@@ -109,7 +114,7 @@ namespace Panak.Services {
             } catch { }
 
             // Fallback: render plate
-            using (Bitmap fallbackBmp = IconGenerator.RenderPlateWithGrid(32, "Squircle", Color.FromArgb(59, 130, 246), new System.Collections.Generic.List<Bitmap>())) {
+            using (Bitmap fallbackBmp = IconGenerator.RenderPlateWithGrid(32, "Squircle", System.Drawing.Color.FromArgb(59, 130, 246), new System.Collections.Generic.List<Bitmap>())) {
                 return fallbackBmp.GetHicon();
             }
         }
@@ -175,19 +180,130 @@ namespace Panak.Services {
 
         private void ShowContextMenu() {
             var loc = LocalizationService.Instance;
+            var settings = SettingsService.Instance.Current;
 
-            ContextMenu menu = new ContextMenu();
+            bool isDark = (settings.ThemeMode == "Dark") || (settings.ThemeMode != "Light" && ShellHelper.IsWindowsDarkTheme());
+            string themeColor = string.IsNullOrEmpty(settings.ThemeColor) ? ShellHelper.GetDefaultPastelColorHex() : settings.ThemeColor;
+            double hue = ShellHelper.GetHueFromHex(themeColor);
 
-            MenuItem mSettings = new MenuItem { Header = loc["Settings"] };
-            mSettings.Click += (s, e) => SettingsRequested?.Invoke();
-            menu.Items.Add(mSettings);
+            System.Windows.Media.Color bgSurface, fgOnSurface, primaryColor, borderCol, hoverBg, sepCol;
+            if (isDark) {
+                bgSurface = System.Windows.Media.Color.FromArgb(242, 28, 27, 34);
+                fgOnSurface = System.Windows.Media.Color.FromRgb(248, 250, 252);
+                var pCol = ShellHelper.ColorFromHsl(hue, 0.70, 0.72);
+                primaryColor = System.Windows.Media.Color.FromRgb(pCol.R, pCol.G, pCol.B);
+                borderCol = System.Windows.Media.Color.FromArgb(45, 255, 255, 255);
+                hoverBg = System.Windows.Media.Color.FromArgb(50, primaryColor.R, primaryColor.G, primaryColor.B);
+                sepCol = System.Windows.Media.Color.FromArgb(30, 255, 255, 255);
+            } else {
+                var (sCol, cCol, pCol) = ShellHelper.GetMaterialYouTonalPalette(hue);
+                bgSurface = System.Windows.Media.Color.FromArgb(248, sCol.R, sCol.G, sCol.B);
+                fgOnSurface = System.Windows.Media.Color.FromRgb(30, 41, 59);
+                primaryColor = System.Windows.Media.Color.FromRgb(pCol.R, pCol.G, pCol.B);
+                borderCol = System.Windows.Media.Color.FromArgb(50, 0, 0, 0);
+                hoverBg = System.Windows.Media.Color.FromArgb(40, primaryColor.R, primaryColor.G, primaryColor.B);
+                sepCol = System.Windows.Media.Color.FromArgb(25, 0, 0, 0);
+            }
 
-            MenuItem mNew = new MenuItem { Header = loc["NewFolder"] };
-            mNew.Click += (s, e) => NewFolderRequested?.Invoke();
-            menu.Items.Add(mNew);
+            ContextMenu menu = new ContextMenu {
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0),
+                Placement = PlacementMode.MousePoint,
+                SnapsToDevicePixels = true,
+                UseLayoutRounding = true
+            };
 
-            MenuItem mUpdate = new MenuItem { Header = loc["CheckForUpdates"] };
-            mUpdate.Click += async (s, e) => {
+            // Custom ContextMenu Template with rounded Card & DropShadow
+            var menuTemplate = new ControlTemplate(typeof(ContextMenu));
+            var borderFactory = new FrameworkElementFactory(typeof(Border));
+            borderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(14));
+            borderFactory.SetValue(Border.BackgroundProperty, new SolidColorBrush(bgSurface));
+            borderFactory.SetValue(Border.BorderBrushProperty, new SolidColorBrush(borderCol));
+            borderFactory.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+            borderFactory.SetValue(Border.PaddingProperty, new Thickness(5));
+            borderFactory.SetValue(Border.MinWidthProperty, 175.0);
+            borderFactory.SetValue(UIElement.EffectProperty, new DropShadowEffect {
+                BlurRadius = 18,
+                ShadowDepth = 3,
+                Direction = 270,
+                Opacity = 0.30,
+                Color = System.Windows.Media.Colors.Black
+            });
+
+            var panelFactory = new FrameworkElementFactory(typeof(StackPanel));
+            panelFactory.SetValue(StackPanel.IsItemsHostProperty, true);
+            borderFactory.AppendChild(panelFactory);
+            menuTemplate.VisualTree = borderFactory;
+            menu.Template = menuTemplate;
+
+            MenuItem CreateItem(string icon, string header, RoutedEventHandler onClick) {
+                MenuItem item = new MenuItem {
+                    Header = header,
+                    Cursor = Cursors.Hand,
+                    Height = 34
+                };
+
+                var itemTemplate = new ControlTemplate(typeof(MenuItem));
+                var itemBorder = new FrameworkElementFactory(typeof(Border), "ItemBorder");
+                itemBorder.SetValue(Border.CornerRadiusProperty, new CornerRadius(10));
+                itemBorder.SetValue(Border.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
+                itemBorder.SetValue(Border.PaddingProperty, new Thickness(10, 0, 12, 0));
+
+                var grid = new FrameworkElementFactory(typeof(Grid));
+                var colIcon = new FrameworkElementFactory(typeof(ColumnDefinition));
+                colIcon.SetValue(ColumnDefinition.WidthProperty, new GridLength(24));
+                var colText = new FrameworkElementFactory(typeof(ColumnDefinition));
+                colText.SetValue(ColumnDefinition.WidthProperty, new GridLength(1, GridUnitType.Star));
+                grid.AppendChild(colIcon);
+                grid.AppendChild(colText);
+
+                var iconBlock = new FrameworkElementFactory(typeof(TextBlock));
+                iconBlock.SetValue(TextBlock.TextProperty, icon);
+                iconBlock.SetValue(TextBlock.FontSizeProperty, 12.0);
+                iconBlock.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+                iconBlock.SetValue(Grid.ColumnProperty, 0);
+                grid.AppendChild(iconBlock);
+
+                var headerBlock = new FrameworkElementFactory(typeof(TextBlock), "HeaderText");
+                headerBlock.SetValue(TextBlock.TextProperty, header);
+                headerBlock.SetValue(TextBlock.FontSizeProperty, 12.0);
+                headerBlock.SetValue(TextBlock.FontWeightProperty, FontWeights.Medium);
+                headerBlock.SetValue(TextBlock.ForegroundProperty, new SolidColorBrush(fgOnSurface));
+                headerBlock.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+                headerBlock.SetValue(Grid.ColumnProperty, 1);
+                grid.AppendChild(headerBlock);
+
+                itemBorder.AppendChild(grid);
+                itemTemplate.VisualTree = itemBorder;
+
+                var trigger = new Trigger { Property = MenuItem.IsHighlightedProperty, Value = true };
+                trigger.Setters.Add(new Setter(Border.BackgroundProperty, new SolidColorBrush(hoverBg), "ItemBorder"));
+                trigger.Setters.Add(new Setter(TextBlock.ForegroundProperty, new SolidColorBrush(primaryColor), "HeaderText"));
+                itemTemplate.Triggers.Add(trigger);
+
+                item.Template = itemTemplate;
+                item.Click += onClick;
+                return item;
+            }
+
+            Separator CreateSeparator() {
+                Separator sep = new Separator {
+                    Height = 1,
+                    Margin = new Thickness(6, 4, 6, 4)
+                };
+                var sepTemplate = new ControlTemplate(typeof(Separator));
+                var sepBorder = new FrameworkElementFactory(typeof(Border));
+                sepBorder.SetValue(Border.HeightProperty, 1.0);
+                sepBorder.SetValue(Border.BackgroundProperty, new SolidColorBrush(sepCol));
+                sepTemplate.VisualTree = sepBorder;
+                sep.Template = sepTemplate;
+                return sep;
+            }
+
+            menu.Items.Add(CreateItem("⚙️", loc["Settings"], (s, e) => SettingsRequested?.Invoke()));
+            menu.Items.Add(CreateItem("📁", loc["NewFolder"], (s, e) => NewFolderRequested?.Invoke()));
+            menu.Items.Add(CreateItem("🔄", loc["CheckForUpdates"], async (s, e) => {
                 bool found = await GitHubUpdateService.Instance.CheckForUpdatesAsync(manual: true);
                 if (found) {
                     ShowBalloon(loc["UpdateAvailable"], $"{loc["LatestVersion"]}: v{GitHubUpdateService.Instance.LatestVersionString}");
@@ -196,15 +312,15 @@ namespace Panak.Services {
                 } else if (GitHubUpdateService.Instance.Status == UpdateStatus.Error) {
                     ShowBalloon(loc["Updates"], loc["UpdateError"]);
                 }
-            };
-            menu.Items.Add(mUpdate);
+            }));
 
-            menu.Items.Add(new Separator());
+            menu.Items.Add(CreateSeparator());
 
-            MenuItem mExit = new MenuItem { Header = loc["Exit"] };
-            mExit.Click += (s, e) => ExitRequested?.Invoke();
-            menu.Items.Add(mExit);
+            menu.Items.Add(CreateItem("✕", loc["Exit"], (s, e) => ExitRequested?.Invoke()));
 
+            if (_hwndSource != null) {
+                ShellHelper.SetForegroundWindow(_hwndSource.Handle);
+            }
             menu.IsOpen = true;
         }
 
