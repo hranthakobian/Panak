@@ -27,11 +27,11 @@ namespace Panak.Services {
                     return null;
                 }
 
-                // Look for ListItem or TreeViewItem
+                // Look for ListItem, TreeViewItem, or DataItem (WinUI File Explorer)
                 AutomationElement? current = element;
                 while (current != null && current != AutomationElement.RootElement) {
                     var controlType = current.Current.ControlType;
-                    if (controlType == ControlType.ListItem || controlType == ControlType.TreeItem) {
+                    if (controlType == ControlType.ListItem || controlType == ControlType.TreeItem || controlType == ControlType.DataItem) {
                         break;
                     }
                     current = TreeWalker.ControlViewWalker.GetParent(current);
@@ -40,8 +40,16 @@ namespace Panak.Services {
                 AutomationElement targetElement = current ?? element;
                 Rect bounds = targetElement.Current.BoundingRectangle;
 
+                string itemName = targetElement.Current.Name;
+                if (string.IsNullOrWhiteSpace(itemName) && element != null) {
+                    itemName = element.Current.Name;
+                }
+                if (string.IsNullOrWhiteSpace(itemName)) {
+                    return null;
+                }
+
                 // Query Shell.Application for the file path
-                string? path = GetPathFromShellWindows(pt, targetElement.Current.Name);
+                string? path = GetPathFromShellWindows(pt, itemName);
 
                 if (string.IsNullOrEmpty(path)) {
                     // Check desktop directories
@@ -53,13 +61,18 @@ namespace Panak.Services {
 
                     foreach (var d in desktopDirs) {
                         if (!string.IsNullOrEmpty(d) && Directory.Exists(d)) {
-                            string candidate = Path.Combine(d, targetElement.Current.Name);
+                            string candidate = Path.Combine(d, itemName);
                             if (File.Exists(candidate) || Directory.Exists(candidate)) {
                                 path = candidate;
                                 break;
                             }
                             try {
-                                var matches = Directory.GetFiles(d, targetElement.Current.Name + ".*");
+                                var dirMatches = Directory.GetDirectories(d, itemName + ".*");
+                                if (dirMatches.Length > 0) {
+                                    path = dirMatches[0];
+                                    break;
+                                }
+                                var matches = Directory.GetFiles(d, itemName + ".*");
                                 if (matches.Length > 0) {
                                     path = matches[0];
                                     break;
@@ -70,7 +83,7 @@ namespace Panak.Services {
 
                     // Also check known Panak folders
                     if (string.IsNullOrEmpty(path)) {
-                        string? match = PanakManager.Instance.FindKnownFolderByName(targetElement.Current.Name);
+                        string? match = PanakManager.Instance.FindKnownFolderByName(itemName);
                         if (!string.IsNullOrEmpty(match)) {
                             path = match;
                         }
@@ -186,11 +199,34 @@ namespace Panak.Services {
                 // Query Shell.Application for active window
                 string? selectedPath = GetActiveExplorerSelectedPath(activeHwnd);
 
-                if (string.IsNullOrEmpty(selectedPath) && focused != null) {
-                    string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                    string candidate = Path.Combine(desktop, focused.Current.Name);
-                    if (File.Exists(candidate) || Directory.Exists(candidate)) {
-                        selectedPath = candidate;
+                if (string.IsNullOrEmpty(selectedPath) && focused != null && !string.IsNullOrWhiteSpace(focused.Current.Name)) {
+                    string focusedName = focused.Current.Name;
+                    string[] desktopDirs = new[] {
+                        Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                        Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OneDrive", "Desktop")
+                    };
+
+                    foreach (var d in desktopDirs) {
+                        if (!string.IsNullOrEmpty(d) && Directory.Exists(d)) {
+                            string candidate = Path.Combine(d, focusedName);
+                            if (File.Exists(candidate) || Directory.Exists(candidate)) {
+                                selectedPath = candidate;
+                                break;
+                            }
+                            try {
+                                var dirMatches = Directory.GetDirectories(d, focusedName + ".*");
+                                if (dirMatches.Length > 0) {
+                                    selectedPath = dirMatches[0];
+                                    break;
+                                }
+                                var matches = Directory.GetFiles(d, focusedName + ".*");
+                                if (matches.Length > 0) {
+                                    selectedPath = matches[0];
+                                    break;
+                                }
+                            } catch { }
+                        }
                     }
                 }
 
@@ -251,7 +287,7 @@ namespace Panak.Services {
                                 if (sel != null) {
                                     string? path = sel.Path;
                                     if (!string.IsNullOrEmpty(path)) {
-                                        if (string.IsNullOrEmpty(itemName) || Path.GetFileName(path).Equals(itemName, StringComparison.OrdinalIgnoreCase)) {
+                                        if (!string.IsNullOrWhiteSpace(itemName) && Path.GetFileName(path).Equals(itemName, StringComparison.OrdinalIgnoreCase)) {
                                             return path;
                                         }
                                     }
@@ -264,7 +300,7 @@ namespace Panak.Services {
                         if (focusedItem != null) {
                             string? fpath = focusedItem.Path;
                             if (!string.IsNullOrEmpty(fpath)) {
-                                if (string.IsNullOrEmpty(itemName) || Path.GetFileName(fpath).Equals(itemName, StringComparison.OrdinalIgnoreCase)) {
+                                if (!string.IsNullOrWhiteSpace(itemName) && Path.GetFileName(fpath).Equals(itemName, StringComparison.OrdinalIgnoreCase)) {
                                     return fpath;
                                 }
                             }
@@ -277,12 +313,16 @@ namespace Panak.Services {
                                 dynamic? selfObj = folderObj.Self;
                                 if (selfObj != null) {
                                     string? folderPath = (string?)selfObj.Path;
-                                    if (!string.IsNullOrEmpty(folderPath) && !string.IsNullOrEmpty(itemName)) {
+                                    if (!string.IsNullOrEmpty(folderPath) && !string.IsNullOrWhiteSpace(itemName)) {
                                         string direct = Path.Combine(folderPath, itemName);
                                         if (File.Exists(direct) || Directory.Exists(direct)) {
                                             return direct;
                                         }
                                         try {
+                                            var dirMatches = Directory.GetDirectories(folderPath, itemName + ".*");
+                                            if (dirMatches.Length > 0) {
+                                                return dirMatches[0];
+                                            }
                                             var matches = Directory.GetFiles(folderPath, itemName + ".*");
                                             if (matches.Length > 0) {
                                                 return matches[0];
@@ -318,6 +358,7 @@ namespace Panak.Services {
 
                 dynamic windows = shell.Windows();
                 int count = windows.Count;
+                IntPtr rootHwnd = ShellHelper.GetAncestor(activeHwnd, ShellHelper.GA_ROOT);
 
                 for (int i = 0; i < count; i++) {
                     dynamic item = windows.Item(i);
@@ -327,7 +368,7 @@ namespace Panak.Services {
 
                     try {
                         long hwnd = item.HWND;
-                        if (hwnd == activeHwnd.ToInt64()) {
+                        if (hwnd == activeHwnd.ToInt64() || (rootHwnd != IntPtr.Zero && hwnd == rootHwnd.ToInt64())) {
                             dynamic? doc = item.Document;
                             if (doc != null) {
                                 dynamic? focusedItem = doc.FocusedItem;

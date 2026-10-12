@@ -10,8 +10,8 @@
     <ApplicationManifest>..\app.manifest</ApplicationManifest>
     <RootNamespace>Panak.Setup</RootNamespace>
     <AssemblyName>Setup</AssemblyName>
-    <Version>1.7.1</Version>
-    <AssemblyVersion>1.7.1.0</AssemblyVersion>
+    <Version>1.7.2</Version>
+    <AssemblyVersion>1.7.2.0</AssemblyVersion>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <ApplicationIcon>Panak.ico</ApplicationIcon>
   </PropertyGroup>
@@ -21,15 +21,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="..\PanakSetupLogo.png" Link="PanakSetupLogo.png" />
+    <Resource Include="..\src\PanakSetupLogo.png" Link="PanakSetupLogo.png" />
     <Resource Include="Panak.ico" />
-    <EmbeddedResource Include="..\PanakSetupLogo.png" Link="PanakSetupLogoEmbedded.png" />
+    <EmbeddedResource Include="..\src\PanakSetupLogo.png" Link="PanakSetupLogoEmbedded.png" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="..\Services\LocalizationService.cs" Link="Services\LocalizationService.cs" />
     <Compile Include="..\Services\ContextMenuRegistry.cs" Link="Services\ContextMenuRegistry.cs" />
     <Compile Include="..\Services\ShellHelper.cs" Link="Services\ShellHelper.cs" />
+    <Compile Include="..\Controls\WavyProgressBar.cs" Link="Controls\WavyProgressBar.cs" />
   </ItemGroup>
 
   <ItemGroup>

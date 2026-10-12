@@ -16,6 +16,7 @@ namespace Panak {
         private HookService? _hookService;
         private TrayManager? _trayManager;
         private SettingsWindow? _settingsWindow;
+        private WelcomeWindow? _welcomeWindow;
 
         protected override void OnStartup(StartupEventArgs e) {
             try {
@@ -86,11 +87,14 @@ namespace Panak {
             // Primary instance: start background services
             InitializeBackgroundServices();
 
-            // Ensure auto-start is properly registered if enabled
+            // Ensure auto-start and context menus are properly registered if enabled
             try {
                 string currentExe = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
                 if (!string.IsNullOrEmpty(currentExe)) {
                     InstallerService.EnsureAutoStartRegistered(currentExe);
+                    if (ContextMenuRegistry.IsRegistered()) {
+                        ContextMenuRegistry.RegisterAll(currentExe);
+                    }
                 }
             } catch { }
 
@@ -182,6 +186,8 @@ namespace Panak {
                         SingleInstanceIpc.SendCommand($"COLLECT|{targetDir}|{cx}|{cy}|{filePayload}");
                     }
                 }
+            } else if (args.Length >= 1 && args[0].Equals("--welcome", StringComparison.OrdinalIgnoreCase)) {
+                SingleInstanceIpc.SendCommand("WELCOME");
             } else if (args.Length >= 1 && args[0].Equals("--settings", StringComparison.OrdinalIgnoreCase)) {
                 SingleInstanceIpc.SendCommand("SETTINGS");
             } else if (args.Length >= 1 && args[0].Equals("--background", StringComparison.OrdinalIgnoreCase)) {
@@ -223,6 +229,8 @@ namespace Panak {
                         PanakManager.Instance.CollectFilesIntoPanakFolder(files, targetDir, bounds);
                     }
                 }
+            } else if (args.Length >= 1 && args[0].Equals("--welcome", StringComparison.OrdinalIgnoreCase)) {
+                ShowWelcome();
             } else if (args.Length >= 1 && args[0].Equals("--settings", StringComparison.OrdinalIgnoreCase)) {
                 ShowSettings();
             } else if (args.Length == 0 || !args[0].Equals("--background", StringComparison.OrdinalIgnoreCase)) {
@@ -272,6 +280,10 @@ namespace Panak {
                                 : new Rect(100, 100, 60, 60);
                             PanakManager.Instance.CollectFilesIntoPanakFolder(files, targetDir, bounds);
                         }
+                        break;
+                    }
+                    case "WELCOME": {
+                        ShowWelcome();
                         break;
                     }
                     case "SETTINGS": {
@@ -340,7 +352,7 @@ namespace Panak {
             }
         }
 
-        private void ShowSettings() {
+        public void ShowSettings() {
             if (_settingsWindow == null || !_settingsWindow.IsLoaded) {
                 _settingsWindow = new SettingsWindow();
                 _settingsWindow.Closed += (s, e) => _settingsWindow = null;
@@ -348,6 +360,18 @@ namespace Panak {
             } else {
                 _settingsWindow.Activate();
             }
+        }
+
+        public void ShowWelcome() {
+            Dispatcher.Invoke(() => {
+                if (_welcomeWindow == null || !_welcomeWindow.IsLoaded) {
+                    _welcomeWindow = new WelcomeWindow();
+                    _welcomeWindow.Closed += (s, e) => _welcomeWindow = null;
+                    _welcomeWindow.Show();
+                } else {
+                    _welcomeWindow.Activate();
+                }
+            });
         }
 
         private void ExitApp() {

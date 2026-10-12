@@ -277,9 +277,6 @@ namespace Panak.Services {
         <Border.RenderTransform>
             <ScaleTransform ScaleX='0.88' ScaleY='0.88'/>
         </Border.RenderTransform>
-        <Border.Effect>
-            <DropShadowEffect BlurRadius='24' ShadowDepth='4' Direction='270' Opacity='0.25' Color='#000000'/>
-        </Border.Effect>
         <StackPanel IsItemsHost='True'/>
     </Border>
     <ControlTemplate.Triggers>

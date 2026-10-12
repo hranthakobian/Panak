@@ -1,0 +1,201 @@
+<Window x:Class="Panak.Views.WelcomeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Welcome to Panak"
+        Height="460"
+        Width="500"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        PreviewKeyDown="Window_PreviewKeyDown">
+
+    <Window.Resources>
+        <!-- Material You (M3) Dynamic Color Brushes -->
+        <SolidColorBrush x:Key="M3SurfaceBrush" Color="#FEF4EB"/>
+        <SolidColorBrush x:Key="M3SurfaceContainerBrush" Color="#FCDDC5"/>
+        <SolidColorBrush x:Key="M3CardBrush" Color="#FFF7F0"/>
+        <SolidColorBrush x:Key="M3PrimaryBrush" Color="#7A5427"/>
+        <SolidColorBrush x:Key="M3OnPrimaryBrush" Color="#FEF4EB"/>
+        <SolidColorBrush x:Key="M3OnSurfaceBrush" Color="#2B1D11"/>
+        <SolidColorBrush x:Key="M3OnSurfaceVariantBrush" Color="#6E5643"/>
+        <SolidColorBrush x:Key="M3TrackInactiveBrush" Color="#EED7C5"/>
+
+        <!-- Close Icon Button Style -->
+        <Style x:Key="CloseIconButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariantBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="HoverCircle" Width="32" Height="32" CornerRadius="16" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HoverCircle" Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material 3 Pill Button Style (Primary) -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}" RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="BtnScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.92"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material 3 Pill Button Style (Secondary / Tonal Container) -->
+        <Style x:Key="SecondaryActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="18,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}" RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="BtnScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Feature Item Card Style -->
+        <Style x:Key="FeatureCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource M3CardBrush}"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+    </Window.Resources>
+
+    <!-- Main Window Surface: Pure borderless Material You card without shadow -->
+    <Border x:Name="MainWindowBorder" Margin="2" CornerRadius="24" Background="{DynamicResource M3SurfaceBrush}" BorderThickness="1" BorderBrush="{DynamicResource M3SurfaceContainerBrush}">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="*"/>    <!-- Content Body -->
+                <RowDefinition Height="Auto"/> <!-- Actions Footer -->
+            </Grid.RowDefinitions>
+
+            <!-- Header: Draggable with Close Button -->
+            <Grid Grid.Row="0" Margin="0,0,0,12" Background="Transparent" MouseDown="Header_MouseDown" Cursor="SizeAll">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="34" Height="34" CornerRadius="10" Margin="0,0,10,0" VerticalAlignment="Center" ClipToBounds="True">
+                        <Image x:Name="HeaderLogoImage" Width="34" Height="34" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Border>
+                    <TextBlock Text="Panak" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <Button Grid.Column="1" Style="{StaticResource CloseIconButtonStyle}" Content="✕" Width="32" Height="32" Click="CloseBtn_Click"/>
+            </Grid>
+
+            <!-- Content Body -->
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4,0,12">
+                <!-- Large Logo Banner: Panak Brand Logo (src/Group 389.png) -->
+                <Image x:Name="CenterLogoImage" Height="46" MaxWidth="220" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,12" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                <!-- Welcome Titles -->
+                <TextBlock x:Name="WelcomeTitleText" Text="Welcome to Panak" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center" TextAlignment="Center"/>
+                <TextBlock x:Name="WelcomeSubtitleText" Text="Material 3 Expressive popup folders for Windows" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,16"/>
+
+                <!-- Highlights Card -->
+                <Border Style="{StaticResource FeatureCardStyle}" Margin="4,0,4,0">
+                    <StackPanel>
+                        <Grid Margin="0,2,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="24"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="🎨" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="Feature1Text" Grid.Column="1" Text="Material You dynamic color palettes &amp; expressive shapes" FontSize="11.5" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                        </Grid>
+                        <Grid Margin="0,2,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="24"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="📂" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="Feature2Text" Grid.Column="1" Text="Instant popup widgets with 2x2 live file previews" FontSize="11.5" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                        </Grid>
+                        <Grid Margin="0,2,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="24"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="⚡" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="Feature3Text" Grid.Column="1" Text="Quick Look via Spacebar &amp; Right Double-Click integration" FontSize="11.5" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Actions Footer: Ko-fi and Go to Settings matching designs -->
+            <Grid Grid.Row="2" Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Ko-fi Support Button -->
+                <Button x:Name="KofiBtn" Grid.Column="0" Margin="0,0,6,0" Style="{StaticResource ActionButtonStyle}" Content="☕ Ko-fi" Click="KofiBtn_Click"/>
+
+                <!-- Go to Settings Button -->
+                <Button x:Name="SettingsBtn" Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource ActionButtonStyle}" Content="⚙️ Settings" Click="SettingsBtn_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

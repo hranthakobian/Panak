@@ -698,7 +698,7 @@ namespace Panak.Tests {
                     foreach (var f in Directory.GetFiles(tempParent, "*", SearchOption.AllDirectories)) {
                         try { File.SetAttributes(f, FileAttributes.Normal); } catch { }
                     }
-                    Directory.Delete(tempParent, true);
+                    try { Directory.Delete(tempParent, true); } catch { }
                 }
             }
         }
@@ -723,13 +723,14 @@ namespace Panak.Tests {
                 // Now 0 items remain inside ("մեջը ոչ մի բան չի մնում, այն ինքնաշխատ ջնջվում է")
                 bool dissolved = PanakManager.Instance.CheckAndDissolveFolder(panakFolder);
                 Assert.IsTrue(dissolved, "Empty folder should dissolve and delete");
+                System.Threading.SpinWait.SpinUntil(() => !Directory.Exists(panakFolder), 1000);
                 Assert.IsFalse(Directory.Exists(panakFolder), "Panak folder should be deleted when empty");
             } finally {
                 if (Directory.Exists(tempParent)) {
                     foreach (var f in Directory.GetFiles(tempParent, "*", SearchOption.AllDirectories)) {
                         try { File.SetAttributes(f, FileAttributes.Normal); } catch { }
                     }
-                    Directory.Delete(tempParent, true);
+                    try { Directory.Delete(tempParent, true); } catch { }
                 }
             }
         }
@@ -755,8 +756,8 @@ namespace Panak.Tests {
         public void TestGitHubUpdateServiceVersionAndDefaults() {
             var updater = GitHubUpdateService.Instance;
             Assert.IsNotNull(updater);
-            Assert.AreEqual("1.7.1", updater.CurrentVersionString);
-            Assert.AreEqual(new Version(1, 7, 1), updater.CurrentVersion);
+            Assert.AreEqual("1.7.2", updater.CurrentVersionString);
+            Assert.AreEqual(new Version(1, 7, 2), updater.CurrentVersion);
             Assert.AreEqual(UpdateStatus.Idle, updater.Status);
         }
 
@@ -865,24 +866,30 @@ namespace Panak.Tests {
             ContextMenuRegistry.RegisterAll(exePath);
 
             const string clsid = "{E5A7B812-3D4C-4A2E-8910-1F2D3C4E5A6B}";
-            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\shellex\DragDropHandlers\Panak")) {
-                Assert.IsNotNull(key, "DragDropHandlers for Directory should be registered");
-                Assert.AreEqual(clsid, key.GetValue(""));
-            }
-
-            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Folder\shellex\DragDropHandlers\Panak")) {
-                Assert.IsNotNull(key, "DragDropHandlers for Folder should be registered");
-                Assert.AreEqual(clsid, key.GetValue(""));
-            }
-
-            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Drive\shellex\DragDropHandlers\Panak")) {
-                Assert.IsNotNull(key, "DragDropHandlers for Drive should be registered");
-                Assert.AreEqual(clsid, key.GetValue(""));
+            string[] expectedRoots = new[] {
+                @"Software\Classes\Directory\shellex\DragDropHandlers\Panak",
+                @"Software\Classes\Folder\shellex\DragDropHandlers\Panak",
+                @"Software\Classes\Drive\shellex\DragDropHandlers\Panak",
+                @"Software\Classes\Directory\Background\shellex\DragDropHandlers\Panak",
+                @"Software\Classes\DesktopBackground\shellex\DragDropHandlers\Panak",
+                @"Software\Classes\*\shellex\DragDropHandlers\Panak",
+                @"Software\Classes\AllFilesystemObjects\shellex\DragDropHandlers\Panak"
+            };
+            foreach (var r in expectedRoots) {
+                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(r)) {
+                    Assert.IsNotNull(key, $"DragDropHandlers for {r} should be registered");
+                    Assert.AreEqual(clsid, key.GetValue(""));
+                }
             }
 
             using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey($@"Software\Classes\CLSID\{clsid}\InprocServer32")) {
                 Assert.IsNotNull(key, "InprocServer32 for PanakDragDropHandler should be registered");
                 Assert.AreEqual("Apartment", key.GetValue("ThreadingModel"));
+            }
+
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved")) {
+                Assert.IsNotNull(key, "Approved shell extensions key should exist");
+                Assert.AreEqual("Panak DragDrop Handler", key.GetValue(clsid));
             }
         }
 
@@ -1050,7 +1057,7 @@ namespace Panak.Tests {
         [TestMethod]
         public void TestKeyRebindingLocalizationKeysInAllLanguages() {
             var loc = LocalizationService.Instance;
-            string[] keys = new[] { "KeyRebinding", "KeyRebindingDesc", "QuickLookKeyRow", "ClosePopupKeyRow", "PressAnyKey", "ResetKeys" };
+            string[] keys = new[] { "KeyRebinding", "KeyRebindingDesc", "QuickLookKeyRow", "ClosePopupKeyRow", "PressAnyKey", "ResetKeys", "ReadyToInstall", "InstallNow" };
             string[] langs = new[] { "hy", "en", "ru", "fr", "es", "zh", "ar" };
 
             foreach (var lang in langs) {
@@ -1058,6 +1065,146 @@ namespace Panak.Tests {
                 foreach (var k in keys) {
                     string val = loc[k];
                     Assert.IsFalse(string.IsNullOrWhiteSpace(val), $"Key '{k}' must exist in language '{lang}'");
+                }
+            }
+        }
+
+        [TestMethod]
+        public void TestGitHubUpdateVersionParsing() {
+            // Standard semver
+            Assert.IsTrue(GitHubUpdateService.TryParseVersion("1.7.1", out var v1));
+            Assert.AreEqual(new Version(1, 7, 1), v1);
+
+            // Prefixed with 'v' or 'V'
+            Assert.IsTrue(GitHubUpdateService.TryParseVersion("v1.7.2", out var v2));
+            Assert.AreEqual(new Version(1, 7, 2), v2);
+
+            // Prefixed with repo name 'panak'
+            Assert.IsTrue(GitHubUpdateService.TryParseVersion("panak1.7.1", out var v3));
+            Assert.AreEqual(new Version(1, 7, 1), v3);
+
+            // Complex release string
+            Assert.IsTrue(GitHubUpdateService.TryParseVersion("Panak-Installer-v2.0.1", out var v4));
+            Assert.AreEqual(new Version(2, 0, 1), v4);
+
+            // 4-part version
+            Assert.IsTrue(GitHubUpdateService.TryParseVersion("1.7.1.5", out var v5));
+            Assert.AreEqual(new Version(1, 7, 1, 5), v5);
+        }
+
+        [TestMethod]
+        public void TestWavyProgressBarInitialization() {
+            var thread = new System.Threading.Thread(() => {
+                var bar = new Panak.Controls.WavyProgressBar {
+                    Minimum = 0,
+                    Maximum = 100,
+                    Value = 50,
+                    WaveAmplitude = 2.5,
+                    WaveLength = 20.0
+                };
+                Assert.AreEqual(50, bar.Value);
+                Assert.AreEqual(2.5, bar.WaveAmplitude);
+                Assert.AreEqual(20.0, bar.WaveLength);
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+        }
+
+        [TestMethod]
+        public void TestInstallerWindowAndWelcomeWindowInitialization() {
+            Exception? caughtEx = null;
+            var thread = new System.Threading.Thread(() => {
+                try {
+                    var installer = new Panak.Views.InstallerWindow(isUninstallMode: false);
+                    Assert.IsNotNull(installer);
+                    var welcome = new Panak.Views.WelcomeWindow();
+                    Assert.IsNotNull(welcome);
+                } catch (Exception ex) {
+                    caughtEx = ex;
+                }
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+
+            Assert.IsNull(caughtEx, $"Windows must initialize without exception: {caughtEx}");
+        }
+
+        [TestMethod]
+        public void TestWelcomeFeatureTranslationsAcrossAllLanguages() {
+            var loc = Panak.Services.LocalizationService.Instance;
+            string[] languages = { "hy", "en", "ru", "fr", "es", "zh", "ar" };
+            string[] keys = {
+                "WelcomeToPanak",
+                "WelcomeSubtitle",
+                "WelcomeFeature1",
+                "WelcomeFeature2",
+                "WelcomeFeature3",
+                "GoToSettings",
+                "DonateOnKofi"
+            };
+
+            foreach (var lang in languages) {
+                loc.CurrentLanguage = lang;
+                foreach (var k in keys) {
+                    string val = loc[k];
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(val), $"Language '{lang}' missing translation for key '{k}'");
+                    Assert.AreNotEqual(k, val, $"Language '{lang}' translation for key '{k}' returned untranslated key name");
+                }
+            }
+        }
+
+        [TestMethod]
+        public void TestCardClipGeometryMatchesWindowBounds() {
+            Exception? caughtEx = null;
+            var thread = new System.Threading.Thread(() => {
+                try {
+                    var popup = new FolderPopupWindow();
+                    popup.Width = 360;
+                    popup.Height = 420;
+                    popup.UpdateLayout();
+
+                    Assert.IsNotNull(popup.CardClipGeometry, "CardClipGeometry must exist");
+                    // Verify that CardBorder has no margins causing 20px clipping
+                    Assert.AreEqual(new System.Windows.Thickness(0), popup.CardBorder.Margin, "CardBorder margin should be 0");
+                    Assert.AreEqual(24, popup.CardClipGeometry.RadiusX, "RadiusX should match corner radius");
+                    Assert.AreEqual(24, popup.CardClipGeometry.RadiusY, "RadiusY should match corner radius");
+                } catch (Exception ex) {
+                    caughtEx = ex;
+                }
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+
+            Assert.IsNull(caughtEx, $"FolderPopupWindow clip geometry test threw: {caughtEx}");
+        }
+
+        [TestMethod]
+        public void TestPanakFolderAutoPopupRecognition() {
+            string tempDir = Path.Combine(Path.GetTempPath(), "PanakOpenTest_" + Guid.NewGuid().ToString("N"));
+            try {
+                Directory.CreateDirectory(tempDir);
+                Assert.IsFalse(PanakManager.Instance.IsPanakFolder(tempDir));
+
+                // Save PanakFolderData with AutoPopup = true (as set by "Always open with Panak")
+                var data = new PanakFolderData {
+                    Title = "TestFolder",
+                    AutoPopup = true
+                };
+                data.Save(tempDir);
+
+                Assert.IsTrue(PanakManager.Instance.IsPanakFolder(tempDir), "Folder with AutoPopup=true must be recognized as Panak folder");
+
+                // Toggle AutoPopup = false
+                data.AutoPopup = false;
+                data.Save(tempDir);
+                Assert.IsFalse(PanakManager.Instance.IsPanakFolder(tempDir), "Folder with AutoPopup=false must NOT be recognized as Panak folder");
+            } finally {
+                if (Directory.Exists(tempDir)) {
+                    File.SetAttributes(tempDir, FileAttributes.Normal);
+                    Directory.Delete(tempDir, true);
                 }
             }
         }

@@ -10,13 +10,15 @@ using Panak.Services;
 namespace Panak.Setup {
     public partial class SetupWindow : Window {
         private readonly bool _isUninstallMode;
+        private readonly bool _isUpdateMode;
         private string _targetDirectory;
         private bool _isUpdatingLanguage = false;
-        private bool _needsAutoDetect = false;
+        private bool _isInitialized = false;
 
-        public SetupWindow(bool isUninstallMode = false) {
+        public SetupWindow(bool isUninstallMode = false, bool isUpdateMode = false) {
             InitializeComponent();
             _isUninstallMode = isUninstallMode;
+            _isUpdateMode = isUpdateMode;
 
             _targetDirectory = StandaloneInstallerService.GetInstalledDirectory();
             if (string.IsNullOrEmpty(_targetDirectory)) {
@@ -26,14 +28,14 @@ namespace Panak.Setup {
             LoadLogoAndIcon();
             LoadThemeAndLanguage();
             ConfigureMode();
+            _isInitialized = true;
 
             Loaded += SetupWindow_Loaded;
         }
 
-        private async void SetupWindow_Loaded(object sender, RoutedEventArgs e) {
-            if (_needsAutoDetect) {
-                string detected = await LocalizationService.DetectOptimalLanguageAsync();
-                SetSelectedLanguage(detected);
+        private void SetupWindow_Loaded(object sender, RoutedEventArgs e) {
+            if (_isUpdateMode) {
+                MainActionBtn_Click(this, new RoutedEventArgs());
             }
         }
 
@@ -86,9 +88,8 @@ namespace Panak.Setup {
         }
 
         private void LoadThemeAndLanguage() {
-            string language = "hy";
+            string language = "en";
             string colorHex = ShellHelper.GetDefaultPastelColorHex();
-            bool foundSavedLanguage = false;
 
             try {
                 string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -98,7 +99,6 @@ namespace Panak.Setup {
                     using var doc = JsonDocument.Parse(json);
                     if (doc.RootElement.TryGetProperty("Language", out var langProp) && !string.IsNullOrEmpty(langProp.GetString())) {
                         language = langProp.GetString()!;
-                        foundSavedLanguage = true;
                     }
                     if (doc.RootElement.TryGetProperty("ThemeColor", out var colProp) && !string.IsNullOrEmpty(colProp.GetString())) {
                         colorHex = colProp.GetString()!;
@@ -106,7 +106,6 @@ namespace Panak.Setup {
                 }
             } catch { }
 
-            _needsAutoDetect = !foundSavedLanguage;
             SetSelectedLanguage(language);
 
             double hue = ShellHelper.GetHueFromHex(colorHex);
@@ -129,8 +128,8 @@ namespace Panak.Setup {
         }
 
         private void LanguageComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) {
-            if (_isUpdatingLanguage) return;
-            if (LanguageComboBox.SelectedItem is System.Windows.Controls.ComboBoxItem item && item.Tag is string lang) {
+            if (!_isInitialized || _isUpdatingLanguage) return;
+            if (LanguageComboBox?.SelectedItem is System.Windows.Controls.ComboBoxItem item && item.Tag is string lang) {
                 LocalizationService.Instance.CurrentLanguage = lang;
                 ConfigureMode();
             }
@@ -176,11 +175,20 @@ namespace Panak.Setup {
         }
 
         private void ConfigureMode() {
+            if (InstallFolderDisplayPath == null || WizardTitleText == null) return;
             var loc = LocalizationService.Instance;
 
             InstallFolderDisplayPath.Text = _targetDirectory;
 
-            if (_isUninstallMode) {
+            if (_isUpdateMode) {
+                Title = "Panak Update";
+                WizardTitleText.Text = "Panak Update";
+                WizardSubtitleText.Text = "Updating Panak to the latest version...";
+                InstallPanel.Visibility = Visibility.Visible;
+                UninstallPanel.Visibility = Visibility.Collapsed;
+                MainActionBtn.Content = loc["Install"];
+                MainActionBtn.Style = (Style)FindResource("ActionButtonStyle");
+            } else if (_isUninstallMode) {
                 Title = loc["UninstallerTitle"];
                 WizardTitleText.Text = loc["UninstallerTitle"];
                 WizardSubtitleText.Text = loc["UninstallDesc"];
@@ -260,9 +268,9 @@ namespace Panak.Setup {
             CancelActionBtn.Visibility = Visibility.Collapsed;
             ProgressPanel.Visibility = Visibility.Visible;
 
-            ProgressTitleText.Text = _isUninstallMode ? loc["Uninstall"] : loc["Install"];
+            ProgressTitleText.Text = _isUpdateMode ? "Updating Panak..." : (_isUninstallMode ? loc["Uninstall"] : loc["Install"]);
             InstallationProgressBar.Value = 10;
-            ProgressStatusText.Text = _isUninstallMode ? "Preparing uninstallation..." : "Preparing installation...";
+            ProgressStatusText.Text = _isUpdateMode ? "Preparing update..." : (_isUninstallMode ? "Preparing uninstallation..." : "Preparing installation...");
 
             var progress = new Progress<(double percent, string status)>(val => {
                 InstallationProgressBar.Value = Math.Clamp(val.percent * 100.0, 0, 100);
@@ -278,8 +286,49 @@ namespace Panak.Setup {
                 bool autoStart = AutoStartCheckBox.IsChecked ?? true;
 
                 var (success, error) = await StandaloneInstallerService.InstallAsync(_targetDirectory, desktop, startMenu, autoStart, progress);
+                if (success) {
+                    SaveInstalledLanguage(LocalizationService.Instance.CurrentLanguage);
+                }
                 ShowCompleted(success, loc["InstalledSuccess"], !string.IsNullOrEmpty(error) ? error : "Installation failed.");
             }
+        }
+
+        private void SaveInstalledLanguage(string language) {
+            try {
+                string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                string dir = Path.Combine(appData, "Panak");
+                if (!Directory.Exists(dir)) {
+                    Directory.CreateDirectory(dir);
+                }
+                string settingsPath = Path.Combine(dir, "settings.json");
+                var dict = new Dictionary<string, object>();
+                if (File.Exists(settingsPath)) {
+                    try {
+                        string existingJson = File.ReadAllText(settingsPath);
+                        using var doc = JsonDocument.Parse(existingJson);
+                        foreach (var prop in doc.RootElement.EnumerateObject()) {
+                            switch (prop.Value.ValueKind) {
+                                case JsonValueKind.String:
+                                    dict[prop.Name] = prop.Value.GetString()!;
+                                    break;
+                                case JsonValueKind.Number:
+                                    if (prop.Value.TryGetInt32(out int iVal)) dict[prop.Name] = iVal;
+                                    else if (prop.Value.TryGetDouble(out double dVal)) dict[prop.Name] = dVal;
+                                    break;
+                                case JsonValueKind.True:
+                                    dict[prop.Name] = true;
+                                    break;
+                                case JsonValueKind.False:
+                                    dict[prop.Name] = false;
+                                    break;
+                            }
+                        }
+                    } catch { }
+                }
+                dict["Language"] = language;
+                string updatedJson = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(settingsPath, updatedJson);
+            } catch { }
         }
 
         private void ShowCompleted(bool success, string successMsg, string failMsg) {
@@ -291,7 +340,18 @@ namespace Panak.Setup {
             if (success) {
                 StatusEmoji.Text = "🎉";
                 StatusTitle.Text = successMsg;
-                StatusSubtitle.Text = _isUninstallMode ? loc["UninstalledSuccess"] : loc["ReadyToUse"];
+                StatusSubtitle.Text = _isUpdateMode ? "Panak has been updated successfully." : (_isUninstallMode ? loc["UninstalledSuccess"] : loc["ReadyToUse"]);
+
+                if (_isUpdateMode) {
+                    var timer = new System.Windows.Threading.DispatcherTimer {
+                        Interval = TimeSpan.FromSeconds(1.8)
+                    };
+                    timer.Tick += (s, ev) => {
+                        timer.Stop();
+                        FinishBtn_Click(this, new RoutedEventArgs());
+                    };
+                    timer.Start();
+                }
             } else {
                 StatusEmoji.Text = "⚠️";
                 StatusTitle.Text = failMsg;
@@ -306,7 +366,7 @@ namespace Panak.Setup {
                     try {
                         Process.Start(new ProcessStartInfo {
                             FileName = exe,
-                            Arguments = "--background",
+                            Arguments = _isUpdateMode ? "--background" : "--welcome",
                             UseShellExecute = true
                         });
                     } catch { }

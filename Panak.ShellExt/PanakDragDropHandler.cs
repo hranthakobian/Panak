@@ -268,6 +268,14 @@ namespace Panak.ShellExt {
                         return "Collect into Panak folder";
                     } else if (json.Contains("\"Language\": \"ru\"") || json.Contains("\"Language\":\"ru\"")) {
                         return "Собрать в папку Panak";
+                    } else if (json.Contains("\"Language\": \"fr\"") || json.Contains("\"Language\":\"fr\"")) {
+                        return "Rassembler dans un dossier Panak";
+                    } else if (json.Contains("\"Language\": \"es\"") || json.Contains("\"Language\":\"es\"")) {
+                        return "Reunir en carpeta Panak";
+                    } else if (json.Contains("\"Language\": \"zh\"") || json.Contains("\"Language\":\"zh\"")) {
+                        return "收集到 Panak 文件夹";
+                    } else if (json.Contains("\"Language\": \"ar\"") || json.Contains("\"Language\":\"ar\"")) {
+                        return "جمع في مجلد Panak";
                     }
                 }
             } catch { }

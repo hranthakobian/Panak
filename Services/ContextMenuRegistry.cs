@@ -101,11 +101,44 @@ namespace Panak.Services {
                         inprocKey.SetValue("ThreadingModel", "Apartment");
                     }
 
-                    string[] dragDropRoots = new[] { "Directory", "Folder", "Drive" };
+                    string[] dragDropRoots = new[] {
+                        "Directory",
+                        "Folder",
+                        "Drive",
+                        @"Directory\Background",
+                        "DesktopBackground",
+                        "*",
+                        "AllFilesystemObjects"
+                    };
                     foreach (var root in dragDropRoots) {
                         using var handlerKey = Registry.CurrentUser.CreateSubKey($@"{HKCU_CLASSES}\{root}\shellex\DragDropHandlers\Panak");
                         handlerKey.SetValue("", clsid);
                     }
+
+                    // Register in HKCU Shell Extensions\Approved so Explorer allows the extension
+                    try {
+                        using var approvedKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved");
+                        approvedKey?.SetValue(clsid, "Panak DragDrop Handler");
+                    } catch { }
+
+                    // Enable HKCU shell extensions policy
+                    try {
+                        using var policyKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer");
+                        policyKey?.SetValue("EnableShellExtensionsInHKCU", 1, RegistryValueKind.DWord);
+                    } catch { }
+
+                    // Also try registering in HKLM if elevated / writeable
+                    try {
+                        using var hklmClsidKey = Registry.LocalMachine.CreateSubKey($@"Software\Classes\CLSID\{clsid}");
+                        if (hklmClsidKey != null) {
+                            hklmClsidKey.SetValue("", "Panak DragDrop Handler");
+                            using var inproc = hklmClsidKey.CreateSubKey("InprocServer32");
+                            inproc?.SetValue("", comhostPath);
+                            inproc?.SetValue("ThreadingModel", "Apartment");
+                        }
+                        using var hklmApproved = Registry.LocalMachine.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved");
+                        hklmApproved?.SetValue(clsid, "Panak DragDrop Handler");
+                    } catch { }
                 }
 
                 ShellHelper.NotifyShellAssocChanged();
@@ -117,11 +150,30 @@ namespace Panak.Services {
         public static void UnregisterAll() {
             try {
                 string clsid = "{E5A7B812-3D4C-4A2E-8910-1F2D3C4E5A6B}";
-                string[] dragDropRoots = new[] { "Directory", "Folder", "Drive" };
+                string[] dragDropRoots = new[] {
+                    "Directory",
+                    "Folder",
+                    "Drive",
+                    @"Directory\Background",
+                    "DesktopBackground",
+                    "*",
+                    "AllFilesystemObjects"
+                };
                 foreach (var root in dragDropRoots) {
                     Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\{root}\shellex\DragDropHandlers\Panak", false);
                 }
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\CLSID\{clsid}", false);
+
+                try {
+                    using var approvedKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved", true);
+                    approvedKey?.DeleteValue(clsid, false);
+                } catch { }
+
+                try {
+                    using var hklmApproved = Registry.LocalMachine.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved", true);
+                    hklmApproved?.DeleteValue(clsid, false);
+                    Registry.LocalMachine.DeleteSubKeyTree($@"Software\Classes\CLSID\{clsid}", false);
+                } catch { }
 
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\*\shell\PanakCreate", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Directory\shell\PanakOpen", false);

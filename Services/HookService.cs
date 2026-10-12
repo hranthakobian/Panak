@@ -80,7 +80,6 @@ namespace Panak.Services {
         private DateTime _lastLeftDown = DateTime.MinValue;
         private POINT _lastLeftDownPt;
         private bool _suppressNextLeftUp = false;
-        private Task<ExplorerHelper.ItemInfo?>? _preResolveTask;
 
         // Left drag & drop (file onto file)
         private ExplorerHelper.ItemInfo? _leftDragSourceItem;
@@ -190,18 +189,8 @@ namespace Panak.Services {
                     if (elapsed.TotalMilliseconds <= doubleClickTime && dx <= maxDeltaX && dy <= maxDeltaY) {
                         _lastLeftDown = DateTime.MinValue;
 
-                        ExplorerHelper.ItemInfo? item = null;
-                        if (_preResolveTask != null) {
-                            try {
-                                if (_preResolveTask.Wait(120)) {
-                                    item = _preResolveTask.Result;
-                                }
-                            } catch {
-                                // Ignore wait errors
-                            }
-                        }
-
-                        if (item == null) {
+                        ExplorerHelper.ItemInfo? item = ExplorerHelper.GetSelectedItemInActiveExplorer();
+                        if (item == null || string.IsNullOrEmpty(item.Value.Path) || !PanakManager.Instance.IsPanakFolder(item.Value.Path)) {
                             item = ExplorerHelper.GetItemUnderCursor();
                         }
 
@@ -216,7 +205,6 @@ namespace Panak.Services {
                     } else {
                         _lastLeftDown = DateTime.Now;
                         _lastLeftDownPt = hookStruct.pt;
-                        _preResolveTask = Task.Run(() => ExplorerHelper.GetItemUnderCursor());
                     }
                 } else if (msg == WM_LBUTTONUP) {
                     if (_suppressNextLeftUp) {
@@ -383,6 +371,20 @@ namespace Panak.Services {
                                     });
                                     return (IntPtr)1; // Swallow key
                                 }
+                            }
+                        }
+                    }
+
+                    // Enter key on Panak folder in Windows Explorer or Desktop
+                    if (hookStruct.vkCode == 0x0D) { // VK_RETURN
+                        if (!isPopupOpen && !ExplorerHelper.IsFocusInsideTextEdit()) {
+                            var item = ExplorerHelper.GetSelectedItemInActiveExplorer();
+                            if (item != null && !string.IsNullOrEmpty(item.Value.Path) && PanakManager.Instance.IsPanakFolder(item.Value.Path)) {
+                                var targetItem = item.Value;
+                                Application.Current.Dispatcher.Invoke(() => {
+                                    LeftDoubleClickTriggered?.Invoke(targetItem);
+                                });
+                                return (IntPtr)1; // Swallow Enter key so Windows Explorer does not open the folder!
                             }
                         }
                     }

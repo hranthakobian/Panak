@@ -9,8 +9,8 @@
     <AssemblyName>Panak.ShellExt</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Platforms>AnyCPU</Platforms>
-    <Version>1.7.1</Version>
-    <AssemblyVersion>1.7.1.0</AssemblyVersion>
+    <Version>1.7.2</Version>
+    <AssemblyVersion>1.7.2.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

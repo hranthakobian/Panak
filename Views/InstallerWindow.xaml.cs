@@ -11,6 +11,7 @@ namespace Panak.Views {
         private readonly bool _isUninstallMode;
         private bool _needsAutoDetect = false;
         private bool _isUpdatingLanguage = false;
+        private bool _isInitialized = false;
 
         public InstallerWindow(bool isUninstallMode = false) {
             InitializeComponent();
@@ -18,7 +19,7 @@ namespace Panak.Views {
             LoadLogoAndIcon();
 
             var settings = SettingsService.Instance.Current;
-            string lang = "hy";
+            string lang = "en";
             if (!string.IsNullOrEmpty(settings.Language)) {
                 lang = settings.Language;
                 _needsAutoDetect = false;
@@ -35,6 +36,7 @@ namespace Panak.Views {
             ApplyMaterialYouPalette(hue);
 
             ConfigureMode();
+            _isInitialized = true;
 
             Loaded += InstallerWindow_Loaded;
         }
@@ -63,8 +65,8 @@ namespace Panak.Views {
         }
 
         private void LanguageComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) {
-            if (_isUpdatingLanguage) return;
-            if (LanguageComboBox.SelectedItem is System.Windows.Controls.ComboBoxItem item && item.Tag is string lang) {
+            if (!_isInitialized || _isUpdatingLanguage) return;
+            if (LanguageComboBox?.SelectedItem is System.Windows.Controls.ComboBoxItem item && item.Tag is string lang) {
                 LocalizationService.Instance.CurrentLanguage = lang;
                 ConfigureMode();
             }
@@ -138,6 +140,7 @@ namespace Panak.Views {
         }
 
         private void ConfigureMode() {
+            if (WizardTitleText == null) return;
             var loc = LocalizationService.Instance;
             if (_isUninstallMode) {
                 Title = loc["UninstallerTitle"];
@@ -176,23 +179,38 @@ namespace Panak.Views {
             UninstallItemFilesText.Text = "• " + loc["UninstallItemFiles"];
         }
 
-        private void MainActionBtn_Click(object sender, RoutedEventArgs e) {
+        private async void MainActionBtn_Click(object sender, RoutedEventArgs e) {
             var loc = LocalizationService.Instance;
 
+            InstallPanel.Visibility = Visibility.Collapsed;
+            UninstallPanel.Visibility = Visibility.Collapsed;
+            MainActionBtn.Visibility = Visibility.Collapsed;
+            CancelActionBtn.Visibility = Visibility.Collapsed;
+            ProgressPanel.Visibility = Visibility.Visible;
+
+            ProgressTitleText.Text = _isUninstallMode ? loc["Uninstall"] : loc["Install"];
+            InstallationProgressBar.IsIndeterminate = true;
+            ProgressStatusText.Text = _isUninstallMode ? "Preparing uninstallation..." : "Preparing installation...";
+
             if (_isUninstallMode) {
-                bool success = InstallerService.Uninstall();
+                bool success = await System.Threading.Tasks.Task.Run(() => InstallerService.Uninstall());
                 ShowCompleted(success, loc["UninstalledSuccess"], "Uninstallation failed.");
             } else {
                 bool desktop = DesktopShortcutCheckBox.IsChecked ?? true;
                 bool startMenu = StartMenuShortcutCheckBox.IsChecked ?? true;
                 bool autoStart = AutoStartCheckBox.IsChecked ?? true;
 
-                bool success = InstallerService.Install(desktop, startMenu, autoStart);
+                bool success = await System.Threading.Tasks.Task.Run(() => InstallerService.Install(desktop, startMenu, autoStart));
+                if (success) {
+                    SettingsService.Instance.Current.Language = LocalizationService.Instance.CurrentLanguage;
+                    SettingsService.Instance.SaveSettings();
+                }
                 ShowCompleted(success, loc["InstalledSuccess"], "Installation failed.");
             }
         }
 
         private void ShowCompleted(bool success, string successMsg, string failMsg) {
+            ProgressPanel.Visibility = Visibility.Collapsed;
             InstallPanel.Visibility = Visibility.Collapsed;
             UninstallPanel.Visibility = Visibility.Collapsed;
             MainActionBtn.Visibility = Visibility.Collapsed;
@@ -220,7 +238,7 @@ namespace Panak.Views {
                 if (System.IO.File.Exists(exe)) {
                     Process.Start(new ProcessStartInfo {
                         FileName = exe,
-                        Arguments = "--background",
+                        Arguments = "--welcome",
                         UseShellExecute = true
                     });
                 }

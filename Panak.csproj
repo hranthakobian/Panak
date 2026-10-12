@@ -10,8 +10,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>Panak</RootNamespace>
     <AssemblyName>Panak</AssemblyName>
-    <Version>1.7.1</Version>
-    <AssemblyVersion>1.7.1.0</AssemblyVersion>
+    <Version>1.7.2</Version>
+    <AssemblyVersion>1.7.2.0</AssemblyVersion>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <ApplicationIcon>Panak.ico</ApplicationIcon>
   </PropertyGroup>
@@ -22,24 +22,32 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="PanakLogo.png" />
-    <Resource Include="SettingsLogo.png" />
-    <Resource Include="PanakSetupLogo.png" />
-    <Resource Include="Panak logo.png" Link="PanakLogoLinked.png" />
+    <Resource Include="src\PanakLogo.png" Link="PanakLogo.png" />
+    <Resource Include="src\SettingsLogo.png" Link="SettingsLogo.png" />
+    <Resource Include="src\PanakSetupLogo.png" Link="PanakSetupLogo.png" />
+    <Resource Include="src\Panak logo.png" Link="PanakLogoLinked.png" />
+    <Resource Include="src\Frame 121.png" Link="Frame 121.png" />
+    <Resource Include="src\Group 389.png" Link="Group 389.png" />
     <Resource Include="Panak.ico" />
-    <None Include="SettingsLogo.png">
+    <None Include="src\SettingsLogo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="PanakLogo.png">
+    <None Include="src\PanakLogo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="PanakSetupLogo.png">
+    <None Include="src\PanakSetupLogo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Panak setup logo.png">
+    <None Include="src\Panak setup logo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Panak logo.png">
+    <None Include="src\Panak logo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="src\Frame 121.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="src\Group 389.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Panak.ico">

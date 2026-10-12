@@ -530,17 +530,22 @@ namespace Panak.Views {
                     DownloadInstallBtn.Content = $"{loc["DownloadingUpdate"]} {updater.DownloadProgress:0}%";
                     break;
                 case UpdateStatus.ReadyToInstall:
-                    UpdateStatusDetailText.Text = "Ready to install";
-                    UpdateStatusBadge.Text = "✓ Ready";
+                    UpdateStatusDetailText.Text = loc["ReadyToInstall"] ?? "Ready to install";
+                    UpdateStatusBadge.Text = "✓ " + (loc["ReadyToInstall"] ?? "Ready");
                     CheckUpdatesBtn.IsEnabled = true;
-                    UpdateProgressBar.Visibility = Visibility.Collapsed;
+                    UpdateAvailableCard.Visibility = Visibility.Visible;
+                    UpdateProgressBar.Visibility = Visibility.Visible;
+                    UpdateProgressBar.Value = 100;
                     DownloadInstallBtn.IsEnabled = true;
-                    DownloadInstallBtn.Content = loc["Install"];
+                    DownloadInstallBtn.Content = loc["InstallNow"] ?? loc["Install"] ?? "Install Now";
                     break;
                 case UpdateStatus.Error:
                     UpdateStatusDetailText.Text = updater.ErrorMessage ?? loc["UpdateError"];
                     UpdateStatusBadge.Text = "⚠ " + loc["UpdateError"];
                     CheckUpdatesBtn.IsEnabled = true;
+                    UpdateProgressBar.Visibility = Visibility.Collapsed;
+                    DownloadInstallBtn.IsEnabled = true;
+                    DownloadInstallBtn.Content = loc["DownloadAndInstall"];
                     break;
                 case UpdateStatus.UpToDate:
                 default:
@@ -575,12 +580,40 @@ namespace Panak.Views {
         }
 
         private async void DownloadInstallBtn_Click(object sender, RoutedEventArgs e) {
+            var updater = GitHubUpdateService.Instance;
+
+            // If update is already downloaded and ready to install, DO NOT re-download! Apply it immediately!
+            if (updater.Status == UpdateStatus.ReadyToInstall && !string.IsNullOrEmpty(updater.DownloadedFilePath) && System.IO.File.Exists(updater.DownloadedFilePath)) {
+                DownloadInstallBtn.IsEnabled = false;
+                DownloadInstallBtn.Content = LocalizationService.Instance["Installing"] ?? "Installing...";
+                bool launched = updater.ApplyDownloadedUpdate();
+                if (!launched) {
+                    DownloadInstallBtn.IsEnabled = true;
+                    UpdateUpdateUI();
+                }
+                return;
+            }
+
+            // Otherwise, start download
             DownloadInstallBtn.IsEnabled = false;
             UpdateProgressBar.Visibility = Visibility.Visible;
             UpdateProgressBar.Value = 0;
-            await GitHubUpdateService.Instance.DownloadAndApplyUpdateAsync(p => {
+
+            bool downloadSuccess = await updater.DownloadUpdateAsync(p => {
                 Dispatcher.Invoke(() => UpdateProgressBar.Value = p);
             });
+
+            if (downloadSuccess) {
+                // Immediately apply downloaded update
+                bool launched = updater.ApplyDownloadedUpdate();
+                if (!launched) {
+                    DownloadInstallBtn.IsEnabled = true;
+                    UpdateUpdateUI();
+                }
+            } else {
+                DownloadInstallBtn.IsEnabled = true;
+                UpdateUpdateUI();
+            }
         }
 
         private void KofiButton_Click(object sender, RoutedEventArgs e) {

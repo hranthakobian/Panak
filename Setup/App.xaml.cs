@@ -31,7 +31,10 @@ namespace Panak.Setup {
 
             // Handle silent modes if requested
             if (args.Any(a => a.Equals("--silent", StringComparison.OrdinalIgnoreCase) || a.Equals("--install-silent", StringComparison.OrdinalIgnoreCase))) {
-                string targetDir = StandaloneInstallerService.GetDefaultInstallDirectory();
+                string targetDir = StandaloneInstallerService.GetInstalledDirectory();
+                if (string.IsNullOrEmpty(targetDir)) {
+                    targetDir = StandaloneInstallerService.GetDefaultInstallDirectory();
+                }
                 for (int i = 0; i < args.Length - 1; i++) {
                     if (args[i].Equals("--dir", StringComparison.OrdinalIgnoreCase)) {
                         targetDir = args[i + 1];
@@ -59,9 +62,10 @@ namespace Panak.Setup {
             }
 
             bool isUninstallMode = args.Any(a => a.Equals("--uninstall", StringComparison.OrdinalIgnoreCase));
+            bool isUpdateMode = args.Any(a => a.Equals("--update", StringComparison.OrdinalIgnoreCase));
 
             ShutdownMode = ShutdownMode.OnLastWindowClose;
-            var window = new SetupWindow(isUninstallMode);
+            var window = new SetupWindow(isUninstallMode: isUninstallMode, isUpdateMode: isUpdateMode);
             window.Show();
         }
     }

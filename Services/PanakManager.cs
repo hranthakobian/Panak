@@ -369,11 +369,16 @@ namespace Panak.Services {
                     }
                 } catch { }
 
-                try {
-                    var folderAttrs = File.GetAttributes(folderPath);
-                    File.SetAttributes(folderPath, FileAttributes.Normal);
-                    Directory.Delete(folderPath, true);
-                } catch { }
+                for (int attempt = 0; attempt < 5; attempt++) {
+                    try {
+                        if (!Directory.Exists(folderPath)) break;
+                        File.SetAttributes(folderPath, FileAttributes.Normal);
+                        Directory.Delete(folderPath, true);
+                        break;
+                    } catch {
+                        System.Threading.Thread.Sleep(25);
+                    }
+                }
 
                 ShellHelper.NotifyItemDeleted(folderPath, isDirectory: true);
                 if (!string.IsNullOrEmpty(parentDir)) {

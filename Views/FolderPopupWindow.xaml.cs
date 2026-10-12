@@ -666,8 +666,8 @@ namespace Panak.Views {
                 if (dpi <= 0) dpi = 1.0;
 
                 double blurMargin = 25;
-                double cardW = Math.Max(10, popupW - 20);
-                double cardH = Math.Max(10, popupH - 20);
+                double cardW = Math.Max(10, popupW);
+                double cardH = Math.Max(10, popupH);
                 double imgW = cardW + blurMargin * 2;
                 double imgH = cardH + blurMargin * 2;
 
@@ -677,8 +677,8 @@ namespace Panak.Views {
                 PopupBlurImage.Width = imgW;
                 PopupBlurImage.Height = imgH;
 
-                double cardLeft = targetLeft + 10;
-                double cardTop = targetTop + 10;
+                double cardLeft = targetLeft;
+                double cardTop = targetTop;
                 double capLeft = Math.Max(screenLeft, cardLeft - blurMargin);
                 double capTop = Math.Max(screenTop, cardTop - blurMargin);
 
@@ -791,8 +791,8 @@ namespace Panak.Views {
                 Top = newTop;
             }
 
-            double cardW = Math.Max(10, newW - 20);
-            double cardH = Math.Max(10, newH - 20);
+            double cardW = Math.Max(10, newW);
+            double cardH = Math.Max(10, newH);
             CardClipGeometry.Rect = new Rect(0, 0, cardW, cardH);
 
             if (PopupBlurImage.Visibility == Visibility.Visible) {
