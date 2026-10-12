@@ -2,7 +2,7 @@
 ### *Android-Style Popup Folders and Widgets for Windows*
 
 <p align="center">
-  <img src="https://jveaaytpcviwuvpgdvxl.supabase.co/storage/v1/object/public/gallery/1791732538203_Panak_logo_-_Copy.png" alt="Panak Logo" width="512" />
+  <img src="https://jveaaytpcviwuvpgdvxl.supabase.co/storage/v1/object/public/gallery/1791793955684_Group_389.png" alt="Panak Logo" width="512" />
 </p>
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/R0R828IT50)
