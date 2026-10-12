@@ -68,8 +68,13 @@ function Convert-PngToIco($pngPath, $icoPath) {
     Write-Host "Generated $icoPath (size: $((Get-Item $icoPath).Length) bytes) from $pngPath"
 }
 
+$baseDir = Split-Path -Parent $PSScriptRoot
+if (-not $baseDir -or -not (Test-Path (Join-Path $baseDir "Panak.csproj"))) {
+    $baseDir = "c:\Users\hrant\Documents\GitHub\Panak"
+}
+
 # 1. Main Application icon (Panak.ico from Panak logo.png)
-Convert-PngToIco 'c:\Users\hrant\Documents\GitHub\Panak\Panak logo.png' 'c:\Users\hrant\Documents\GitHub\Panak\Panak.ico'
+Convert-PngToIco (Join-Path $baseDir 'Panak logo.png') (Join-Path $baseDir 'Panak.ico')
 
 # 2. Setup Installer icon (Setup\Panak.ico from Panak setup logo.png)
-Convert-PngToIco 'c:\Users\hrant\Documents\GitHub\Panak\Panak setup logo.png' 'c:\Users\hrant\Documents\GitHub\Panak\Setup\Panak.ico'
+Convert-PngToIco (Join-Path $baseDir 'Panak setup logo.png') (Join-Path $baseDir 'Setup\Panak.ico')

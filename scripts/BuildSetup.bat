@@ -2,6 +2,8 @@
 setlocal enabledelayedexpansion
 title Panak Setup Builder
 
+pushd "%~dp0\.."
+
 echo ===================================================
 echo             Building Panak Setup.exe
 echo ===================================================
@@ -15,11 +17,13 @@ if exist "staging_panak" rmdir /S /Q "staging_panak"
 dotnet publish -c Release -r win-x64 --self-contained false -o staging_panak Panak.csproj
 if %ERRORLEVEL% neq 0 (
     echo Error publishing Panak.
+    popd
     exit /b %ERRORLEVEL%
 )
 dotnet publish -c Release -r win-x64 --self-contained false -o staging_panak Panak.ShellExt\Panak.ShellExt.csproj
 if %ERRORLEVEL% neq 0 (
     echo Error publishing Panak.ShellExt.
+    popd
     exit /b %ERRORLEVEL%
 )
 
@@ -28,6 +32,7 @@ if exist "Setup\PanakPayload.zip" del /F /Q "Setup\PanakPayload.zip"
 powershell -NoProfile -Command "Compress-Archive -Path 'staging_panak\*' -DestinationPath 'Setup\PanakPayload.zip' -Force"
 if %ERRORLEVEL% neq 0 (
     echo Error compressing payload.
+    popd
     exit /b %ERRORLEVEL%
 )
 
@@ -37,6 +42,7 @@ xcopy /E /I /Y "staging_panak\*" "publish\" >nul
 dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish Setup\Setup.csproj
 if %ERRORLEVEL% neq 0 (
     echo Error publishing Setup.exe.
+    popd
     exit /b %ERRORLEVEL%
 )
 
@@ -48,3 +54,5 @@ echo ===================================================
 echo   Success! Standalone installer ready at:
 echo   publish\Setup.exe
 echo ===================================================
+
+popd

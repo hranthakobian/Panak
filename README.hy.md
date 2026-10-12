@@ -207,7 +207,7 @@ Panak-ի տեղադրման համար **Administrator իրավունքներ պ
 
 ### Տարբերակ 1. Մեկ կտտոցով տեղադրիչ (Խորհուրդ տրվող)
 1. Ներբեռնեք `Panak-Installer-vX.X.X.zip` փաթեթը [Releases](https://github.com/hranthakobian/Panak/releases) բաժնից:
-2. Բացեք արխիվը եւ գործարկեք **`Setup.exe`** (կամ `Install.bat`):
+2. Բացեք արխիվը եւ գործարկեք **`Setup.exe`** (կամ `scripts\Install.bat`):
 3. Հետեւեք քայլերին. ծրագիրը տեղադրվում է `%LocalAppData%\Programs\Panak` պանակում:
 
 ### Տարբերակ 2. Հրամանային տողով (CLI)
@@ -288,7 +288,7 @@ dotnet test
 dotnet publish -c Release -r win-x64 --self-contained false -o publish Panak.csproj
 
 # 5. Կառուցել ինքնաբավ Standalone Setup.exe տեղադրիչը
-.\BuildSetup.bat
+.\scripts\BuildSetup.bat
 ```
 
 ### Նախագծի ճարտարապետությունը

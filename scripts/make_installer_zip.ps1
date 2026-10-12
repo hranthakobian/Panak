@@ -1,4 +1,7 @@
-$baseDir = "c:\Users\hrant\Documents\GitHub\Panak"
+$baseDir = Split-Path -Parent $PSScriptRoot
+if (-not $baseDir -or -not (Test-Path (Join-Path $baseDir "Panak.csproj"))) {
+    $baseDir = "c:\Users\hrant\Documents\GitHub\Panak"
+}
 $staging = Join-Path $baseDir "staging_zip"
 $zipPath = Join-Path $baseDir "Panak-Installer-v1.7.3.zip"
 $publishZip = Join-Path $baseDir "publish\Panak-Installer-v1.7.3.zip"
@@ -18,7 +21,7 @@ $readmeContent = @"
 
 [Տեղադրում / Installation]
 1. Գործարկեք `Setup.exe`-ն (Run Setup.exe)
-2. Ընտրեք Ձեր նախընտրած կարգավորումները (Auto-start, Shortcuts)
+2. Ընտրեք Ձեր նախընտրած կարգավորումները (Auto-start, Shortcuts, .NET 8.0)
 3. Սեղմեք «Տեղադրել» (Install)
 
 [Հիմնական հնարավորություններ / Features]

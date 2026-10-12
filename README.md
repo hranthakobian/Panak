@@ -210,7 +210,7 @@ Panak requires **no administrator privileges** to install or run.
 
 ### Option 1: One-Click Installer (Recommended)
 1. Download `Panak-Installer-vX.X.X.zip` from [Releases](https://github.com/hranthakobian/Panak/releases).
-2. Extract the archive and launch **`Setup.exe`** (or `Install.bat`).
+2. Extract the archive and launch **`Setup.exe`** (or `scripts\Install.bat`).
 3. Follow the setup wizard; files are installed to `%LocalAppData%\Programs\Panak`.
 
 ### Option 2: Command Line (CLI)
@@ -291,7 +291,7 @@ dotnet test
 dotnet publish -c Release -r win-x64 --self-contained false -o publish Panak.csproj
 
 # 5. Build standalone single-file Setup.exe installer
-.\BuildSetup.bat
+.\scripts\BuildSetup.bat
 ```
 
 ### Architecture Tree

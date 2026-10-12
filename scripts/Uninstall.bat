@@ -1,6 +1,7 @@
 @echo off
 title Panak Uninstaller
 echo Starting Panak Uninstaller Wizard...
+pushd "%~dp0\.."
 if exist "publish\Setup.exe" (
     start "" "publish\Setup.exe" --uninstall
 ) else if exist "%LocalAppData%\Programs\Panak\Setup.exe" (
@@ -17,3 +18,4 @@ if exist "publish\Setup.exe" (
     echo Panak executable or uninstaller not found.
     pause
 )
+popd
