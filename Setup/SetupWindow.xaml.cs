@@ -14,6 +14,7 @@ namespace Panak.Setup {
         private string _targetDirectory;
         private bool _isUpdatingLanguage = false;
         private bool _isInitialized = false;
+        private bool _dotNetUserToggled = false;
 
         public SetupWindow(bool isUninstallMode = false, bool isUpdateMode = false) {
             InitializeComponent();
@@ -23,6 +24,10 @@ namespace Panak.Setup {
             _targetDirectory = StandaloneInstallerService.GetInstalledDirectory();
             if (string.IsNullOrEmpty(_targetDirectory)) {
                 _targetDirectory = StandaloneInstallerService.GetDefaultInstallDirectory();
+            }
+
+            if (DotNetRuntimeCheckBox != null) {
+                DotNetRuntimeCheckBox.Click += (s, e) => _dotNetUserToggled = true;
             }
 
             LoadLogoAndIcon();
@@ -220,12 +225,36 @@ namespace Panak.Setup {
             AutoStartTitleText.Text = loc["AutoStart"];
             AutoStartDescText.Text = loc["AutoStartDesc"];
 
+            ConfigureDotNetRuntime();
+
             UninstallIntroText.Text = loc["UninstallConfirm"];
             UninstallWillRemoveText.Text = loc["UninstallWillRemove"];
             UninstallItemContextMenuText.Text = "• " + loc["UninstallItemContextMenu"];
             UninstallItemShortcutsText.Text = "• " + loc["UninstallItemShortcuts"];
             UninstallItemStartupText.Text = "• " + loc["UninstallItemStartup"];
             UninstallItemFilesText.Text = "• " + loc["UninstallItemFiles"];
+        }
+
+        private void ConfigureDotNetRuntime() {
+            if (DotNetRuntimeTitleText == null || DotNetStatusBadgeText == null || DotNetRuntimeDescText == null || DotNetRuntimeCheckBox == null) return;
+            var loc = LocalizationService.Instance;
+
+            DotNetRuntimeTitleText.Text = loc["DotNetRuntime"];
+
+            var (isInstalled, version) = StandaloneInstallerService.CheckDotNet8DesktopRuntime();
+            if (isInstalled) {
+                DotNetStatusBadgeText.Text = $"{loc["DotNetAlreadyInstalled"]} (v{version})";
+                DotNetRuntimeDescText.Text = $"{loc["DotNetRuntimeDesc"]} • {loc["DotNetAlreadyInstalled"]}";
+                if (!_dotNetUserToggled) {
+                    DotNetRuntimeCheckBox.IsChecked = false;
+                }
+            } else {
+                DotNetStatusBadgeText.Text = loc["DotNetNotInstalled"];
+                DotNetRuntimeDescText.Text = $"{loc["DotNetRuntimeDesc"]} • {loc["DotNetNotInstalled"]}";
+                if (!_dotNetUserToggled) {
+                    DotNetRuntimeCheckBox.IsChecked = true;
+                }
+            }
         }
 
         private string GetLocalizedInstallFolderTitle() {
@@ -284,8 +313,9 @@ namespace Panak.Setup {
                 bool desktop = DesktopShortcutCheckBox.IsChecked ?? true;
                 bool startMenu = StartMenuShortcutCheckBox.IsChecked ?? true;
                 bool autoStart = AutoStartCheckBox.IsChecked ?? true;
+                bool installDotNet = DotNetRuntimeCheckBox.IsChecked ?? false;
 
-                var (success, error) = await StandaloneInstallerService.InstallAsync(_targetDirectory, desktop, startMenu, autoStart, progress);
+                var (success, error) = await StandaloneInstallerService.InstallAsync(_targetDirectory, desktop, startMenu, autoStart, installDotNet, progress);
                 if (success) {
                     SaveInstalledLanguage(LocalizationService.Instance.CurrentLanguage);
                 }

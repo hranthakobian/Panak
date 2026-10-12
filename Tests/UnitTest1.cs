@@ -20,7 +20,8 @@ namespace Panak.Tests {
                 "ConvertToPanak", "RevertToRegular", "AlwaysOpenWithPanak",
                 "CombineFilesOnDrop", "CombineFilesOnDropDesc", "CollectIntoPanakFolder",
                 "Hue", "DefaultFolderColor", "Apply",
-                "LanguageAiNote", "CenterPopupOnly", "CenterPopupOnlyDesc", "Support", "SupportDesc", "DonateOnKofi"
+                "LanguageAiNote", "CenterPopupOnly", "CenterPopupOnlyDesc", "Support", "SupportDesc", "DonateOnKofi",
+                "DotNetRuntime", "DotNetRuntimeDesc", "DotNetAlreadyInstalled", "DotNetNotInstalled", "DotNetDownloading", "DotNetInstalling"
             };
 
             foreach (var lang in new[] { "hy", "en", "ru", "fr", "es", "zh", "ar" }) {
@@ -756,8 +757,8 @@ namespace Panak.Tests {
         public void TestGitHubUpdateServiceVersionAndDefaults() {
             var updater = GitHubUpdateService.Instance;
             Assert.IsNotNull(updater);
-            Assert.AreEqual("1.7.2", updater.CurrentVersionString);
-            Assert.AreEqual(new Version(1, 7, 2), updater.CurrentVersion);
+            Assert.AreEqual("1.7.3", updater.CurrentVersionString);
+            Assert.AreEqual(new Version(1, 7, 3), updater.CurrentVersion);
             Assert.AreEqual(UpdateStatus.Idle, updater.Status);
         }
 
@@ -1207,6 +1208,15 @@ namespace Panak.Tests {
                     Directory.Delete(tempDir, true);
                 }
             }
+        }
+
+        [TestMethod]
+        public void TestDotNet8DesktopRuntimeDetection() {
+            var (isInstalled, version) = StandaloneInstallerService.CheckDotNet8DesktopRuntime();
+            // Since this build environment runs .NET 8, it must detect the installed runtime
+            Assert.IsTrue(isInstalled, ".NET 8.0 Windows Desktop Runtime should be detected on development machine");
+            Assert.IsFalse(string.IsNullOrWhiteSpace(version), "Detected .NET version string should not be empty");
+            Assert.IsTrue(version!.StartsWith("8."), $"Detected version should start with '8.' but was '{version}'");
         }
     }
 }

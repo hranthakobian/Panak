@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:Panak.Controls"
         Title="Panak Setup"
-        Height="550"
+        Height="570"
         Width="520"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
@@ -440,74 +440,100 @@
             <!-- Body Content -->
             <Grid Grid.Row="1" Margin="0,0,0,14">
                 <!-- Install View -->
-                <StackPanel x:Name="InstallPanel">
-                    <!-- Feature Intro Card -->
-                    <Border Style="{StaticResource SectionCardStyle}">
-                        <TextBlock x:Name="InstallIntroText"
-                                   Text="Install Panak to enjoy Material You popup folder widgets, dynamic 2x2 preview icons, right double-click quick look, and Windows Explorer context menu integration."
-                                   FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" LineHeight="17"/>
-                    </Border>
+                <ScrollViewer x:Name="InstallScrollViewer"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Padding="0,0,2,0"
+                              Visibility="{Binding Visibility, ElementName=InstallPanel}">
+                    <StackPanel x:Name="InstallPanel">
+                        <!-- Feature Intro Card -->
+                        <Border Style="{StaticResource SectionCardStyle}">
+                            <TextBlock x:Name="InstallIntroText"
+                                       Text="Install Panak to enjoy Material You popup folder widgets, dynamic 2x2 preview icons, right double-click quick look, and Windows Explorer context menu integration."
+                                       FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" LineHeight="17"/>
+                        </Border>
 
-                    <!-- Destination Directory Card -->
-                    <Border Style="{StaticResource SectionCardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="InstallFolderTitleText" Text="Installation Folder" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                                <TextBlock x:Name="InstallFolderDisplayPath" Text="C:\Program Files\..." FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
-                            </StackPanel>
-                            <Button x:Name="BrowseFolderBtn" Grid.Column="1" Style="{StaticResource MiniPillButtonStyle}" Content="Browse..." VerticalAlignment="Center" Click="BrowseFolderBtn_Click"/>
-                        </Grid>
-                    </Border>
+                        <!-- Destination Directory Card -->
+                        <Border Style="{StaticResource SectionCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="InstallFolderTitleText" Text="Installation Folder" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="InstallFolderDisplayPath" Text="C:\Program Files\..." FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                                </StackPanel>
+                                <Button x:Name="BrowseFolderBtn" Grid.Column="1" Style="{StaticResource MiniPillButtonStyle}" Content="Browse..." VerticalAlignment="Center" Click="BrowseFolderBtn_Click"/>
+                            </Grid>
+                        </Border>
 
-                    <!-- Desktop Shortcut Option -->
-                    <Border Style="{StaticResource SectionCardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="DesktopShortcutTitleText" Text="Create Desktop Shortcut" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                                <TextBlock x:Name="DesktopShortcutDescText" Text="Quick access directly from your desktop" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
-                            </StackPanel>
-                            <CheckBox x:Name="DesktopShortcutCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" VerticalAlignment="Center"/>
-                        </Grid>
-                    </Border>
+                        <!-- .NET 8.0 Runtime Option -->
+                        <Border Style="{StaticResource SectionCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock x:Name="DotNetRuntimeTitleText" Text="Install .NET 8.0 Desktop Runtime" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                        <Border x:Name="DotNetStatusBadge" Margin="8,0,0,0" CornerRadius="8" Padding="7,2" Background="{DynamicResource M3SurfaceContainerBrush}" VerticalAlignment="Center">
+                                            <TextBlock x:Name="DotNetStatusBadgeText" Text="Not Detected" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock x:Name="DotNetRuntimeDescText" Text="Required runtime to run Panak on Windows" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <CheckBox x:Name="DotNetRuntimeCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
 
-                    <!-- Start Menu Shortcut Option -->
-                    <Border Style="{StaticResource SectionCardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="StartMenuShortcutTitleText" Text="Create Start Menu Shortcut" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                                <TextBlock x:Name="StartMenuShortcutDescText" Text="Add Panak to the Windows Start Menu" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
-                            </StackPanel>
-                            <CheckBox x:Name="StartMenuShortcutCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" VerticalAlignment="Center"/>
-                        </Grid>
-                    </Border>
+                        <!-- Desktop Shortcut Option -->
+                        <Border Style="{StaticResource SectionCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="DesktopShortcutTitleText" Text="Create Desktop Shortcut" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="DesktopShortcutDescText" Text="Quick access directly from your desktop" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="DesktopShortcutCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
 
-                    <!-- Auto Start with Windows Option -->
-                    <Border Style="{StaticResource SectionCardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="AutoStartTitleText" Text="Start with Windows" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                                <TextBlock x:Name="AutoStartDescText" Text="Launch automatically on Windows startup" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
-                            </StackPanel>
-                            <CheckBox x:Name="AutoStartCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" VerticalAlignment="Center"/>
-                        </Grid>
-                    </Border>
-                </StackPanel>
+                        <!-- Start Menu Shortcut Option -->
+                        <Border Style="{StaticResource SectionCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="StartMenuShortcutTitleText" Text="Create Start Menu Shortcut" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="StartMenuShortcutDescText" Text="Add Panak to the Windows Start Menu" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="StartMenuShortcutCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Auto Start with Windows Option -->
+                        <Border Style="{StaticResource SectionCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="AutoStartTitleText" Text="Start with Windows" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="AutoStartDescText" Text="Launch automatically on Windows startup" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="AutoStartCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
 
                 <!-- Uninstall View -->
                 <StackPanel x:Name="UninstallPanel" Visibility="Collapsed">
@@ -567,7 +593,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="CancelActionBtn" Grid.Column="0" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Click="CancelButton_Click"/>
-                <TextBlock Grid.Column="1" Text="Panak v1.7.2" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
+                <TextBlock Grid.Column="1" Text="Panak v1.7.3" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Button x:Name="MainActionBtn" Style="{StaticResource ActionButtonStyle}" Content="Install Now" Click="MainActionBtn_Click"/>
                     <Button x:Name="FinishBtn" Style="{StaticResource ActionButtonStyle}" Content="Finish" Visibility="Collapsed" Click="FinishBtn_Click"/>

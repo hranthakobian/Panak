@@ -138,7 +138,13 @@ namespace Panak.Services {
                 ["WelcomeFeature2"] = "Ակնթարթային փոփափ վիջեթներ՝ 2x2 կենդանի նախադիտմամբ",
                 ["WelcomeFeature3"] = "Արագ դիտում Space ստեղնով և աջ կրկնակտտոցով ինտեգրում",
                 ["GoToSettings"] = "Գնալ դեպի կայանքներ",
-                ["GetStarted"] = "Սկսել"
+                ["GetStarted"] = "Սկսել",
+                ["DotNetRuntime"] = "Տեղադրել .NET 8.0 Desktop Runtime",
+                ["DotNetRuntimeDesc"] = "Անհրաժեշտ է Panak-ի աշխատանքի համար",
+                ["DotNetAlreadyInstalled"] = "Արդեն տեղադրված է",
+                ["DotNetNotInstalled"] = "Համակարգչում չի գտնվել (խորհուրդ է տրվում)",
+                ["DotNetDownloading"] = "Ներբեռնվում է .NET 8.0 Desktop Runtime...",
+                ["DotNetInstalling"] = "Տեղադրվում է .NET 8.0 Desktop Runtime..."
             },
             ["en"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Popup Folders",
@@ -261,7 +267,13 @@ namespace Panak.Services {
                 ["WelcomeFeature2"] = "Instant popup widgets with 2x2 live file previews",
                 ["WelcomeFeature3"] = "Quick Look via Spacebar & Right Double-Click integration",
                 ["GoToSettings"] = "Go to Settings",
-                ["GetStarted"] = "Get Started"
+                ["GetStarted"] = "Get Started",
+                ["DotNetRuntime"] = "Install .NET 8.0 Desktop Runtime",
+                ["DotNetRuntimeDesc"] = "Required runtime to run Panak on Windows",
+                ["DotNetAlreadyInstalled"] = "Already installed",
+                ["DotNetNotInstalled"] = "Not detected on PC (recommended)",
+                ["DotNetDownloading"] = "Downloading .NET 8.0 Desktop Runtime...",
+                ["DotNetInstalling"] = "Installing .NET 8.0 Desktop Runtime..."
             },
             ["ru"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Папки",
@@ -384,7 +396,13 @@ namespace Panak.Services {
                 ["WelcomeFeature2"] = "Мгновенные всплывающие окна с живым предпросмотром 2x2",
                 ["WelcomeFeature3"] = "Быстрый просмотр пробелом и открытие правым двойным кликом",
                 ["GoToSettings"] = "Перейти к настройкам",
-                ["GetStarted"] = "Начать работу"
+                ["GetStarted"] = "Начать работу",
+                ["DotNetRuntime"] = "Установить .NET 8.0 Desktop Runtime",
+                ["DotNetRuntimeDesc"] = "Необходимо для запуска Panak в Windows",
+                ["DotNetAlreadyInstalled"] = "Уже установлено",
+                ["DotNetNotInstalled"] = "Не найдено на ПК (рекомендуется)",
+                ["DotNetDownloading"] = "Загрузка .NET 8.0 Desktop Runtime...",
+                ["DotNetInstalling"] = "Установка .NET 8.0 Desktop Runtime..."
             },
             ["fr"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Dossiers popup",
@@ -502,7 +520,13 @@ namespace Panak.Services {
                 ["WelcomeFeature2"] = "Widgets contextuels instantanés avec aperçu dynamique 2x2",
                 ["WelcomeFeature3"] = "Aperçu rapide avec Espace et intégration double-clic droit",
                 ["GoToSettings"] = "Aller aux paramètres",
-                ["GetStarted"] = "Commencer"
+                ["GetStarted"] = "Commencer",
+                ["DotNetRuntime"] = "Installer .NET 8.0 Desktop Runtime",
+                ["DotNetRuntimeDesc"] = "Nécessaire pour exécuter Panak sous Windows",
+                ["DotNetAlreadyInstalled"] = "Déjà installé",
+                ["DotNetNotInstalled"] = "Non détecté sur le PC (recommandé)",
+                ["DotNetDownloading"] = "Téléchargement de .NET 8.0 Desktop Runtime...",
+                ["DotNetInstalling"] = "Installation de .NET 8.0 Desktop Runtime..."
             },
             ["es"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Carpetas emergentes",
@@ -620,7 +644,13 @@ namespace Panak.Services {
                 ["WelcomeFeature2"] = "Widgets emergentes instantáneos con vista previa 2x2",
                 ["WelcomeFeature3"] = "Vista previa rápida con Espacio y doble clic derecho",
                 ["GoToSettings"] = "Ir a configuración",
-                ["GetStarted"] = "Comenzar"
+                ["GetStarted"] = "Comenzar",
+                ["DotNetRuntime"] = "Instalar .NET 8.0 Desktop Runtime",
+                ["DotNetRuntimeDesc"] = "Requerido para ejecutar Panak en Windows",
+                ["DotNetAlreadyInstalled"] = "Ya instalado",
+                ["DotNetNotInstalled"] = "No detectado en el PC (recomendado)",
+                ["DotNetDownloading"] = "Descargando .NET 8.0 Desktop Runtime...",
+                ["DotNetInstalling"] = "Instalando .NET 8.0 Desktop Runtime..."
             },
             ["zh"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - 弹出式文件夹",
@@ -738,7 +768,13 @@ namespace Panak.Services {
                 ["WelcomeFeature2"] = "即时弹出小部件与 2x2 实时文件预览",
                 ["WelcomeFeature3"] = "空格键快速预览与右键双击无缝集成",
                 ["GoToSettings"] = "前往设置",
-                ["GetStarted"] = "开始使用"
+                ["GetStarted"] = "开始使用",
+                ["DotNetRuntime"] = "安装 .NET 8.0 Desktop Runtime",
+                ["DotNetRuntimeDesc"] = "运行 Panak 必需的 Windows 运行库",
+                ["DotNetAlreadyInstalled"] = "已安装",
+                ["DotNetNotInstalled"] = "未检测到 (推荐)",
+                ["DotNetDownloading"] = "正在下载 .NET 8.0 Desktop Runtime...",
+                ["DotNetInstalling"] = "正在安装 .NET 8.0 Desktop Runtime..."
             },
             ["ar"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - مجلدات منبثقة",
@@ -856,7 +892,13 @@ namespace Panak.Services {
                 ["WelcomeFeature2"] = "عناصر واجهة منبثقة فورية مع معاينة حية للملفات 2x2",
                 ["WelcomeFeature3"] = "معاينة سريعة باستخدام زر المسافة والنقر المزدوج الأيمن",
                 ["GoToSettings"] = "الانتقال إلى الإعدادات",
-                ["GetStarted"] = "ابدأ الآن"
+                ["GetStarted"] = "ابدأ الآن",
+                ["DotNetRuntime"] = "تثبيت .NET 8.0 Desktop Runtime",
+                ["DotNetRuntimeDesc"] = "مطلوب لتشغيل تطبيق Panak على Windows",
+                ["DotNetAlreadyInstalled"] = "مثبت بالفعل",
+                ["DotNetNotInstalled"] = "لم يتم العثور عليه (موصى به)",
+                ["DotNetDownloading"] = "جاري تنزيل .NET 8.0 Desktop Runtime...",
+                ["DotNetInstalling"] = "جاري تثبيت .NET 8.0 Desktop Runtime..."
             }
         };
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Win32;
 
@@ -53,16 +54,126 @@ namespace Panak.Services {
             }
         }
 
+        public static (bool isInstalled, string? version) CheckDotNet8DesktopRuntime() {
+            try {
+                // 1. Check directory C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App
+                string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+                string desktopSharedDir = Path.Combine(programFiles, "dotnet", "shared", "Microsoft.WindowsDesktop.App");
+                if (Directory.Exists(desktopSharedDir)) {
+                    foreach (var dir in Directory.GetDirectories(desktopSharedDir)) {
+                        string name = Path.GetFileName(dir);
+                        if (Version.TryParse(name, out var v) && v.Major == 8) {
+                            return (true, name);
+                        }
+                    }
+                }
+
+                // 2. Check 64-bit registry and WOW6432Node registry
+                string[] regPaths = new[] {
+                    @"SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App",
+                    @"SOFTWARE\WOW6432Node\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App"
+                };
+
+                foreach (var regPath in regPaths) {
+                    try {
+                        using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+                        using var subKey = baseKey.OpenSubKey(regPath);
+                        if (subKey != null) {
+                            foreach (var valName in subKey.GetValueNames()) {
+                                if (Version.TryParse(valName, out var v) && v.Major == 8) {
+                                    return (true, valName);
+                                }
+                            }
+                        }
+                    } catch { }
+                }
+            } catch { }
+
+            return (false, null);
+        }
+
+        public static async Task<(bool success, string error)> InstallDotNet8DesktopRuntimeAsync(
+            IProgress<(double percent, string status)>? progress = null) {
+            try {
+                const string downloadUrl = "https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe";
+                string tempFile = Path.Combine(Path.GetTempPath(), "windowsdesktop-runtime-8.0-win-x64.exe");
+
+                var loc = LocalizationService.Instance;
+                progress?.Report((0.02, loc["DotNetDownloading"] ?? "Downloading .NET 8.0 Desktop Runtime..."));
+
+                using (var httpClient = new HttpClient()) {
+                    httpClient.Timeout = TimeSpan.FromMinutes(5);
+                    using var response = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+                    response.EnsureSuccessStatusCode();
+
+                    long? totalBytes = response.Content.Headers.ContentLength;
+                    using var contentStream = await response.Content.ReadAsStreamAsync();
+                    using var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
+
+                    var buffer = new byte[81920];
+                    long totalRead = 0;
+                    int bytesRead;
+
+                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0) {
+                        await fileStream.WriteAsync(buffer, 0, bytesRead);
+                        totalRead += bytesRead;
+
+                        if (totalBytes.HasValue && totalBytes.Value > 0) {
+                            double dlPercent = (double)totalRead / totalBytes.Value;
+                            double overallPct = 0.02 + (dlPercent * 0.18);
+                            string mbStatus = $"{loc["DotNetDownloading"] ?? "Downloading .NET 8.0 Desktop Runtime..."} ({totalRead / 1048576.0:F1} MB / {totalBytes.Value / 1048576.0:F1} MB)";
+                            progress?.Report((overallPct, mbStatus));
+                        }
+                    }
+                }
+
+                progress?.Report((0.21, loc["DotNetInstalling"] ?? "Installing .NET 8.0 Desktop Runtime..."));
+
+                var psi = new ProcessStartInfo {
+                    FileName = tempFile,
+                    Arguments = "/install /quiet /norestart",
+                    UseShellExecute = true
+                };
+
+                var proc = Process.Start(psi);
+                if (proc != null) {
+                    await proc.WaitForExitAsync();
+                    if (proc.ExitCode != 0 && proc.ExitCode != 3010 && proc.ExitCode != 1638) {
+                        return (false, $".NET installer exited with code {proc.ExitCode}");
+                    }
+                }
+
+                try {
+                    if (File.Exists(tempFile)) {
+                        File.Delete(tempFile);
+                    }
+                } catch { }
+
+                return (true, string.Empty);
+            } catch (Exception ex) {
+                Debug.WriteLine($"Error installing .NET 8: {ex}");
+                return (false, ex.Message);
+            }
+        }
+
         public static async Task<(bool success, string message)> InstallAsync(
             string targetDir,
             bool createDesktopShortcut,
             bool createStartMenuShortcut,
             bool autoStart,
+            bool installDotNetRuntime = false,
             IProgress<(double percent, string status)>? progress = null) {
+
+            if (installDotNetRuntime) {
+                var (dnSuccess, dnError) = await InstallDotNet8DesktopRuntimeAsync(progress);
+                if (!dnSuccess) {
+                    Debug.WriteLine($"Failed to install .NET 8 Desktop Runtime: {dnError}");
+                }
+            }
 
             return await Task.Run(() => {
                 try {
-                    progress?.Report((0.05, LocalizationService.Instance["InstallDesc"] ?? "Preparing installation..."));
+                    progress?.Report((0.25, LocalizationService.Instance["InstallDesc"] ?? "Preparing installation..."));
 
                     if (string.IsNullOrWhiteSpace(targetDir)) {
                         targetDir = GetDefaultInstallDirectory();
@@ -73,11 +184,11 @@ namespace Panak.Services {
                     }
 
                     // 1. Terminate existing instances
-                    progress?.Report((0.15, "Stopping running Panak processes..."));
+                    progress?.Report((0.30, "Stopping running Panak processes..."));
                     TerminateRunningPanak();
 
                     // 2. Extract embedded payload zip or fallback to local directory files
-                    progress?.Report((0.25, "Extracting application files..."));
+                    progress?.Report((0.35, "Extracting application files..."));
                     bool extractedFromPayload = TryExtractEmbeddedPayload(targetDir, progress);
 
                     if (!extractedFromPayload) {
@@ -135,7 +246,7 @@ namespace Panak.Services {
                     using (var key = Registry.CurrentUser.CreateSubKey(UNINSTALL_REG_KEY)) {
                         key.SetValue("DisplayName", "Panak - Material You Folders");
                         key.SetValue("DisplayIcon", $"\"{targetExe}\",0");
-                        key.SetValue("DisplayVersion", "1.7.2");
+                        key.SetValue("DisplayVersion", "1.7.3");
                         key.SetValue("Publisher", "Panak Team");
                         key.SetValue("InstallLocation", targetDir);
                         key.SetValue("UninstallString", uninstallCommand);
