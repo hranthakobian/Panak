@@ -24,6 +24,14 @@
         <SolidColorBrush x:Key="M3ErrorContainerBrush" Color="#FFDAD6"/>
         <SolidColorBrush x:Key="M3OnErrorContainerBrush" Color="#410002"/>
 
+        <!-- Dynamic Logo Brushes -->
+        <SolidColorBrush x:Key="LogoContainerBrush" Color="#E5CBB4"/>
+        <SolidColorBrush x:Key="LogoArrowBrush" Color="#481A0A"/>
+        <SolidColorBrush x:Key="LogoTriangleBrush" Color="#884433"/>
+        <SolidColorBrush x:Key="LogoCloudBrush" Color="#481A0A"/>
+        <SolidColorBrush x:Key="LogoShieldBrush" Color="#CFA636"/>
+        <SolidColorBrush x:Key="LogoEllipseBrush" Color="#CF5D36"/>
+
         <!-- Material 3 Section Card Style: Pure borderless elevated container -->
         <Style x:Key="SectionCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource M3CardBrush}"/>
@@ -414,9 +422,20 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="40" Height="40" CornerRadius="12" Margin="0,0,12,0" VerticalAlignment="Center" ClipToBounds="True">
-                        <Image x:Name="HeaderLogoImage" Width="40" Height="40" RenderOptions.BitmapScalingMode="HighQuality"/>
-                    </Border>
+                    <!-- Dynamic Vector Panak Setup SVG Logo (svg/Setup.svg) -->
+                    <Viewbox Width="40" Height="40" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <Canvas Width="88" Height="88" Clip="M 0,0 L 88,0 L 88,88 L 0,88 Z">
+                            <!-- 1. Scalloped container badge base -->
+                            <Path Data="M59.4086 1.20571C76.2803 -3.9745 92.0771 11.8223 86.8968 28.694L84.1639 37.595C82.8719 41.8029 82.8719 46.3016 84.1639 50.5095L86.8968 59.4105C92.0771 76.2822 76.2803 92.079 59.4086 86.8988L50.5076 84.1659C46.2997 82.8739 41.8009 82.8739 37.593 84.1659L28.6921 86.8988C11.8203 92.079 -3.97645 76.2822 1.20376 59.4105L3.93668 50.5095C5.22865 46.3016 5.22865 41.8029 3.93668 37.595L1.20376 28.694C-3.97645 11.8223 11.8203 -3.9745 28.692 1.20571L37.593 3.93863C41.8009 5.23061 46.2997 5.23061 50.5076 3.93863L59.4086 1.20571Z"
+                                  Fill="{DynamicResource LogoContainerBrush}"/>
+                            <!-- 2. Downward triangle arrow -->
+                            <Path Data="M48.3301 54.5C46.4056 57.8333 41.5944 57.8333 39.6699 54.5L22.3494 24.5C20.4249 21.1667 22.8305 17 26.6795 17L61.3205 17C65.1695 17 67.5751 21.1667 65.6506 24.5L48.3301 54.5Z"
+                                  Fill="{DynamicResource LogoArrowBrush}"/>
+                            <!-- 3. Bottom rounded bar -->
+                            <Rectangle Canvas.Left="17" Canvas.Top="62" Width="53" Height="10" RadiusX="3" RadiusY="3"
+                                       Fill="{DynamicResource LogoArrowBrush}"/>
+                        </Canvas>
+                    </Viewbox>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock x:Name="WizardTitleText" Text="Panak Setup" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                         <TextBlock x:Name="WizardSubtitleText" Text="Material You Popup Folders for Windows" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
@@ -468,8 +487,8 @@
                             </Grid>
                         </Border>
 
-                        <!-- .NET 8.0 Runtime Option -->
-                        <Border Style="{StaticResource SectionCardStyle}">
+                        <!-- .NET 8.0 Runtime Option (Built-in / Self-Contained) -->
+                        <Border x:Name="DotNetSectionCard" Style="{StaticResource SectionCardStyle}" Visibility="Collapsed">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -593,7 +612,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="CancelActionBtn" Grid.Column="0" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Click="CancelButton_Click"/>
-                <TextBlock Grid.Column="1" Text="Panak v1.7.3" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
+                <TextBlock Grid.Column="1" Text="Panak v1.7.4" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Button x:Name="MainActionBtn" Style="{StaticResource ActionButtonStyle}" Content="Install Now" Click="MainActionBtn_Click"/>
                     <Button x:Name="FinishBtn" Style="{StaticResource ActionButtonStyle}" Content="Finish" Visibility="Collapsed" Click="FinishBtn_Click"/>

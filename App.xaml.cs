@@ -85,6 +85,13 @@ namespace Panak {
             }
 
             // Primary instance: start background services
+            try {
+                var settings = SettingsService.Instance.Current;
+                if (!string.IsNullOrEmpty(settings?.Language)) {
+                    LocalizationService.Instance.CurrentLanguage = settings.Language;
+                }
+            } catch { }
+
             InitializeBackgroundServices();
 
             // Ensure auto-start and context menus are properly registered if enabled
@@ -93,7 +100,7 @@ namespace Panak {
                 if (!string.IsNullOrEmpty(currentExe)) {
                     InstallerService.EnsureAutoStartRegistered(currentExe);
                     if (ContextMenuRegistry.IsRegistered()) {
-                        ContextMenuRegistry.RegisterAll(currentExe);
+                        ContextMenuRegistry.RegisterAll(currentExe, LocalizationService.Instance.CurrentLanguage);
                     }
                 }
             } catch { }

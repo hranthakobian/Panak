@@ -211,6 +211,14 @@ namespace Panak.Services {
                             if (!currentExe.Equals(setupTarget, StringComparison.OrdinalIgnoreCase)) {
                                 File.Copy(currentExe, setupTarget, true);
                             }
+
+                            // Copy Uninstall.exe if present alongside current setup exe
+                            string setupDir = Path.GetDirectoryName(currentExe) ?? string.Empty;
+                            string uninstallerSource = Path.Combine(setupDir, "Uninstall.exe");
+                            if (File.Exists(uninstallerSource)) {
+                                string uninstallerTarget = Path.Combine(targetDir, "Uninstall.exe");
+                                File.Copy(uninstallerSource, uninstallerTarget, true);
+                            }
                         }
                     } catch { }
 
@@ -238,19 +246,34 @@ namespace Panak.Services {
 
                     // 7. Windows Add/Remove Programs (Registry)
                     progress?.Report((0.95, "Registering application..."));
+                    string uninstallExeInTarget = Path.Combine(targetDir, "Uninstall.exe");
                     string setupExeInTarget = Path.Combine(targetDir, "Setup.exe");
-                    string uninstallCommand = File.Exists(setupExeInTarget)
-                        ? $"\"{setupExeInTarget}\" --uninstall"
-                        : $"\"{targetExe}\" --uninstall";
+                    string uninstallCommand;
+                    string quietUninstallCommand;
+                    string displayIcon;
+
+                    if (File.Exists(uninstallExeInTarget)) {
+                        uninstallCommand = $"\"{uninstallExeInTarget}\"";
+                        quietUninstallCommand = $"\"{uninstallExeInTarget}\" --silent";
+                        displayIcon = $"\"{uninstallExeInTarget}\",0";
+                    } else if (File.Exists(setupExeInTarget)) {
+                        uninstallCommand = $"\"{setupExeInTarget}\" --uninstall";
+                        quietUninstallCommand = $"\"{setupExeInTarget}\" --uninstall --silent";
+                        displayIcon = $"\"{setupExeInTarget}\",0";
+                    } else {
+                        uninstallCommand = $"\"{targetExe}\" --uninstall";
+                        quietUninstallCommand = $"\"{targetExe}\" --uninstall --silent";
+                        displayIcon = $"\"{targetExe}\",0";
+                    }
 
                     using (var key = Registry.CurrentUser.CreateSubKey(UNINSTALL_REG_KEY)) {
                         key.SetValue("DisplayName", "Panak - Material You Folders");
-                        key.SetValue("DisplayIcon", $"\"{targetExe}\",0");
-                        key.SetValue("DisplayVersion", "1.7.3");
+                        key.SetValue("DisplayIcon", displayIcon);
+                        key.SetValue("DisplayVersion", "1.7.4");
                         key.SetValue("Publisher", "Panak Team");
                         key.SetValue("InstallLocation", targetDir);
                         key.SetValue("UninstallString", uninstallCommand);
-                        key.SetValue("QuietUninstallString", $"{uninstallCommand} --silent");
+                        key.SetValue("QuietUninstallString", quietUninstallCommand);
                     }
 
                     progress?.Report((1.0, LocalizationService.Instance["InstalledSuccess"] ?? "Installation completed successfully!"));

@@ -224,11 +224,11 @@ Panak.exe --install-silent
 
 ### Uninstallation
 Panak can be completely removed using any of the following methods:
-- Run **`Uninstall.bat`**, or
-- From command line: `Panak.exe --uninstall`, or
+- Run **`Uninstall.exe`** or **`Uninstall.bat`**, or
+- Open **Panak Settings** and click **Uninstall**, or
 - Open **Windows Settings ➔ Apps ➔ Installed apps ➔ Panak ➔ Uninstall**.
 
-The uninstaller thoroughly cleans all registry entries, shortcuts, and application files.
+The dedicated uninstaller (`Uninstall.exe`) features dynamic Material You branding matching the user's settings, feedback contact links, an option to remove the .NET 8.0 Desktop Runtime, and thoroughly cleans all registry entries, context menus, shortcuts, and application files.
 
 ---
 

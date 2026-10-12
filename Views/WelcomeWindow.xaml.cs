@@ -13,61 +13,49 @@ namespace Panak.Views {
             InitializeComponent();
             LoadLogo();
             LoadThemeAndLanguage();
+
+            SettingsService.Instance.SettingsChanged += OnSettingsChanged;
+            Closed += (s, e) => {
+                SettingsService.Instance.SettingsChanged -= OnSettingsChanged;
+            };
+        }
+
+        private void OnSettingsChanged(Models.AppSettings settings) {
+            Dispatcher.Invoke(LoadThemeAndLanguage);
         }
 
         private void LoadLogo() {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 
-            // 1. Header & Window Icon: Frame 121.png (Panak Square Icon)
+            // Header & Window Icon: Logo.png
             BitmapImage? iconImage = null;
             try {
-                iconImage = new BitmapImage(new Uri("pack://application:,,,/Frame 121.png", UriKind.Absolute));
+                iconImage = new BitmapImage(new Uri("pack://application:,,,/Logo.png", UriKind.Absolute));
             } catch {
-                string[] iconCandidates = {
-                    Path.Combine(baseDir, "src", "Frame 121.png"),
-                    Path.Combine(baseDir, "Frame 121.png"),
-                    Path.Combine(baseDir, "PanakSetupLogo.png"),
-                    Path.Combine(baseDir, "src", "PanakSetupLogo.png"),
-                    Path.Combine(baseDir, "PanakLogo.png"),
-                    Path.Combine(baseDir, "Panak.ico")
-                };
-                foreach (var path in iconCandidates) {
-                    if (File.Exists(path)) {
-                        iconImage = new BitmapImage(new Uri(path, UriKind.Absolute));
-                        break;
+                try {
+                    iconImage = new BitmapImage(new Uri("pack://application:,,,/Frame 121.png", UriKind.Absolute));
+                } catch {
+                    string[] iconCandidates = {
+                        Path.Combine(baseDir, "src", "Logo.png"),
+                        Path.Combine(baseDir, "Logo.png"),
+                        Path.Combine(baseDir, "src", "Frame 121.png"),
+                        Path.Combine(baseDir, "Frame 121.png"),
+                        Path.Combine(baseDir, "PanakSetupLogo.png"),
+                        Path.Combine(baseDir, "src", "PanakSetupLogo.png"),
+                        Path.Combine(baseDir, "PanakLogo.png"),
+                        Path.Combine(baseDir, "Panak.ico")
+                    };
+                    foreach (var path in iconCandidates) {
+                        if (File.Exists(path)) {
+                            iconImage = new BitmapImage(new Uri(path, UriKind.Absolute));
+                            break;
+                        }
                     }
                 }
             }
 
             if (iconImage != null) {
-                HeaderLogoImage.Source = iconImage;
                 Icon = iconImage;
-            }
-
-            // 2. Center Hero Logo: Group 389.png (Panak Brand Logo Banner)
-            BitmapImage? bannerImage = null;
-            try {
-                bannerImage = new BitmapImage(new Uri("pack://application:,,,/Group 389.png", UriKind.Absolute));
-            } catch {
-                string[] bannerCandidates = {
-                    Path.Combine(baseDir, "src", "Group 389.png"),
-                    Path.Combine(baseDir, "Group 389.png"),
-                    Path.Combine(baseDir, "src", "Panak logo.png"),
-                    Path.Combine(baseDir, "Panak logo.png"),
-                    Path.Combine(baseDir, "PanakLogo.png")
-                };
-                foreach (var path in bannerCandidates) {
-                    if (File.Exists(path)) {
-                        bannerImage = new BitmapImage(new Uri(path, UriKind.Absolute));
-                        break;
-                    }
-                }
-            }
-
-            if (bannerImage != null) {
-                CenterLogoImage.Source = bannerImage;
-            } else if (iconImage != null) {
-                CenterLogoImage.Source = iconImage;
             }
         }
 
@@ -120,6 +108,14 @@ namespace Panak.Views {
                 Resources["M3OnSurfaceBrush"] = new SolidColorBrush(wpfOnSurface);
                 Resources["M3OnSurfaceVariantBrush"] = new SolidColorBrush(wpfOnSurfaceVariant);
                 Resources["M3TrackInactiveBrush"] = new SolidColorBrush(wpfTrackInactive);
+
+                var (cContainer, cTriangle, cCloud, cShield, cEllipse) = ShellHelper.GetLogoDynamicColors(hue, false);
+                Resources["LogoContainerBrush"] = new SolidColorBrush(toWpf(cContainer));
+                Resources["LogoTriangleBrush"] = new SolidColorBrush(toWpf(cTriangle));
+                Resources["LogoCloudBrush"] = new SolidColorBrush(toWpf(cCloud));
+                Resources["LogoShieldBrush"] = new SolidColorBrush(toWpf(cShield));
+                Resources["LogoEllipseBrush"] = new SolidColorBrush(toWpf(cEllipse));
+                Resources["LogoTextBrush"] = new SolidColorBrush(toWpf(cTriangle));
             } catch { }
         }
 

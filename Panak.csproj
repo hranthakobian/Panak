@@ -10,8 +10,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>Panak</RootNamespace>
     <AssemblyName>Panak</AssemblyName>
-    <Version>1.7.3</Version>
-    <AssemblyVersion>1.7.3.0</AssemblyVersion>
+    <Version>1.7.4</Version>
+    <AssemblyVersion>1.7.4.0</AssemblyVersion>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <ApplicationIcon>Panak.ico</ApplicationIcon>
   </PropertyGroup>
@@ -22,6 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="src\Logo.png" Link="Logo.png" />
+    <Resource Include="src\Setup.png" Link="Setup.png" />
     <Resource Include="src\PanakLogo.png" Link="PanakLogo.png" />
     <Resource Include="src\SettingsLogo.png" Link="SettingsLogo.png" />
     <Resource Include="src\PanakSetupLogo.png" Link="PanakSetupLogo.png" />
@@ -29,6 +31,12 @@
     <Resource Include="src\Frame 121.png" Link="Frame 121.png" />
     <Resource Include="src\Group 389.png" Link="Group 389.png" />
     <Resource Include="Panak.ico" />
+    <None Include="src\Logo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="src\Setup.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="src\SettingsLogo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -50,6 +58,14 @@
     <None Include="src\Group 389.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <Resource Include="svg\settings.svg" Link="settings.svg" />
+    <Resource Include="src\settings.svg" />
+    <None Include="svg\settings.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="src\settings.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="Panak.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -65,6 +81,9 @@
     <EmbeddedResource Remove="Panak.ShellExt\**" />
     <None Remove="Panak.ShellExt\**" />
     <Page Remove="Panak.ShellExt\**" />
+    <Compile Remove="Uninstall\**" />
+    <Page Remove="Uninstall\**" />
+    <None Remove="Uninstall\**" />
   </ItemGroup>
 
   <Target Name="CopyShellExtFiles" AfterTargets="Build;Publish">

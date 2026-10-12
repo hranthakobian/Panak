@@ -2,7 +2,15 @@
 title Panak Uninstaller
 echo Starting Panak Uninstaller Wizard...
 pushd "%~dp0\.."
-if exist "publish\Setup.exe" (
+if exist "%LocalAppData%\Programs\Panak\Uninstall.exe" (
+    start "" "%LocalAppData%\Programs\Panak\Uninstall.exe"
+) else if exist "publish\Uninstall.exe" (
+    start "" "publish\Uninstall.exe"
+) else if exist "Uninstall\bin\Release\net8.0-windows10.0.19041.0\win-x64\Uninstall.exe" (
+    start "" "Uninstall\bin\Release\net8.0-windows10.0.19041.0\win-x64\Uninstall.exe"
+) else if exist "Uninstall\bin\Debug\net8.0-windows10.0.19041.0\Uninstall.exe" (
+    start "" "Uninstall\bin\Debug\net8.0-windows10.0.19041.0\Uninstall.exe"
+) else if exist "publish\Setup.exe" (
     start "" "publish\Setup.exe" --uninstall
 ) else if exist "%LocalAppData%\Programs\Panak\Setup.exe" (
     start "" "%LocalAppData%\Programs\Panak\Setup.exe" --uninstall

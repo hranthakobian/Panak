@@ -822,7 +822,7 @@
             <!-- Header: Full-width draggable, dynamic vector SVG logo, no close button -->
             <Grid Grid.Row="0" Margin="0,0,0,16" Background="Transparent" MouseDown="Header_MouseDown" Cursor="SizeAll">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Dynamic Vector Panak SVG Logo -->
+                    <!-- Dynamic Vector Panak SVG Logo (svg/settings.svg) -->
                     <Viewbox Width="32" Height="32" Margin="0,0,10,0" VerticalAlignment="Center">
                         <Canvas Width="88" Height="88" Clip="M 0,0 L 88,0 L 88,88 L 0,88 Z">
                             <!-- 1. Scalloped container badge base -->
@@ -856,22 +856,45 @@
             <!-- Body -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14">
                 <StackPanel>
-                    <!-- Ko-fi Donation Support Card (Top of Settings) -->
+                    <!-- Ko-fi Donation Support Card & Contact (Top of Settings) -->
                     <Border Style="{StaticResource SectionCardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="☕" FontSize="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="SupportTitleText" Text="Աջակցել նախագծին (Ko-fi)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="☕" FontSize="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="SupportTitleText" Text="Աջակցել նախագծին (Ko-fi)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock x:Name="SupportDescText" Text="Աջակցեք Panak-ի զարգացմանը Ko-fi-ի միջոցով" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <TextBlock x:Name="SupportDescText" Text="Աջակցեք Panak-ի զարգացմանը Ko-fi-ի միջոցով" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3,0,0" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <Button x:Name="KofiButton" Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Content="☕ Ko-fi" VerticalAlignment="Center" Padding="18,8" FontWeight="Bold" Click="KofiButton_Click"/>
-                        </Grid>
+                                <Button x:Name="KofiButton" Grid.Column="1" Style="{StaticResource ActionButtonStyle}" Content="☕ Ko-fi" VerticalAlignment="Center" Padding="18,8" FontWeight="Bold" Click="KofiButton_Click"/>
+                            </Grid>
+
+                            <Border Height="1" Background="{DynamicResource M3SurfaceContainerBrush}" Margin="0,2,0,8" BorderThickness="0"/>
+
+                            <!-- Clickable contact links row -->
+                            <WrapPanel Margin="0,2,0,0">
+                                <!-- Email link -->
+                                <Border Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="14" Padding="12,6" Margin="0,0,8,0" Cursor="Hand" MouseDown="EmailLink_MouseDown" ToolTip="dev@hakobian.am">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="✉ " FontSize="11" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                        <TextBlock Text="dev@hakobian.am" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Website link -->
+                                <Border Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="14" Padding="12,6" Margin="0,0,8,0" Cursor="Hand" MouseDown="WebsiteLink_MouseDown" ToolTip="https://hakobian.am/contact">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="🌐 " FontSize="11" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                        <TextBlock Text="hakobian.am" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </WrapPanel>
+                        </StackPanel>
                     </Border>
 
                     <!-- Language Selection with AI Notice -->
@@ -1206,7 +1229,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock x:Name="UpdateStatusTitleText" Text="Current version: v1.7.3" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                        <TextBlock x:Name="UpdateStatusTitleText" Text="Current version: v1.7.4" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                                         <TextBlock x:Name="UpdateStatusDetailText" Text="You are using the latest version" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <TextBlock x:Name="UpdateStatusBadge" Grid.Column="1" Text="✓ Latest" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}" VerticalAlignment="Center"/>
@@ -1262,8 +1285,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="InstallerSectionTitle" Text="Installation &amp; Setup" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                                <TextBlock x:Name="InstallerSectionDesc" Text="Setup or remove Panak system integration" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                <TextBlock x:Name="InstallerSectionTitle" Text="Ապատեղադրիչ" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                 <Button x:Name="UninstallAppBtn" Style="{StaticResource DangerButtonStyle}" Content="Uninstall" Padding="14,6" Click="UninstallAppBtn_Click"/>
@@ -1279,7 +1301,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Panak v1.7.3" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="Panak v1.7.4" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button x:Name="CancelBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Margin="0,0,10,0" Click="CancelBtn_Click"/>
                     <Button x:Name="ApplyBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Apply" Margin="0,0,10,0" Click="ApplyBtn_Click"/>

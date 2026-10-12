@@ -48,7 +48,9 @@ namespace Panak.Setup {
             try {
                 var asm = typeof(SetupWindow).Assembly;
                 string? resName = asm.GetManifestResourceNames()
-                    .FirstOrDefault(n => n.EndsWith("PanakSetupLogoEmbedded.png", StringComparison.OrdinalIgnoreCase) ||
+                    .FirstOrDefault(n => n.EndsWith("SetupEmbedded.png", StringComparison.OrdinalIgnoreCase) ||
+                                         n.EndsWith("Setup.png", StringComparison.OrdinalIgnoreCase) ||
+                                         n.EndsWith("PanakSetupLogoEmbedded.png", StringComparison.OrdinalIgnoreCase) ||
                                          n.EndsWith("PanakSetupLogo.png", StringComparison.OrdinalIgnoreCase) ||
                                          n.EndsWith("Panak setup logo.png", StringComparison.OrdinalIgnoreCase) ||
                                          n.EndsWith("PanakLogoEmbedded.png", StringComparison.OrdinalIgnoreCase));
@@ -66,7 +68,6 @@ namespace Panak.Setup {
                         bi.EndInit();
                         bi.Freeze();
 
-                        HeaderLogoImage.Source = bi;
                         Icon = bi;
                         return;
                     }
@@ -76,6 +77,7 @@ namespace Panak.Setup {
             try {
                 string exeDir = AppDomain.CurrentDomain.BaseDirectory;
                 string[] candidates = {
+                    Path.Combine(exeDir, "Setup.png"),
                     Path.Combine(exeDir, "PanakSetupLogo.png"),
                     Path.Combine(exeDir, "Panak setup logo.png"),
                     Path.Combine(exeDir, "PanakLogo.png"),
@@ -84,7 +86,6 @@ namespace Panak.Setup {
                 foreach (var localPng in candidates) {
                     if (File.Exists(localPng)) {
                         var bi = new System.Windows.Media.Imaging.BitmapImage(new Uri(localPng, UriKind.Absolute));
-                        HeaderLogoImage.Source = bi;
                         Icon = bi;
                         return;
                     }
@@ -170,6 +171,14 @@ namespace Panak.Setup {
                 Resources["M3OnSurfaceVariantBrush"] = new SolidColorBrush(wpfOnSurfaceVariant);
                 Resources["M3TrackInactiveBrush"] = new SolidColorBrush(wpfTrackInactive);
 
+                var (cContainer, cTriangle, cCloud, cShield, cEllipse) = ShellHelper.GetLogoDynamicColors(hue, false);
+                Resources["LogoContainerBrush"] = new SolidColorBrush(toWpf(cContainer));
+                Resources["LogoArrowBrush"] = new SolidColorBrush(toWpf(cTriangle));
+                Resources["LogoTriangleBrush"] = new SolidColorBrush(toWpf(cTriangle));
+                Resources["LogoCloudBrush"] = new SolidColorBrush(toWpf(cCloud));
+                Resources["LogoShieldBrush"] = new SolidColorBrush(toWpf(cShield));
+                Resources["LogoEllipseBrush"] = new SolidColorBrush(toWpf(cEllipse));
+
                 if (MainWindowBorder != null) {
                     MainWindowBorder.Background = new SolidColorBrush(wpfSurface);
                 }
@@ -236,24 +245,11 @@ namespace Panak.Setup {
         }
 
         private void ConfigureDotNetRuntime() {
-            if (DotNetRuntimeTitleText == null || DotNetStatusBadgeText == null || DotNetRuntimeDescText == null || DotNetRuntimeCheckBox == null) return;
-            var loc = LocalizationService.Instance;
-
-            DotNetRuntimeTitleText.Text = loc["DotNetRuntime"];
-
-            var (isInstalled, version) = StandaloneInstallerService.CheckDotNet8DesktopRuntime();
-            if (isInstalled) {
-                DotNetStatusBadgeText.Text = $"{loc["DotNetAlreadyInstalled"]} (v{version})";
-                DotNetRuntimeDescText.Text = $"{loc["DotNetRuntimeDesc"]} • {loc["DotNetAlreadyInstalled"]}";
-                if (!_dotNetUserToggled) {
-                    DotNetRuntimeCheckBox.IsChecked = false;
-                }
-            } else {
-                DotNetStatusBadgeText.Text = loc["DotNetNotInstalled"];
-                DotNetRuntimeDescText.Text = $"{loc["DotNetRuntimeDesc"]} • {loc["DotNetNotInstalled"]}";
-                if (!_dotNetUserToggled) {
-                    DotNetRuntimeCheckBox.IsChecked = true;
-                }
+            if (DotNetSectionCard != null) {
+                DotNetSectionCard.Visibility = Visibility.Collapsed;
+            }
+            if (DotNetRuntimeCheckBox != null) {
+                DotNetRuntimeCheckBox.IsChecked = false;
             }
         }
 

@@ -14,7 +14,7 @@ taskkill /F /IM Setup.exe 2>nul
 
 echo [2/5] Publishing Panak application and Shell Extension...
 if exist "staging_panak" rmdir /S /Q "staging_panak"
-dotnet publish -c Release -r win-x64 --self-contained false -o staging_panak Panak.csproj
+dotnet publish -c Release -r win-x64 --self-contained true -o staging_panak Panak.csproj
 if %ERRORLEVEL% neq 0 (
     echo Error publishing Panak.
     popd
@@ -23,6 +23,12 @@ if %ERRORLEVEL% neq 0 (
 dotnet publish -c Release -r win-x64 --self-contained false -o staging_panak Panak.ShellExt\Panak.ShellExt.csproj
 if %ERRORLEVEL% neq 0 (
     echo Error publishing Panak.ShellExt.
+    popd
+    exit /b %ERRORLEVEL%
+)
+dotnet publish -c Release -r win-x64 --self-contained true -o staging_panak Uninstall\Uninstall.csproj
+if %ERRORLEVEL% neq 0 (
+    echo Error publishing Uninstall.exe.
     popd
     exit /b %ERRORLEVEL%
 )
@@ -39,7 +45,7 @@ if %ERRORLEVEL% neq 0 (
 echo [4/5] Publishing Standalone Setup.exe...
 if not exist "publish" mkdir "publish"
 xcopy /E /I /Y "staging_panak\*" "publish\" >nul
-dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish Setup\Setup.csproj
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o publish Setup\Setup.csproj
 if %ERRORLEVEL% neq 0 (
     echo Error publishing Setup.exe.
     popd

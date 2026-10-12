@@ -757,8 +757,8 @@ namespace Panak.Tests {
         public void TestGitHubUpdateServiceVersionAndDefaults() {
             var updater = GitHubUpdateService.Instance;
             Assert.IsNotNull(updater);
-            Assert.AreEqual("1.7.3", updater.CurrentVersionString);
-            Assert.AreEqual(new Version(1, 7, 3), updater.CurrentVersion);
+            Assert.AreEqual("1.7.4", updater.CurrentVersionString);
+            Assert.AreEqual(new Version(1, 7, 4), updater.CurrentVersion);
             Assert.AreEqual(UpdateStatus.Idle, updater.Status);
         }
 
@@ -895,6 +895,44 @@ namespace Panak.Tests {
         }
 
         [TestMethod]
+        public void TestContextMenuLanguageUpdates() {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string exePath = Path.Combine(baseDir, "Panak.exe");
+            if (!File.Exists(exePath)) {
+                File.WriteAllText(exePath, "mock");
+            }
+
+            // Register in Armenian (hy)
+            ContextMenuRegistry.RegisterAll(exePath, "hy");
+            using (var keyHy = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\*\shell\PanakCreate")) {
+                Assert.IsNotNull(keyHy);
+                Assert.AreEqual("Հավաքել Panak պանակի մեջ", keyHy.GetValue(""));
+            }
+            using (var keyHyDir = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\shell\PanakOpen")) {
+                Assert.IsNotNull(keyHyDir);
+                Assert.AreEqual("Բացել Panak-ով", keyHyDir.GetValue(""));
+            }
+
+            // Change language to English (en)
+            ContextMenuRegistry.RegisterAll(exePath, "en");
+            using (var keyEn = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\*\shell\PanakCreate")) {
+                Assert.IsNotNull(keyEn);
+                Assert.AreEqual("Collect into Panak folder", keyEn.GetValue(""));
+            }
+            using (var keyEnDir = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\shell\PanakOpen")) {
+                Assert.IsNotNull(keyEnDir);
+                Assert.AreEqual("Open with Panak", keyEnDir.GetValue(""));
+            }
+
+            // Change back to Armenian (hy)
+            ContextMenuRegistry.RegisterAll(exePath, "hy");
+            using (var keyBackHy = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\*\shell\PanakCreate")) {
+                Assert.IsNotNull(keyBackHy);
+                Assert.AreEqual("Հավաքել Panak պանակի մեջ", keyBackHy.GetValue(""));
+            }
+        }
+
+        [TestMethod]
         public void TestTrayContextMenuCreationAndPalette() {
             var thread = new System.Threading.Thread(() => {
                 var tm = new TrayManager();
@@ -963,6 +1001,17 @@ namespace Panak.Tests {
             Assert.IsNotNull(bmp48Dark);
             Assert.AreEqual(48, bmp48Dark.Width);
             Assert.AreEqual(48, bmp48Dark.Height);
+
+            // Test uninstaller logo bitmap rendering
+            using var bmpUninst32 = ShellHelper.RenderUninstallerLogoBitmap(32, 26.2, false);
+            Assert.IsNotNull(bmpUninst32);
+            Assert.AreEqual(32, bmpUninst32.Width);
+            Assert.AreEqual(32, bmpUninst32.Height);
+
+            using var bmpUninst48Dark = ShellHelper.RenderUninstallerLogoBitmap(48, 200.0, true);
+            Assert.IsNotNull(bmpUninst48Dark);
+            Assert.AreEqual(48, bmpUninst48Dark.Width);
+            Assert.AreEqual(48, bmpUninst48Dark.Height);
         }
 
         [TestMethod]
@@ -1217,6 +1266,61 @@ namespace Panak.Tests {
             Assert.IsTrue(isInstalled, ".NET 8.0 Windows Desktop Runtime should be detected on development machine");
             Assert.IsFalse(string.IsNullOrWhiteSpace(version), "Detected .NET version string should not be empty");
             Assert.IsTrue(version!.StartsWith("8."), $"Detected version should start with '8.' but was '{version}'");
+        }
+
+        [TestMethod]
+        public void TestStandaloneUninstallerServiceMethods() {
+            string defaultDir = Panak.Services.StandaloneUninstallerService.GetDefaultInstallDirectory();
+            Assert.IsFalse(string.IsNullOrEmpty(defaultDir));
+            Assert.IsTrue(defaultDir.EndsWith("Panak", StringComparison.OrdinalIgnoreCase));
+
+            var (isInstalled, version) = Panak.Services.StandaloneUninstallerService.CheckDotNet8DesktopRuntime();
+            Assert.IsTrue(isInstalled, ".NET 8 runtime should be found on test machine");
+            Assert.IsNotNull(version);
+            Assert.IsTrue(version.StartsWith("8."));
+        }
+
+        [TestMethod]
+        public void TestUninstallerLocalizationKeys() {
+            var loc = Panak.Services.LocalizationService.Instance;
+
+            loc.CurrentLanguage = "hy";
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallApology"]));
+            StringAssert.Contains(loc["UninstallApology"], "չի արդարացրել");
+            StringAssert.Contains(loc["UninstallApology"], "սպասելիքները");
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallDotNet8"]));
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallRemoveMenusAndShortcuts"]));
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallRemoveSettingsData"]));
+
+            loc.CurrentLanguage = "en";
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallApology"]));
+            StringAssert.Contains(loc["UninstallApology"], "expectations");
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallDotNet8"]));
+
+            loc.CurrentLanguage = "ru";
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallApology"]));
+            StringAssert.Contains(loc["UninstallApology"], "ожиданий");
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallDotNet8"]));
+
+            loc.CurrentLanguage = "fr";
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallApology"]));
+            StringAssert.Contains(loc["UninstallApology"], "attentes");
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallDotNet8"]));
+
+            loc.CurrentLanguage = "es";
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallApology"]));
+            StringAssert.Contains(loc["UninstallApology"], "expectativas");
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallDotNet8"]));
+
+            loc.CurrentLanguage = "zh";
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallApology"]));
+            StringAssert.Contains(loc["UninstallApology"], "预期");
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallDotNet8"]));
+
+            loc.CurrentLanguage = "ar";
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallApology"]));
+            StringAssert.Contains(loc["UninstallApology"], "توقعاتكم");
+            Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallDotNet8"]));
         }
     }
 }

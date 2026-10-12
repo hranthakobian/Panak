@@ -7,13 +7,29 @@ namespace Panak.Services {
     public static class ContextMenuRegistry {
         private const string HKCU_CLASSES = @"Software\Classes";
 
-        public static void RegisterAll(string exePath) {
+        public static void RegisterAll(string exePath, string? language = null) {
             try {
                 if (string.IsNullOrEmpty(exePath)) {
                     exePath = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
                 }
                 if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath)) {
                     return;
+                }
+
+                if (!string.IsNullOrEmpty(language)) {
+                    LocalizationService.Instance.CurrentLanguage = language;
+                } else {
+                    try {
+                        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                        string settingsPath = Path.Combine(appData, "Panak", "settings.json");
+                        if (File.Exists(settingsPath)) {
+                            string json = File.ReadAllText(settingsPath);
+                            using var doc = System.Text.Json.JsonDocument.Parse(json);
+                            if (doc.RootElement.TryGetProperty("Language", out var langProp) && !string.IsNullOrEmpty(langProp.GetString())) {
+                                LocalizationService.Instance.CurrentLanguage = langProp.GetString()!;
+                            }
+                        }
+                    } catch { }
                 }
 
                 string createText = LocalizationService.Instance["CollectIntoPanakFolder"];

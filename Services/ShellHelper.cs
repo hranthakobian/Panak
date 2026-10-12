@@ -87,6 +87,16 @@ namespace Panak.Services {
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool DestroyIcon(IntPtr hIcon);
 
+        public const uint WM_SETICON = 0x0080;
+        public const int ICON_SMALL = 0;
+        public const int ICON_BIG = 1;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("shell32.dll", SetLastError = true)]
+        public static extern int SetCurrentProcessExplicitAppUserModelID([MarshalAs(UnmanagedType.LPWStr)] string AppID);
+
         [DllImport("dwmapi.dll")]
         public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
@@ -693,6 +703,84 @@ namespace Panak.Services {
             var container = ColorFromHsl(hue, 0.90, 0.88);
             var primary = ColorFromHsl(hue + 6.3, 0.516, 0.316);
             return (surface, container, primary);
+        }
+
+        public static (Color container, Color triangle, Color cloud, Color shield, Color ellipse) GetLogoDynamicColors(double hue, bool isDark) {
+            hue = (hue % 360.0 + 360.0) % 360.0;
+            if (isDark) {
+                var container = ColorFromHsl(hue, 0.28, 0.24);
+                var triangle = ColorFromHsl(hue, 0.75, 0.82);
+                var cloud = ColorFromHsl(hue, 0.55, 0.68);
+                var shield = ColorFromHsl((hue + 18.0) % 360.0, 0.65, 0.65);
+                var ellipse = ColorFromHsl((hue + 349.0) % 360.0, 0.65, 0.65);
+                return (container, triangle, cloud, shield, ellipse);
+            } else {
+                var container = ColorFromHsl(hue, 0.50, 0.80);
+                var triangle = ColorFromHsl(hue, 0.75, 0.16);
+                var cloud = ColorFromHsl(hue, 0.48, 0.36);
+                var shield = ColorFromHsl((hue + 18.0) % 360.0, 0.61, 0.51);
+                var ellipse = ColorFromHsl((hue + 349.0) % 360.0, 0.60, 0.51);
+                return (container, triangle, cloud, shield, ellipse);
+            }
+        }
+
+        public static Bitmap RenderUninstallerLogoBitmap(int size, double hue, bool isDark) {
+            Bitmap? result = null;
+            void CoreRender() {
+                Color colContainer;
+                Color colCloud;
+                if (isDark) {
+                    colContainer = ColorFromHsl(hue, 0.25, 0.20);
+                    colCloud = ColorFromHsl(hue, 0.75, 0.78);
+                } else {
+                    var (cContainer, _, cCloud, _, _) = GetLogoDynamicColors(hue, false);
+                    colContainer = cContainer;
+                    colCloud = cCloud;
+                }
+
+                var dv = new System.Windows.Media.DrawingVisual();
+                using (var dc = dv.RenderOpen()) {
+                    double scale = size / 88.0;
+                    dc.PushTransform(new System.Windows.Media.ScaleTransform(scale, scale));
+
+                    System.Windows.Media.Color toWpf(Color c) => System.Windows.Media.Color.FromArgb(c.A, c.R, c.G, c.B);
+                    var brushContainer = new System.Windows.Media.SolidColorBrush(toWpf(colContainer));
+                    var brushCloud = new System.Windows.Media.SolidColorBrush(toWpf(colCloud));
+
+                    // 1. Scalloped squircle container badge base
+                    dc.DrawGeometry(brushContainer, null, System.Windows.Media.Geometry.Parse(
+                        "M59.4086 1.20571C76.2803 -3.9745 92.0771 11.8223 86.8968 28.694L84.1639 37.595C82.8719 41.8029 82.8719 46.3016 84.1639 50.5095L86.8968 59.4105C92.0771 76.2822 76.2803 92.079 59.4086 86.8988L50.5076 84.1659C46.2997 82.8739 41.8009 82.8739 37.593 84.1659L28.6921 86.8988C11.8203 92.079 -3.97645 76.2822 1.20376 59.4105L3.93668 50.5095C5.22865 46.3016 5.22865 41.8029 3.93668 37.595L1.20376 28.694C-3.97645 11.8223 11.8203 -3.9745 28.692 1.20571L37.593 3.93863C41.8009 5.23061 46.2997 5.23061 50.5076 3.93863L59.4086 1.20571Z"));
+
+                    // 2. Trash can container bin
+                    dc.DrawGeometry(brushCloud, null, System.Windows.Media.Geometry.Parse(
+                        "M35.6414 72C34.1731 72 32.9205 70.9372 32.6814 69.4885L26.5757 32.4885C26.2741 30.6613 27.6838 29 29.5356 29L59.5458 29C61.3698 29 62.7717 30.6142 62.5162 32.4202L57.2828 69.4202C57.0735 70.8999 55.8069 72 54.3123 72L35.6414 72Z"));
+
+                    // 3. Trash can lid
+                    dc.DrawRoundedRectangle(brushCloud, null, new System.Windows.Rect(26, 18, 37, 9), 3, 3);
+
+                    dc.Pop();
+                }
+
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(size, size, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(dv);
+                using var ms = new MemoryStream();
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                enc.Save(ms);
+                ms.Position = 0;
+                result = new Bitmap(ms);
+            }
+
+            if (System.Threading.Thread.CurrentThread.GetApartmentState() == System.Threading.ApartmentState.STA) {
+                CoreRender();
+            } else {
+                var t = new System.Threading.Thread(CoreRender);
+                t.SetApartmentState(System.Threading.ApartmentState.STA);
+                t.Start();
+                t.Join();
+            }
+
+            return result!;
         }
 
         public static Color ColorFromPastelHue(double hue) {

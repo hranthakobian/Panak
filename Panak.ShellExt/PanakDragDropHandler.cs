@@ -264,18 +264,19 @@ namespace Panak.ShellExt {
                 string settingsPath = Path.Combine(appData, "Panak", "settings.json");
                 if (File.Exists(settingsPath)) {
                     string json = File.ReadAllText(settingsPath);
-                    if (json.Contains("\"Language\": \"en\"") || json.Contains("\"Language\":\"en\"")) {
-                        return "Collect into Panak folder";
-                    } else if (json.Contains("\"Language\": \"ru\"") || json.Contains("\"Language\":\"ru\"")) {
-                        return "Собрать в папку Panak";
-                    } else if (json.Contains("\"Language\": \"fr\"") || json.Contains("\"Language\":\"fr\"")) {
-                        return "Rassembler dans un dossier Panak";
-                    } else if (json.Contains("\"Language\": \"es\"") || json.Contains("\"Language\":\"es\"")) {
-                        return "Reunir en carpeta Panak";
-                    } else if (json.Contains("\"Language\": \"zh\"") || json.Contains("\"Language\":\"zh\"")) {
-                        return "收集到 Panak 文件夹";
-                    } else if (json.Contains("\"Language\": \"ar\"") || json.Contains("\"Language\":\"ar\"")) {
-                        return "جمع في مجلد Panak";
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("Language", out var langProp)) {
+                        string lang = langProp.GetString()?.ToLowerInvariant() ?? "";
+                        return lang switch {
+                            "hy" => "Հավաքել Panak պանակի մեջ",
+                            "en" => "Collect into Panak folder",
+                            "ru" => "Собрать в папку Panak",
+                            "fr" => "Rassembler dans un dossier Panak",
+                            "es" => "Reunir en carpeta Panak",
+                            "zh" => "收集到 Panak 文件夹",
+                            "ar" => "جمع في مجلد Panak",
+                            _ => "Հավաքել Panak պանակի մեջ"
+                        };
                     }
                 }
             } catch { }

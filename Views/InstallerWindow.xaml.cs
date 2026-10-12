@@ -74,9 +74,15 @@ namespace Panak.Views {
 
         private void LoadLogoAndIcon() {
             try {
+                var uri = new Uri("pack://application:,,,/Setup.png", UriKind.Absolute);
+                var bi = new BitmapImage(uri);
+                Icon = bi;
+                return;
+            } catch { }
+
+            try {
                 var uri = new Uri("pack://application:,,,/PanakSetupLogo.png", UriKind.Absolute);
                 var bi = new BitmapImage(uri);
-                HeaderLogoImage.Source = bi;
                 Icon = bi;
                 return;
             } catch { }
@@ -84,6 +90,8 @@ namespace Panak.Views {
             try {
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string[] candidates = {
+                    Path.Combine(baseDir, "src", "Setup.png"),
+                    Path.Combine(baseDir, "Setup.png"),
                     Path.Combine(baseDir, "PanakSetupLogo.png"),
                     Path.Combine(baseDir, "Panak setup logo.png"),
                     Path.Combine(baseDir, "PanakLogo.png"),
@@ -93,7 +101,6 @@ namespace Panak.Views {
                 foreach (var file in candidates) {
                     if (File.Exists(file)) {
                         var bi = new BitmapImage(new Uri(file, UriKind.Absolute));
-                        HeaderLogoImage.Source = bi;
                         Icon = bi;
                         return;
                     }
@@ -132,6 +139,14 @@ namespace Panak.Views {
                 Resources["M3OnSurfaceBrush"] = new System.Windows.Media.SolidColorBrush(wpfOnSurface);
                 Resources["M3OnSurfaceVariantBrush"] = new System.Windows.Media.SolidColorBrush(wpfOnSurfaceVariant);
                 Resources["M3TrackInactiveBrush"] = new System.Windows.Media.SolidColorBrush(wpfTrackInactive);
+
+                var (cContainer, cTriangle, cCloud, cShield, cEllipse) = ShellHelper.GetLogoDynamicColors(hue, false);
+                Resources["LogoContainerBrush"] = new System.Windows.Media.SolidColorBrush(toWpf(cContainer));
+                Resources["LogoArrowBrush"] = new System.Windows.Media.SolidColorBrush(toWpf(cTriangle));
+                Resources["LogoTriangleBrush"] = new System.Windows.Media.SolidColorBrush(toWpf(cTriangle));
+                Resources["LogoCloudBrush"] = new System.Windows.Media.SolidColorBrush(toWpf(cCloud));
+                Resources["LogoShieldBrush"] = new System.Windows.Media.SolidColorBrush(toWpf(cShield));
+                Resources["LogoEllipseBrush"] = new System.Windows.Media.SolidColorBrush(toWpf(cEllipse));
 
                 if (MainWindowBorder != null) {
                     MainWindowBorder.Background = new System.Windows.Media.SolidColorBrush(wpfSurface);

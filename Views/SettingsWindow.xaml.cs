@@ -20,6 +20,7 @@ namespace Panak.Views {
         private string _currentQuickLookHotkey = "Space";
         private string _currentClosePopupHotkey = "Escape";
         private string? _recordingTarget = null;
+        private bool _isAppliedOrSaved = false;
 
         public SettingsWindow() {
             InitializeComponent();
@@ -37,16 +38,21 @@ namespace Panak.Views {
         }
 
         private void LoadLogoAndIcon() {
+            BitmapImage? bi = null;
             try {
-                var uri = new Uri("pack://application:,,,/SettingsLogo.png", UriKind.Absolute);
-                var bi = new BitmapImage(uri);
-                Icon = bi;
-                return;
-            } catch { }
+                bi = new BitmapImage(new Uri("pack://application:,,,/Logo.png", UriKind.Absolute));
+            } catch {
+                try {
+                    bi = new BitmapImage(new Uri("pack://application:,,,/SettingsLogo.png", UriKind.Absolute));
+                } catch { }
+            }
 
-            try {
+            if (bi == null) {
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string[] candidates = {
+                    Path.Combine(baseDir, "src", "Logo.png"),
+                    Path.Combine(baseDir, "Logo.png"),
+                    Path.Combine(baseDir, "src", "SettingsLogo.png"),
                     Path.Combine(baseDir, "SettingsLogo.png"),
                     Path.Combine(baseDir, "PanakLogo.png"),
                     Path.Combine(baseDir, "Panak logo.png"),
@@ -54,12 +60,15 @@ namespace Panak.Views {
                 };
                 foreach (var file in candidates) {
                     if (File.Exists(file)) {
-                        var bi = new BitmapImage(new Uri(file, UriKind.Absolute));
-                        Icon = bi;
-                        return;
+                        bi = new BitmapImage(new Uri(file, UriKind.Absolute));
+                        break;
                     }
                 }
-            } catch { }
+            }
+
+            if (bi != null) {
+                Icon = bi;
+            }
         }
 
         public void ApplyMaterialYouPalette(double hue) {
@@ -121,6 +130,15 @@ namespace Panak.Views {
                 SetBrush("M3OnSurfaceBrush", wpfOnSurface);
                 SetBrush("M3OnSurfaceVariantBrush", wpfOnSurfaceVariant);
                 SetBrush("M3TrackInactiveBrush", wpfTrackInactive);
+
+                var wpfErrorContainer = isDark
+                    ? toWpf(ShellHelper.ColorFromHsl((hue + 350.0) % 360.0, 0.45, 0.25))
+                    : toWpf(ShellHelper.ColorFromHsl((hue + 350.0) % 360.0, 0.65, 0.88));
+                var wpfOnErrorContainer = isDark
+                    ? toWpf(ShellHelper.ColorFromHsl((hue + 350.0) % 360.0, 0.80, 0.90))
+                    : toWpf(ShellHelper.ColorFromHsl((hue + 350.0) % 360.0, 0.80, 0.22));
+                SetBrush("M3ErrorContainerBrush", wpfErrorContainer);
+                SetBrush("M3OnErrorContainerBrush", wpfOnErrorContainer);
 
                 // Dynamically update the 5 vector logo colors based on active theme hue & luminance
                 var (cContainer, cTriangle, cCloud, cShield, cEllipse) = IconGenerator.GetLogoDynamicColors(hue, isDark);
@@ -330,8 +348,7 @@ namespace Panak.Views {
             ApplyBtn.Content = loc["Apply"];
             CancelBtn.Content = loc["Cancel"];
             UninstallAppBtn.Content = loc["Uninstall"];
-            InstallerSectionTitle.Text = loc["InstallerTitle"];
-            InstallerSectionDesc.Text = loc["InstallDesc"];
+            InstallerSectionTitle.Text = loc["Uninstaller"];
 
             bool registered = ContextMenuRegistry.IsRegistered();
             ContextMenuStatusText.Text = registered ? loc["ContextMenuInstalled"] : "Explorer context menu not registered";
@@ -423,6 +440,16 @@ namespace Panak.Views {
             if (LanguageComboBox.SelectedItem is ComboBoxItem item && item.Tag is string langCode) {
                 LocalizationService.Instance.CurrentLanguage = langCode;
                 ApplyLocalization();
+
+                try {
+                    SettingsService.Instance.Current.Language = langCode;
+                    SettingsService.Instance.SaveSettings();
+
+                    string exe = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
+                    if (!string.IsNullOrEmpty(exe) && ContextMenuRegistry.IsRegistered()) {
+                        ContextMenuRegistry.RegisterAll(exe, langCode);
+                    }
+                } catch { }
             }
         }
 
@@ -481,6 +508,12 @@ namespace Panak.Views {
             PanakManager.Instance.UpdateOpenPopupThemeColor(s.ThemeColor);
             PanakManager.Instance.UpdateOpenPopupThemeMode(s.ThemeMode);
             PanakManager.Instance.UpdateOpenPopupOpacity(s.FolderOpacity);
+
+            try {
+                if (!string.IsNullOrEmpty(exe) && ContextMenuRegistry.IsRegistered()) {
+                    ContextMenuRegistry.RegisterAll(exe, s.Language);
+                }
+            } catch { }
 
             _initialColor = _selectedColor;
             _initialThemeMode = _selectedThemeMode;
@@ -622,12 +655,41 @@ namespace Panak.Views {
             } catch { }
         }
 
+        private void EmailLink_MouseDown(object sender, MouseButtonEventArgs e) {
+            try {
+                Process.Start(new ProcessStartInfo("mailto:dev@hakobian.am") { UseShellExecute = true });
+            } catch { }
+        }
+
+        private void WebsiteLink_MouseDown(object sender, MouseButtonEventArgs e) {
+            try {
+                Process.Start(new ProcessStartInfo("https://hakobian.am/contact") { UseShellExecute = true });
+            } catch { }
+        }
+
         private void CancelBtn_Click(object sender, RoutedEventArgs e) {
             if (PanakManager.Instance.IsPopupOpen) {
                 PanakManager.Instance.UpdateOpenPopupThemeColor(_initialColor);
                 PanakManager.Instance.UpdateOpenPopupThemeMode(_initialThemeMode);
             }
+            try {
+                double initialHue = ShellHelper.GetHueFromHex(_initialColor);
+                bool initialDark = _initialThemeMode == "Dark" || (_initialThemeMode == "Auto" && ShellHelper.IsWindowsDarkTheme());
+                TrayManager.Instance?.UpdateTrayIconTheme(initialHue, initialDark);
+            } catch { }
+            _isAppliedOrSaved = true;
             Close();
+        }
+
+        protected override void OnClosed(EventArgs e) {
+            base.OnClosed(e);
+            if (!_isAppliedOrSaved) {
+                try {
+                    double initialHue = ShellHelper.GetHueFromHex(_initialColor);
+                    bool initialDark = _initialThemeMode == "Dark" || (_initialThemeMode == "Auto" && ShellHelper.IsWindowsDarkTheme());
+                    TrayManager.Instance?.UpdateTrayIconTheme(initialHue, initialDark);
+                } catch { }
+            }
         }
 
         private void Header_MouseDown(object sender, MouseButtonEventArgs e) {
@@ -638,21 +700,44 @@ namespace Panak.Views {
 
         private void ReRegisterContextBtn_Click(object sender, RoutedEventArgs e) {
             string exe = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
-            ContextMenuRegistry.RegisterAll(exe);
+            ContextMenuRegistry.RegisterAll(exe, LocalizationService.Instance.CurrentLanguage);
             ApplyLocalization();
             MessageBox.Show(LocalizationService.Instance["ContextMenuInstalled"], "Panak", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void UninstallAppBtn_Click(object sender, RoutedEventArgs e) {
-            var result = MessageBox.Show(LocalizationService.Instance["UninstallDesc"] + "\n\nAre you sure you want to proceed?", "Panak", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result == MessageBoxResult.Yes) {
-                bool success = InstallerService.Uninstall();
-                if (success) {
-                    MessageBox.Show(LocalizationService.Instance["UninstalledSuccess"], "Panak", MessageBoxButton.OK, MessageBoxImage.Information);
-                    Application.Current.Shutdown();
-                } else {
-                    MessageBox.Show("Uninstall encountered an issue.", "Panak", MessageBoxButton.OK, MessageBoxImage.Warning);
+            try {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string localAppDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Programs",
+                    "Panak");
+
+                string[] candidates = {
+                    Path.Combine(baseDir, "Uninstall.exe"),
+                    Path.Combine(localAppDir, "Uninstall.exe"),
+                    Path.Combine(baseDir, "..", "..", "..", "..", "Uninstall", "bin", "Debug", "net8.0-windows10.0.19041.0", "Uninstall.exe"),
+                    Path.Combine(baseDir, "..", "..", "..", "..", "publish", "Uninstall.exe"),
+                    Path.Combine(baseDir, "Setup.exe"),
+                    Path.Combine(localAppDir, "Setup.exe")
+                };
+
+                foreach (var candidate in candidates) {
+                    if (File.Exists(candidate)) {
+                        Process.Start(new ProcessStartInfo {
+                            FileName = Path.GetFullPath(candidate),
+                            Arguments = candidate.EndsWith("Setup.exe", StringComparison.OrdinalIgnoreCase) ? "--uninstall" : "",
+                            UseShellExecute = true
+                        });
+                        Close();
+                        return;
+                    }
                 }
+
+                new InstallerWindow(isUninstallMode: true).Show();
+                Close();
+            } catch (Exception ex) {
+                MessageBox.Show($"Could not launch uninstaller: {ex.Message}", "Panak", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -732,7 +817,13 @@ namespace Panak.Views {
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e) {
-            if (_recordingTarget == null) return;
+            if (_recordingTarget == null) {
+                if (e.Key == Key.Escape) {
+                    CancelBtn_Click(this, new RoutedEventArgs());
+                    e.Handled = true;
+                }
+                return;
+            }
 
             Key key = (e.Key == Key.System) ? e.SystemKey : e.Key;
             if (key == Key.LeftCtrl || key == Key.RightCtrl ||

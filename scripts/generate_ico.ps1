@@ -73,8 +73,27 @@ if (-not $baseDir -or -not (Test-Path (Join-Path $baseDir "Panak.csproj"))) {
     $baseDir = "c:\Users\hrant\Documents\GitHub\Panak"
 }
 
-# 1. Main Application icon (Panak.ico from Panak logo.png)
-Convert-PngToIco (Join-Path $baseDir 'Panak logo.png') (Join-Path $baseDir 'Panak.ico')
+$iconSource = Join-Path $baseDir 'src\Logo.png'
+if (-not (Test-Path $iconSource)) {
+    $iconSource = Join-Path $baseDir 'Logo.png'
+}
 
-# 2. Setup Installer icon (Setup\Panak.ico from Panak setup logo.png)
-Convert-PngToIco (Join-Path $baseDir 'Panak setup logo.png') (Join-Path $baseDir 'Setup\Panak.ico')
+$setupSource = Join-Path $baseDir 'src\Setup.png'
+if (-not (Test-Path $setupSource)) {
+    $setupSource = Join-Path $baseDir 'Setup.png'
+}
+
+# 1. Main Application icon (Panak.ico from src\Logo.png)
+Convert-PngToIco $iconSource (Join-Path $baseDir 'Panak.ico')
+
+# 2. Setup Installer icon (Setup\Panak.ico from src\Setup.png)
+Convert-PngToIco $setupSource (Join-Path $baseDir 'Setup\Panak.ico')
+
+# 3. Uninstaller icon (Uninstall\Uninstall.ico from src\Uninstaller.png)
+$uninstallerSource = Join-Path $baseDir 'src\Uninstaller.png'
+if (Test-Path $uninstallerSource) {
+    Convert-PngToIco $uninstallerSource (Join-Path $baseDir 'Uninstall\Uninstall.ico')
+    Convert-PngToIco $uninstallerSource (Join-Path $baseDir 'Uninstall.ico')
+}
+
+

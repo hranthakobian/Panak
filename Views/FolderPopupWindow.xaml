@@ -883,8 +883,8 @@
                                                     MouseLeftButtonDown="Item_MouseLeftButtonDown"
                                                     MouseRightButtonDown="Item_MouseRightButtonDown"
                                                     MouseMove="Item_MouseMove">
-                                                <Border.ContextMenu>
-                                                    <ContextMenu>
+                                                 <Border.ContextMenu>
+                                                    <ContextMenu Opened="ContextMenu_Opened">
                                                         <MenuItem Header="Բացել" Click="MenuItemOpen_Click"/>
                                                         <MenuItem Header="Բացել Explorer-ում" Click="MenuItemOpenInExplorer_Click"/>
                                                         <Separator/>

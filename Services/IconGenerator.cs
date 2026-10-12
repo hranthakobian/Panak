@@ -548,25 +548,8 @@ namespace Panak.Services {
             }
             return dib;
         }
-
-        public static (Color container, Color triangle, Color cloud, Color shield, Color ellipse) GetLogoDynamicColors(double hue, bool isDark) {
-            hue = (hue % 360.0 + 360.0) % 360.0;
-            if (isDark) {
-                var container = ShellHelper.ColorFromHsl(hue, 0.28, 0.24);
-                var triangle = ShellHelper.ColorFromHsl(hue, 0.75, 0.82);
-                var cloud = ShellHelper.ColorFromHsl(hue, 0.55, 0.68);
-                var shield = ShellHelper.ColorFromHsl((hue + 18.0) % 360.0, 0.65, 0.65);
-                var ellipse = ShellHelper.ColorFromHsl((hue + 349.0) % 360.0, 0.65, 0.65);
-                return (container, triangle, cloud, shield, ellipse);
-            } else {
-                var container = ShellHelper.ColorFromHsl(hue, 0.50, 0.80);
-                var triangle = ShellHelper.ColorFromHsl(hue, 0.75, 0.16);
-                var cloud = ShellHelper.ColorFromHsl(hue, 0.48, 0.36);
-                var shield = ShellHelper.ColorFromHsl((hue + 18.0) % 360.0, 0.61, 0.51);
-                var ellipse = ShellHelper.ColorFromHsl((hue + 349.0) % 360.0, 0.60, 0.51);
-                return (container, triangle, cloud, shield, ellipse);
-            }
-        }
+        public static (Color container, Color triangle, Color cloud, Color shield, Color ellipse) GetLogoDynamicColors(double hue, bool isDark) =>
+            ShellHelper.GetLogoDynamicColors(hue, isDark);
 
         public static Bitmap RenderPanakLogoBitmap(int size, double hue, bool isDark) {
             Bitmap? result = null;

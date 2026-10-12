@@ -3,8 +3,8 @@ if (-not $baseDir -or -not (Test-Path (Join-Path $baseDir "Panak.csproj"))) {
     $baseDir = "c:\Users\hrant\Documents\GitHub\Panak"
 }
 $staging = Join-Path $baseDir "staging_zip"
-$zipPath = Join-Path $baseDir "Panak-Installer-v1.7.3.zip"
-$publishZip = Join-Path $baseDir "publish\Panak-Installer-v1.7.3.zip"
+$zipPath = Join-Path $baseDir "Panak-Installer-v1.7.4.zip"
+$publishZip = Join-Path $baseDir "publish\Panak-Installer-v1.7.4.zip"
 
 if (Test-Path $staging) {
     Remove-Item -Recurse -Force $staging
@@ -15,13 +15,13 @@ Copy-Item (Join-Path $baseDir "publish\Setup.exe") -Destination $staging
 
 $readmeContent = @"
 ==================================================
-                 PANAK v1.7.3
+                 PANAK v1.7.4
        Material You Popup Folders for Windows
 ==================================================
 
 [Տեղադրում / Installation]
 1. Գործարկեք `Setup.exe`-ն (Run Setup.exe)
-2. Ընտրեք Ձեր նախընտրած կարգավորումները (Auto-start, Shortcuts, .NET 8.0)
+2. Ընտրեք Ձեր նախընտրած կարգավորումները (Auto-start, Shortcuts)
 3. Սեղմեք «Տեղադրել» (Install)
 
 [Հիմնական հնարավորություններ / Features]

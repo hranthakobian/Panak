@@ -1,6 +1,6 @@
 namespace Panak.Models {
     public class AppSettings {
-        public string Language { get; set; } = "en";
+        public string Language { get; set; } = "hy";
         public int GridColumns { get; set; } = 5;
         public bool FocusModeEnabled { get; set; } = true;
         public double FocusDimmingOpacity { get; set; } = 0.40;

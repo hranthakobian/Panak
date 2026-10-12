@@ -1592,6 +1592,28 @@ namespace Panak.Views {
             }
         }
 
+        private void ContextMenu_Opened(object sender, RoutedEventArgs e) {
+            if (sender is ContextMenu cm) {
+                var loc = LocalizationService.Instance;
+                foreach (var item in cm.Items) {
+                    if (item is MenuItem mi) {
+                        string header = mi.Header?.ToString() ?? string.Empty;
+                        if (header == "Բացել" || header.StartsWith("Open") || header == loc["Open"]) {
+                            mi.Header = loc["Open"];
+                        } else if (header.Contains("Explorer")) {
+                            mi.Header = loc["OpenInExplorer"];
+                        } else if (header.Contains("պանակից") || header.Contains("folder") || header == loc["RemoveFromFolder"]) {
+                            mi.Header = loc["RemoveFromFolder"];
+                        } else if (header == "Ջնջել" || header == "Delete" || header == loc["Delete"]) {
+                            mi.Header = loc["Delete"];
+                        } else if (header == "Հատկություններ" || header == "Properties" || header == loc["Properties"]) {
+                            mi.Header = loc["Properties"];
+                        }
+                    }
+                }
+            }
+        }
+
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e) {
             if (e.Key == Key.Escape) {
                 if (InlineNameEditBox.Visibility == Visibility.Visible) {

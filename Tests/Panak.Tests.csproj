@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <Compile Include="..\Setup\Services\StandaloneInstallerService.cs" Link="StandaloneInstallerService.cs" />
+    <Compile Include="..\Uninstall\Services\StandaloneUninstallerService.cs" Link="StandaloneUninstallerService.cs" />
   </ItemGroup>
 
   <ItemGroup>
