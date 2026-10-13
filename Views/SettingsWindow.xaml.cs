@@ -29,8 +29,9 @@ namespace Panak.Views {
             ApplyLocalization();
             _isInitializing = false;
 
-            FocusModeCheckBox.Click += (s, e) => UpdateFocusModeControlsEnabled();
-            FocusBlurCheckBox.Click += (s, e) => UpdateFocusModeControlsEnabled();
+            FocusModeCheckBox.Click += (s, e) => UpdateFocusModeControlsEnabled(animate: true);
+            FocusBlurCheckBox.Click += (s, e) => UpdateFocusModeControlsEnabled(animate: true);
+            FolderBlurCheckBox.Click += (s, e) => UpdateFolderBlurControlsEnabled(animate: true);
 
             GitHubUpdateService.Instance.StatusChanged += OnUpdateStatusChanged;
             GitHubUpdateService.Instance.DownloadProgressChanged += OnDownloadProgressChanged;
@@ -265,6 +266,24 @@ namespace Panak.Views {
             GeneralFolderOpacitySlider.Value = Math.Round(s.FolderOpacity * 100);
             GeneralFolderOpacityValueText.Text = $"{(int)GeneralFolderOpacitySlider.Value}%";
 
+            // Folder blur
+            FolderBlurCheckBox.IsChecked = s.FolderBlurEnabled;
+            FolderBlurSlider.Value = s.FolderBlurRadius;
+            FolderBlurValueText.Text = $"{(int)s.FolderBlurRadius} px";
+            UpdateFolderBlurControlsEnabled(animate: false);
+
+            // Paging mode & rows
+            if (string.Equals(s.PagingMode, "Scrollbar", StringComparison.OrdinalIgnoreCase)) {
+                PagingScrollbarRadio.IsChecked = true;
+            } else {
+                PagingSliderRadio.IsChecked = true;
+            }
+            GridRowsSlider.Value = s.GridRows;
+            GridRowsValueText.Text = s.GridRows.ToString();
+            SliderArrowsCheckBox.IsChecked = s.SliderArrowsEnabled;
+            SliderDragCheckBox.IsChecked = s.SliderDragEnabled;
+            UpdatePagingControlsVisibility();
+
             // Grid columns
             GridColumnsSlider.Value = s.GridColumns;
             GridColumnsValueText.Text = s.GridColumns.ToString();
@@ -276,7 +295,7 @@ namespace Panak.Views {
             FocusBlurCheckBox.IsChecked = s.FocusBlurEnabled;
             FocusBlurSlider.Value = s.FocusBlurRadius;
             FocusBlurValueText.Text = $"{(int)s.FocusBlurRadius} px";
-            UpdateFocusModeControlsEnabled();
+            UpdateFocusModeControlsEnabled(animate: false);
 
             // Lock & Hooks
             LockFoldersCheckBox.IsChecked = s.IsLocked;
@@ -322,6 +341,16 @@ namespace Panak.Views {
             DefaultColorLabel.Text = loc["DefaultFolderColor"];
             GeneralFolderOpacityLabel.Text = loc["GeneralFolderOpacity"];
             GeneralFolderOpacityDescText.Text = loc["GeneralFolderOpacityDesc"];
+            FolderBlurLabel.Text = loc["FolderBlur"];
+            FolderBlurDescText.Text = loc["FolderBlurDesc"];
+            FolderBlurRadiusLabel.Text = loc["FolderBlurRadius"];
+            PagingModeLabel.Text = loc["PagingMode"];
+            PagingModeDescText.Text = loc["PagingModeDesc"];
+            PagingSliderRadio.Content = loc["PagingModeSlider"];
+            PagingScrollbarRadio.Content = loc["PagingModeScrollbar"];
+            GridRowsLabel.Text = loc["GridRows"];
+            SliderArrowsLabel.Text = loc["SliderArrows"];
+            SliderDragLabel.Text = loc["SliderDrag"];
             GridColumnsLabel.Text = loc["ItemsPerRow"];
             FocusModeLabel.Text = loc["FocusMode"];
             FocusModeDescText.Text = loc["FocusModeDesc"];
@@ -481,13 +510,248 @@ namespace Panak.Views {
             }
         }
 
-        private void UpdateFocusModeControlsEnabled() {
+        private void UpdateFocusModeControlsEnabled(bool animate = false) {
             bool focusOn = FocusModeCheckBox?.IsChecked ?? true;
             bool blurOn = FocusBlurCheckBox?.IsChecked ?? true;
 
             if (FocusDimmingSlider != null) FocusDimmingSlider.IsEnabled = focusOn;
             if (FocusBlurCheckBox != null) FocusBlurCheckBox.IsEnabled = focusOn;
-            if (FocusBlurSlider != null) FocusBlurSlider.IsEnabled = focusOn && blurOn;
+
+            SetFocusBlurSliderVisible(focusOn && blurOn, animate);
+        }
+
+        private void SetFocusBlurSliderVisible(bool visible, bool animate) {
+            if (FocusBlurSliderContainer == null) return;
+
+            if (!animate) {
+                FocusBlurSliderContainer.BeginAnimation(UIElement.OpacityProperty, null);
+                FocusBlurSliderContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, null);
+
+                if (visible) {
+                    FocusBlurSliderContainer.Visibility = Visibility.Visible;
+                    FocusBlurSliderContainer.Opacity = 1.0;
+                    FocusBlurSliderContainer.MaxHeight = double.PositiveInfinity;
+                    if (FocusBlurSlider != null) FocusBlurSlider.IsEnabled = true;
+                } else {
+                    FocusBlurSliderContainer.Visibility = Visibility.Collapsed;
+                    FocusBlurSliderContainer.Opacity = 0.0;
+                    FocusBlurSliderContainer.MaxHeight = 0;
+                    if (FocusBlurSlider != null) FocusBlurSlider.IsEnabled = false;
+                }
+                return;
+            }
+
+            var ease = new System.Windows.Media.Animation.CubicEase {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseInOut
+            };
+
+            if (visible) {
+                FocusBlurSliderContainer.Visibility = Visibility.Visible;
+                if (FocusBlurSlider != null) FocusBlurSlider.IsEnabled = true;
+
+                FocusBlurSliderContainer.Measure(new Size(
+                    FocusBlurSliderContainer.ActualWidth > 0 ? FocusBlurSliderContainer.ActualWidth : 350,
+                    double.PositiveInfinity));
+                double targetHeight = FocusBlurSliderContainer.DesiredSize.Height > 0
+                    ? FocusBlurSliderContainer.DesiredSize.Height
+                    : 65.0;
+
+                double fromHeight = FocusBlurSliderContainer.ActualHeight;
+                if (fromHeight <= 0 || double.IsNaN(fromHeight)) {
+                    fromHeight = 0;
+                }
+
+                var heightAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = fromHeight,
+                    To = targetHeight,
+                    Duration = TimeSpan.FromMilliseconds(240),
+                    EasingFunction = ease
+                };
+
+                var opacityAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = FocusBlurSliderContainer.Opacity,
+                    To = 1.0,
+                    Duration = TimeSpan.FromMilliseconds(240),
+                    EasingFunction = ease
+                };
+
+                heightAnim.Completed += (s, e) => {
+                    FocusBlurSliderContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, null);
+                    FocusBlurSliderContainer.MaxHeight = double.PositiveInfinity;
+                };
+
+                FocusBlurSliderContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, heightAnim);
+                FocusBlurSliderContainer.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+            } else {
+                if (FocusBlurSlider != null) FocusBlurSlider.IsEnabled = false;
+
+                double fromHeight = FocusBlurSliderContainer.ActualHeight;
+                if (fromHeight <= 0 || double.IsNaN(fromHeight)) {
+                    FocusBlurSliderContainer.Measure(new Size(
+                        FocusBlurSliderContainer.ActualWidth > 0 ? FocusBlurSliderContainer.ActualWidth : 350,
+                        double.PositiveInfinity));
+                    fromHeight = FocusBlurSliderContainer.DesiredSize.Height > 0
+                        ? FocusBlurSliderContainer.DesiredSize.Height
+                        : 65.0;
+                }
+
+                var heightAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = fromHeight,
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(220),
+                    EasingFunction = ease
+                };
+
+                var opacityAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = FocusBlurSliderContainer.Opacity,
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(200),
+                    EasingFunction = ease
+                };
+
+                heightAnim.Completed += (s, e) => {
+                    bool focusOn = FocusModeCheckBox?.IsChecked ?? true;
+                    bool blurOn = FocusBlurCheckBox?.IsChecked ?? true;
+                    if (!focusOn || !blurOn) {
+                        FocusBlurSliderContainer.Visibility = Visibility.Collapsed;
+                        FocusBlurSliderContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, null);
+                        FocusBlurSliderContainer.MaxHeight = 0;
+                    }
+                };
+
+                FocusBlurSliderContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, heightAnim);
+                FocusBlurSliderContainer.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+            }
+        }
+
+        private void FolderBlurSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (FolderBlurValueText != null) {
+                FolderBlurValueText.Text = $"{(int)e.NewValue} px";
+            }
+        }
+
+        private void GridRowsSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (GridRowsValueText != null) {
+                GridRowsValueText.Text = ((int)e.NewValue).ToString();
+            }
+        }
+
+        private void PagingModeRadio_Checked(object sender, RoutedEventArgs e) {
+            UpdatePagingControlsVisibility();
+        }
+
+        private void UpdatePagingControlsVisibility() {
+            bool isSlider = PagingSliderRadio?.IsChecked == true;
+            if (GridRowsContainer != null) GridRowsContainer.Visibility = isSlider ? Visibility.Visible : Visibility.Collapsed;
+            if (SliderInteractionsContainer != null) SliderInteractionsContainer.Visibility = isSlider ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void UpdateFolderBlurControlsEnabled(bool animate = false) {
+            bool blurOn = FolderBlurCheckBox?.IsChecked ?? true;
+            SetFolderBlurSliderVisible(blurOn, animate);
+        }
+
+        private void SetFolderBlurSliderVisible(bool visible, bool animate) {
+            if (FolderBlurSliderContainer == null) return;
+
+            if (!animate) {
+                FolderBlurSliderContainer.BeginAnimation(UIElement.OpacityProperty, null);
+                FolderBlurSliderContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, null);
+
+                if (visible) {
+                    FolderBlurSliderContainer.Visibility = Visibility.Visible;
+                    FolderBlurSliderContainer.Opacity = 1.0;
+                    FolderBlurSliderContainer.MaxHeight = double.PositiveInfinity;
+                    if (FolderBlurSlider != null) FolderBlurSlider.IsEnabled = true;
+                } else {
+                    FolderBlurSliderContainer.Visibility = Visibility.Collapsed;
+                    FolderBlurSliderContainer.Opacity = 0.0;
+                    FolderBlurSliderContainer.MaxHeight = 0;
+                    if (FolderBlurSlider != null) FolderBlurSlider.IsEnabled = false;
+                }
+                return;
+            }
+
+            var ease = new System.Windows.Media.Animation.CubicEase {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseInOut
+            };
+
+            if (visible) {
+                FolderBlurSliderContainer.Visibility = Visibility.Visible;
+                if (FolderBlurSlider != null) FolderBlurSlider.IsEnabled = true;
+
+                FolderBlurSliderContainer.Measure(new Size(
+                    FolderBlurSliderContainer.ActualWidth > 0 ? FolderBlurSliderContainer.ActualWidth : 350,
+                    double.PositiveInfinity));
+                double targetHeight = FolderBlurSliderContainer.DesiredSize.Height > 0
+                    ? FolderBlurSliderContainer.DesiredSize.Height
+                    : 65.0;
+
+                double fromHeight = FolderBlurSliderContainer.ActualHeight;
+                if (fromHeight <= 0 || double.IsNaN(fromHeight)) {
+                    fromHeight = 0;
+                }
+
+                var heightAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = fromHeight,
+                    To = targetHeight,
+                    Duration = TimeSpan.FromMilliseconds(240),
+                    EasingFunction = ease
+                };
+
+                var opacityAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = FolderBlurSliderContainer.Opacity,
+                    To = 1.0,
+                    Duration = TimeSpan.FromMilliseconds(240),
+                    EasingFunction = ease
+                };
+
+                heightAnim.Completed += (s, e) => {
+                    FolderBlurSliderContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, null);
+                    FolderBlurSliderContainer.MaxHeight = double.PositiveInfinity;
+                };
+
+                FolderBlurSliderContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, heightAnim);
+                FolderBlurSliderContainer.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+            } else {
+                if (FolderBlurSlider != null) FolderBlurSlider.IsEnabled = false;
+
+                double fromHeight = FolderBlurSliderContainer.ActualHeight;
+                if (fromHeight <= 0 || double.IsNaN(fromHeight)) {
+                    FolderBlurSliderContainer.Measure(new Size(
+                        FolderBlurSliderContainer.ActualWidth > 0 ? FolderBlurSliderContainer.ActualWidth : 350,
+                        double.PositiveInfinity));
+                    fromHeight = FolderBlurSliderContainer.DesiredSize.Height > 0
+                        ? FolderBlurSliderContainer.DesiredSize.Height
+                        : 65.0;
+                }
+
+                var heightAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = fromHeight,
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(220),
+                    EasingFunction = ease
+                };
+
+                var opacityAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = FolderBlurSliderContainer.Opacity,
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(200),
+                    EasingFunction = ease
+                };
+
+                heightAnim.Completed += (s, e) => {
+                    bool blurOn = FolderBlurCheckBox?.IsChecked ?? true;
+                    if (!blurOn) {
+                        FolderBlurSliderContainer.Visibility = Visibility.Collapsed;
+                        FolderBlurSliderContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, null);
+                        FolderBlurSliderContainer.MaxHeight = 0;
+                    }
+                };
+
+                FolderBlurSliderContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, heightAnim);
+                FolderBlurSliderContainer.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+            }
         }
 
         private void GeneralFolderOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
@@ -512,6 +776,12 @@ namespace Panak.Views {
             s.FolderOpacity = GeneralFolderOpacitySlider.Value / 100.0;
 
             s.GridColumns = (int)GridColumnsSlider.Value;
+            s.GridRows = (int)GridRowsSlider.Value;
+            s.FolderBlurEnabled = FolderBlurCheckBox.IsChecked ?? true;
+            s.FolderBlurRadius = FolderBlurSlider.Value;
+            s.PagingMode = (PagingScrollbarRadio.IsChecked == true) ? "Scrollbar" : "Slider";
+            s.SliderArrowsEnabled = SliderArrowsCheckBox.IsChecked ?? true;
+            s.SliderDragEnabled = SliderDragCheckBox.IsChecked ?? true;
             s.FocusModeEnabled = FocusModeCheckBox.IsChecked ?? true;
             s.FocusDimmingOpacity = FocusDimmingSlider.Value / 100.0;
             s.FocusBlurEnabled = FocusBlurCheckBox.IsChecked ?? true;
@@ -535,6 +805,7 @@ namespace Panak.Views {
             PanakManager.Instance.UpdateOpenPopupThemeColor(s.ThemeColor);
             PanakManager.Instance.UpdateOpenPopupThemeMode(s.ThemeMode);
             PanakManager.Instance.UpdateOpenPopupOpacity(s.FolderOpacity);
+            PanakManager.Instance.UpdateOpenPopupSettings();
 
             try {
                 if (!string.IsNullOrEmpty(exe) && ContextMenuRegistry.IsRegistered()) {

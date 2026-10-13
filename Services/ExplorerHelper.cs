@@ -173,59 +173,95 @@ namespace Panak.Services {
         public static ItemInfo? GetSelectedItemInActiveExplorer() {
             try {
                 IntPtr activeHwnd = ShellHelper.GetForegroundWindow();
-                if (activeHwnd == IntPtr.Zero) {
-                    return null;
-                }
+                ShellHelper.POINT pt = default;
+                bool hasCursor = ShellHelper.GetCursorPos(out pt);
 
-                StringBuilder className = new StringBuilder(256);
-                ShellHelper.GetClassName(activeHwnd, className, className.Capacity);
-                string cls = className.ToString();
+                string cls = string.Empty;
+                if (activeHwnd != IntPtr.Zero) {
+                    StringBuilder className = new StringBuilder(256);
+                    ShellHelper.GetClassName(activeHwnd, className, className.Capacity);
+                    cls = className.ToString();
+                }
 
                 bool isExplorer = cls.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase) ||
                                   cls.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
                                   cls.Equals("WorkerW", StringComparison.OrdinalIgnoreCase);
 
+                IntPtr targetHwnd = activeHwnd;
+
+                // If foreground window is not Explorer/Desktop, check window under cursor
+                if (!isExplorer && hasCursor) {
+                    IntPtr hwndUnderPoint = ShellHelper.WindowFromPoint(pt);
+                    IntPtr rootUnderPoint = ShellHelper.GetAncestor(hwndUnderPoint, ShellHelper.GA_ROOT);
+                    if (rootUnderPoint != IntPtr.Zero) {
+                        StringBuilder ptCls = new StringBuilder(256);
+                        ShellHelper.GetClassName(rootUnderPoint, ptCls, ptCls.Capacity);
+                        string ptClsStr = ptCls.ToString();
+                        if (ptClsStr.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase) ||
+                            ptClsStr.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
+                            ptClsStr.Equals("WorkerW", StringComparison.OrdinalIgnoreCase)) {
+                            targetHwnd = rootUnderPoint;
+                            cls = ptClsStr;
+                            isExplorer = true;
+                        }
+                    }
+                }
+
                 if (!isExplorer) {
                     return null;
                 }
 
-                // Get focused element from UIAutomation
-                AutomationElement? focused = AutomationElement.FocusedElement;
-                Rect bounds = Rect.Empty;
-                if (focused != null) {
-                    bounds = focused.Current.BoundingRectangle;
+                bool isDesktop = cls.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
+                                 cls.Equals("WorkerW", StringComparison.OrdinalIgnoreCase);
+
+                // FIRST: Query Shell COM API (< 1ms), avoids blocking or hook timeout on Windows 10
+                string? selectedPath = isDesktop ? GetDesktopSelectedPathFast() : GetActiveExplorerSelectedPath(targetHwnd);
+
+                // If not found yet and target was not detected as desktop, desktop might still have focus
+                if (string.IsNullOrEmpty(selectedPath) && !isDesktop) {
+                    selectedPath = GetDesktopSelectedPathFast();
                 }
 
-                // Query Shell.Application for active window
-                string? selectedPath = GetActiveExplorerSelectedPath(activeHwnd);
+                Rect bounds = hasCursor ? new Rect(pt.X - 24, pt.Y - 24, 48, 48) : Rect.Empty;
 
-                if (string.IsNullOrEmpty(selectedPath) && focused != null && !string.IsNullOrWhiteSpace(focused.Current.Name)) {
-                    string focusedName = focused.Current.Name;
-                    string[] desktopDirs = new[] {
-                        Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                        Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
-                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OneDrive", "Desktop")
-                    };
+                // Fallback to UIAutomation ONLY if COM did not return path
+                if (string.IsNullOrEmpty(selectedPath)) {
+                    AutomationElement? focused = null;
+                    try {
+                        focused = AutomationElement.FocusedElement;
+                        if (focused != null) {
+                            bounds = focused.Current.BoundingRectangle;
+                        }
+                    } catch { }
 
-                    foreach (var d in desktopDirs) {
-                        if (!string.IsNullOrEmpty(d) && Directory.Exists(d)) {
-                            string candidate = Path.Combine(d, focusedName);
-                            if (File.Exists(candidate) || Directory.Exists(candidate)) {
-                                selectedPath = candidate;
-                                break;
+                    if (focused != null && !string.IsNullOrWhiteSpace(focused.Current.Name)) {
+                        string focusedName = focused.Current.Name;
+                        string[] desktopDirs = new[] {
+                            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                            Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
+                            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OneDrive", "Desktop")
+                        };
+
+                        foreach (var d in desktopDirs) {
+                            if (!string.IsNullOrEmpty(d) && Directory.Exists(d)) {
+                                string candidate = Path.Combine(d, focusedName);
+                                if (File.Exists(candidate) || Directory.Exists(candidate)) {
+                                    selectedPath = candidate;
+                                    break;
+                                }
+                                try {
+                                    var dirMatches = Directory.GetDirectories(d, focusedName + ".*");
+                                    if (dirMatches.Length > 0) {
+                                        selectedPath = dirMatches[0];
+                                        break;
+                                    }
+                                    var matches = Directory.GetFiles(d, focusedName + ".*");
+                                    if (matches.Length > 0) {
+                                        selectedPath = matches[0];
+                                        break;
+                                    }
+                                } catch { }
                             }
-                            try {
-                                var dirMatches = Directory.GetDirectories(d, focusedName + ".*");
-                                if (dirMatches.Length > 0) {
-                                    selectedPath = dirMatches[0];
-                                    break;
-                                }
-                                var matches = Directory.GetFiles(d, focusedName + ".*");
-                                if (matches.Length > 0) {
-                                    selectedPath = matches[0];
-                                    break;
-                                }
-                            } catch { }
                         }
                     }
                 }
@@ -235,7 +271,7 @@ namespace Panak.Services {
                 }
 
                 if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0) {
-                    if (ShellHelper.GetCursorPos(out var pt)) {
+                    if (hasCursor) {
                         bounds = new Rect(pt.X - 24, pt.Y - 24, 48, 48);
                     } else {
                         bounds = new Rect(100, 100, 48, 48);
@@ -250,6 +286,43 @@ namespace Panak.Services {
             } catch {
                 return null;
             }
+        }
+
+        public static string? GetDesktopSelectedPathFast() {
+            try {
+                Type? shellType = Type.GetTypeFromProgID("Shell.Application");
+                if (shellType == null) return null;
+                dynamic? shell = Activator.CreateInstance(shellType);
+                if (shell == null) return null;
+                dynamic windows = shell.Windows();
+                IShellWindows sw = (IShellWindows)windows;
+                object loc = 0; // CSIDL_DESKTOP
+                object locRoot = 0;
+                int hwnd = 0;
+                // SWC_DESKTOP = 8, SWFO_NEEDDISPATCH = 1
+                object disp = sw.FindWindowSW(ref loc, ref locRoot, 8, out hwnd, 1);
+                if (disp != null) {
+                    dynamic d = disp;
+                    dynamic? doc = d.Document;
+                    if (doc != null) {
+                        dynamic? focusedItem = doc.FocusedItem;
+                        if (focusedItem != null) {
+                            string? fpath = (string?)focusedItem.Path;
+                            if (!string.IsNullOrEmpty(fpath)) return fpath;
+                        }
+
+                        dynamic? selected = doc.SelectedItems();
+                        if (selected != null && (int)selected.Count > 0) {
+                            dynamic? first = selected.Item(0);
+                            if (first != null) {
+                                string? spath = (string?)first.Path;
+                                if (!string.IsNullOrEmpty(spath)) return spath;
+                            }
+                        }
+                    }
+                }
+            } catch { }
+            return null;
         }
 
         private static string? GetPathFromShellWindows(ShellHelper.POINT pt, string itemName) {
@@ -341,6 +414,50 @@ namespace Panak.Services {
             } catch {
                 // COM error
             }
+
+            try {
+                Type? shellType = Type.GetTypeFromProgID("Shell.Application");
+                if (shellType != null) {
+                    dynamic? shell = Activator.CreateInstance(shellType);
+                    if (shell != null) {
+                        dynamic windows = shell.Windows();
+                        IShellWindows sw = (IShellWindows)windows;
+                        object loc = 0; // CSIDL_DESKTOP
+                        object locRoot = 0;
+                        int hwnd = 0;
+                        object disp = sw.FindWindowSW(ref loc, ref locRoot, 8, out hwnd, 1);
+                        if (disp != null) {
+                            dynamic d = disp;
+                            dynamic? doc = d.Document;
+                            if (doc != null) {
+                                dynamic? focusedItem = doc.FocusedItem;
+                                if (focusedItem != null) {
+                                    string? fpath = focusedItem.Path;
+                                    if (!string.IsNullOrEmpty(fpath) && !string.IsNullOrWhiteSpace(itemName) &&
+                                        Path.GetFileName(fpath).Equals(itemName, StringComparison.OrdinalIgnoreCase)) {
+                                        return fpath;
+                                    }
+                                }
+                                dynamic? selected = doc.SelectedItems();
+                                if (selected != null && (int)selected.Count > 0) {
+                                    int cnt = (int)selected.Count;
+                                    for (int s = 0; s < cnt; s++) {
+                                        dynamic? sel = selected.Item(s);
+                                        if (sel != null) {
+                                            string? path = sel.Path;
+                                            if (!string.IsNullOrEmpty(path) && !string.IsNullOrWhiteSpace(itemName) &&
+                                                Path.GetFileName(path).Equals(itemName, StringComparison.OrdinalIgnoreCase)) {
+                                                return path;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch { }
+
             return null;
         }
 

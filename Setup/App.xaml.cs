@@ -61,11 +61,21 @@ namespace Panak.Setup {
                 return;
             }
 
+            string? initialLang = null;
+            for (int i = 0; i < args.Length - 1; i++) {
+                if (args[i].Equals("--lang", StringComparison.OrdinalIgnoreCase)) {
+                    initialLang = args[i + 1];
+                }
+            }
+            if (!string.IsNullOrEmpty(initialLang)) {
+                LocalizationService.Instance.CurrentLanguage = initialLang;
+            }
+
             bool isUninstallMode = args.Any(a => a.Equals("--uninstall", StringComparison.OrdinalIgnoreCase));
             bool isUpdateMode = args.Any(a => a.Equals("--update", StringComparison.OrdinalIgnoreCase));
 
             ShutdownMode = ShutdownMode.OnLastWindowClose;
-            var window = new SetupWindow(isUninstallMode: isUninstallMode, isUpdateMode: isUpdateMode);
+            var window = new SetupWindow(isUninstallMode: isUninstallMode, isUpdateMode: isUpdateMode, initialLanguage: initialLang);
             window.Show();
         }
     }

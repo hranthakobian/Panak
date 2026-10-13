@@ -13,23 +13,23 @@ namespace Panak.Controls {
     public class WavyProgressBar : ProgressBar {
         public static readonly DependencyProperty WaveAmplitudeProperty =
             DependencyProperty.Register(nameof(WaveAmplitude), typeof(double), typeof(WavyProgressBar),
-                new FrameworkPropertyMetadata(3.5, FrameworkPropertyMetadataOptions.AffectsRender));
+                new FrameworkPropertyMetadata(2.8, FrameworkPropertyMetadataOptions.AffectsRender));
 
         public static readonly DependencyProperty WaveLengthProperty =
             DependencyProperty.Register(nameof(WaveLength), typeof(double), typeof(WavyProgressBar),
-                new FrameworkPropertyMetadata(26.0, FrameworkPropertyMetadataOptions.AffectsRender));
+                new FrameworkPropertyMetadata(24.0, FrameworkPropertyMetadataOptions.AffectsRender));
 
         public static readonly DependencyProperty WaveStrokeThicknessProperty =
             DependencyProperty.Register(nameof(WaveStrokeThickness), typeof(double), typeof(WavyProgressBar),
-                new FrameworkPropertyMetadata(4.5, FrameworkPropertyMetadataOptions.AffectsRender));
+                new FrameworkPropertyMetadata(4.0, FrameworkPropertyMetadataOptions.AffectsRender));
 
         public static readonly DependencyProperty TrackHeightProperty =
             DependencyProperty.Register(nameof(TrackHeight), typeof(double), typeof(WavyProgressBar),
-                new FrameworkPropertyMetadata(6.0, FrameworkPropertyMetadataOptions.AffectsRender));
+                new FrameworkPropertyMetadata(4.0, FrameworkPropertyMetadataOptions.AffectsRender));
 
         public static readonly DependencyProperty WaveSpeedProperty =
             DependencyProperty.Register(nameof(WaveSpeed), typeof(double), typeof(WavyProgressBar),
-                new FrameworkPropertyMetadata(32.0, FrameworkPropertyMetadataOptions.None));
+                new FrameworkPropertyMetadata(28.0, FrameworkPropertyMetadataOptions.None));
 
         public double WaveAmplitude {
             get => (double)GetValue(WaveAmplitudeProperty);
@@ -110,7 +110,7 @@ namespace Panak.Controls {
             _phase = (_phase + dt * speed * (2.0 * Math.PI / wl)) % (2.0 * Math.PI);
 
             if (IsIndeterminate) {
-                double travelSpeed = ActualWidth > 0 ? (ActualWidth * 0.6) : 100.0;
+                double travelSpeed = ActualWidth > 0 ? (ActualWidth * 0.55) : 90.0;
                 double maxTravel = Math.Max(0.0, ActualWidth - (ActualWidth * 0.35));
                 if (maxTravel > 0) {
                     if (_isIndeterminateForward) {
@@ -143,15 +143,12 @@ namespace Panak.Controls {
             double centerY = height / 2.0;
             double trackH = Math.Max(2.0, TrackHeight);
             double trackRadius = trackH / 2.0;
+            const double m3Gap = 4.0; // Official Material 3 gap between active and inactive tracks
 
-            // 1. Inactive Track (M3 Expressive pill)
             Brush trackBrush = Background
                 ?? (TryFindResource("M3TrackInactiveBrush") as Brush)
                 ?? new SolidColorBrush(Color.FromArgb(40, 0, 0, 0));
 
-            dc.DrawRoundedRectangle(trackBrush, null, new Rect(0, centerY - trackH / 2.0, width, trackH), trackRadius, trackRadius);
-
-            // 2. Active Wave Indicator
             Brush activeBrush = Foreground
                 ?? (TryFindResource("M3PrimaryBrush") as Brush)
                 ?? new SolidColorBrush(Color.FromRgb(0x7A, 0x54, 0x27));
@@ -172,13 +169,39 @@ namespace Panak.Controls {
                 double startX = _indeterminateOffset;
                 double endX = Math.Min(width, startX + segW);
 
+                // M3 Expressive: Inactive track is drawn ONLY where the wave is not (with gap)
+                // 1. Left inactive track segment
+                if (startX > m3Gap + 1.0) {
+                    double leftW = Math.Max(1.0, startX - m3Gap);
+                    dc.DrawRoundedRectangle(trackBrush, null, new Rect(0, centerY - trackH / 2.0, leftW, trackH), trackRadius, trackRadius);
+                }
+
+                // 2. Right inactive track segment
+                if (endX + m3Gap < width - 1.0) {
+                    double rightX = endX + m3Gap;
+                    double rightW = Math.Max(1.0, width - rightX);
+                    dc.DrawRoundedRectangle(trackBrush, null, new Rect(rightX, centerY - trackH / 2.0, rightW, trackH), trackRadius, trackRadius);
+                }
+
+                // 3. Active Wave Indicator (no track underneath!)
                 DrawWavySegment(dc, wavePen, startX, endX, centerY, amp, wl, _phase);
             } else {
                 double range = Maximum - Minimum;
                 double fraction = range > 0 ? Math.Clamp((Value - Minimum) / range, 0.0, 1.0) : 0.0;
                 double activeW = width * fraction;
 
-                if (activeW > 1.5) {
+                if (activeW <= 1.5) {
+                    // Full track when zero progress
+                    dc.DrawRoundedRectangle(trackBrush, null, new Rect(0, centerY - trackH / 2.0, width, trackH), trackRadius, trackRadius);
+                } else {
+                    // M3 Expressive: Inactive track only for the remaining unfulfilled portion
+                    if (activeW + m3Gap < width - 1.0) {
+                        double remX = activeW + m3Gap;
+                        double remW = Math.Max(1.0, width - remX);
+                        dc.DrawRoundedRectangle(trackBrush, null, new Rect(remX, centerY - trackH / 2.0, remW, trackH), trackRadius, trackRadius);
+                    }
+
+                    // Active wave indicator (no straight track underneath!)
                     DrawWavySegment(dc, wavePen, 0.0, activeW, centerY, amp, wl, _phase);
                 }
             }
@@ -209,19 +232,24 @@ namespace Panak.Controls {
             using (var ctx = geometry.Open()) {
                 ctx.BeginFigure(new Point(startX, centerY), isFilled: false, isClosed: false);
 
-                double step = 2.0;
-                double taperDist = Math.Min(12.0, length * 0.25);
+                // High-precision 1px step for mathematically flawless, delicate sinusoidal wave
+                double step = 1.0;
+                double taperDist = Math.Min(16.0, length * 0.25);
 
                 for (double x = startX + step; x < endX; x += step) {
                     double distFromStart = x - startX;
                     double distFromEnd = endX - x;
 
-                    // Smooth edge taper so wave begins and ends cleanly on the center baseline
-                    double taper = Math.Min(1.0, distFromStart / taperDist) * Math.Min(1.0, distFromEnd / taperDist);
-                    // Smooth sinusoidal easing
-                    taper = Math.Sin(taper * Math.PI * 0.5);
+                    // Ultra-smooth Hann window envelope at both endpoints for seamless baseline convergence
+                    double taperStart = distFromStart < taperDist
+                        ? 0.5 * (1.0 - Math.Cos((distFromStart / taperDist) * Math.PI))
+                        : 1.0;
+                    double taperEnd = distFromEnd < taperDist
+                        ? 0.5 * (1.0 - Math.Cos((distFromEnd / taperDist) * Math.PI))
+                        : 1.0;
+                    double envelope = Math.Min(taperStart, taperEnd);
 
-                    double y = centerY + amplitude * taper * Math.Sin((2.0 * Math.PI * (x - startX) / wavelength) - phase);
+                    double y = centerY + amplitude * envelope * Math.Sin((2.0 * Math.PI * (x - startX) / wavelength) - phase);
                     ctx.LineTo(new Point(x, y), isStroked: true, isSmoothJoin: true);
                 }
 

@@ -22,7 +22,9 @@ namespace Panak.Tests {
                 "CombineFilesOnDrop", "CombineFilesOnDropDesc", "CollectIntoPanakFolder",
                 "Hue", "DefaultFolderColor", "Apply",
                 "LanguageAiNote", "CenterPopupOnly", "CenterPopupOnlyDesc", "Support", "SupportDesc", "DonateOnKofi",
-                "DotNetRuntime", "DotNetRuntimeDesc", "DotNetAlreadyInstalled", "DotNetNotInstalled", "DotNetDownloading", "DotNetInstalling"
+                "DotNetRuntime", "DotNetRuntimeDesc", "DotNetAlreadyInstalled", "DotNetNotInstalled", "DotNetDownloading", "DotNetInstalling",
+                "FolderBlur", "FolderBlurDesc", "FolderBlurRadius", "PagingMode", "PagingModeDesc", "PagingModeSlider", "PagingModeScrollbar",
+                "GridRows", "SliderArrows", "SliderDrag", "Step1Title", "Step1Subtitle", "Step2Title", "Step2Subtitle", "Step3Title", "Step3Subtitle", "Skip", "Next", "Back", "Preview"
             };
 
             foreach (var lang in new[] { "hy", "en", "ru", "fr", "es", "zh", "ar" }) {
@@ -762,8 +764,8 @@ namespace Panak.Tests {
         public void TestGitHubUpdateServiceVersionAndDefaults() {
             var updater = GitHubUpdateService.Instance;
             Assert.IsNotNull(updater);
-            Assert.AreEqual("1.8.0", updater.CurrentVersionString);
-            Assert.AreEqual(new Version(1, 8, 0), updater.CurrentVersion);
+            Assert.AreEqual("1.9.0", updater.CurrentVersionString);
+            Assert.AreEqual(new Version(1, 9, 0), updater.CurrentVersion);
             Assert.AreEqual(UpdateStatus.Idle, updater.Status);
         }
 
@@ -1125,6 +1127,32 @@ namespace Panak.Tests {
         }
 
         [TestMethod]
+        public void TestInstallerAndUpdaterLocalizationKeysInAllLanguages() {
+            var loc = LocalizationService.Instance;
+            string[] keys = new[] {
+                "UpdatePanak", "UpdatingPanak", "UpdatingPanakDesc",
+                "PreparingUpdate", "PreparingInstall", "PreparingUninstall",
+                "ExtractingFiles", "Extracting", "Copying", "CreatingShortcuts",
+                "RegisteringMenus", "ConfiguringAutoStart", "RegisteringApp",
+                "UpdatedSuccess", "UpdateCompletedDesc", "InstallFailed",
+                "UpdateFailed", "UninstallFailed", "InstallErrorEnsureUnlocked",
+                "InstallationFolder", "Browse"
+            };
+            string[] langs = new[] { "hy", "en", "ru", "fr", "es", "zh", "ar" };
+
+            foreach (var lang in langs) {
+                loc.CurrentLanguage = lang;
+                foreach (var k in keys) {
+                    string val = loc[k];
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(val), $"Key '{k}' must exist in language '{lang}'");
+                    if (lang != "en") {
+                        Assert.AreNotEqual(k, val, $"Key '{k}' must not fallback to key name in language '{lang}'");
+                    }
+                }
+            }
+        }
+
+        [TestMethod]
         public void TestGitHubUpdateVersionParsing() {
             // Standard semver
             Assert.IsTrue(GitHubUpdateService.TryParseVersion("1.7.1", out var v1));
@@ -1326,6 +1354,116 @@ namespace Panak.Tests {
             Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallApology"]));
             StringAssert.Contains(loc["UninstallApology"], "توقعاتكم");
             Assert.IsFalse(string.IsNullOrEmpty(loc["UninstallDotNet8"]));
+        }
+
+        [TestMethod]
+        public void TestPanakManagerBackdropDragMethods() {
+            // Verify TemporarilyHideBackdropForDrag and RestoreBackdropAfterDrag can be invoked safely
+            PanakManager.Instance.TemporarilyHideBackdropForDrag();
+            PanakManager.Instance.RestoreBackdropAfterDrag();
+        }
+
+        [TestMethod]
+        public void TestFolderPopupWindowEditPanelWidthAnimation() {
+            var thread = new System.Threading.Thread(() => {
+                var window = new FolderPopupWindow();
+                Assert.AreEqual(258.0, window.MinWidth, 0.1, "Window MinWidth should be 258px to match 234px EditPanel + 24px margins");
+                var editPanel = window.FindName("EditPanel") as System.Windows.FrameworkElement;
+                Assert.IsNotNull(editPanel);
+                Assert.AreEqual(234.0, editPanel.Width, 0.1);
+
+                // Invoke private ToggleEditPanel via reflection
+                var method = typeof(FolderPopupWindow).GetMethod("ToggleEditPanel",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                Assert.IsNotNull(method, "ToggleEditPanel method must exist");
+
+                // Open edit panel
+                method.Invoke(window, new object?[] { true });
+                Assert.AreEqual(System.Windows.SizeToContent.Height, window.SizeToContent);
+
+                // Close edit panel
+                method.Invoke(window, new object?[] { false });
+
+                window.Close();
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+        }
+
+        [TestMethod]
+        public void TestExplorerHelperDesktopFastPath() {
+            // Verify GetDesktopSelectedPathFast can be called without unhandled exceptions
+            string? path = ExplorerHelper.GetDesktopSelectedPathFast();
+            // Path may be null in test environment without active desktop selection
+        }
+
+        [TestMethod]
+        public void TestAppSettingsV190NewProperties() {
+            var s = new AppSettings();
+            Assert.IsTrue(s.FolderBlurEnabled, "FolderBlurEnabled should default to true");
+            Assert.AreEqual(28.0, s.FolderBlurRadius, 0.01, "FolderBlurRadius should default to 28.0");
+            Assert.AreEqual("Slider", s.PagingMode, "PagingMode should default to Slider");
+            Assert.AreEqual(3, s.GridRows, "GridRows should default to 3");
+            Assert.IsTrue(s.SliderArrowsEnabled, "SliderArrowsEnabled should default to true");
+            Assert.IsTrue(s.SliderDragEnabled, "SliderDragEnabled should default to true");
+
+            // Test round-trip JSON serialization
+            s.FolderBlurEnabled = false;
+            s.FolderBlurRadius = 42.5;
+            s.PagingMode = "Scrollbar";
+            s.GridRows = 4;
+            s.SliderArrowsEnabled = false;
+            s.SliderDragEnabled = false;
+
+            string json = System.Text.Json.JsonSerializer.Serialize(s);
+            var deserialized = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
+            Assert.IsNotNull(deserialized);
+            Assert.IsFalse(deserialized.FolderBlurEnabled);
+            Assert.AreEqual(42.5, deserialized.FolderBlurRadius, 0.01);
+            Assert.AreEqual("Scrollbar", deserialized.PagingMode);
+            Assert.AreEqual(4, deserialized.GridRows);
+            Assert.IsFalse(deserialized.SliderArrowsEnabled);
+            Assert.IsFalse(deserialized.SliderDragEnabled);
+        }
+
+        [TestMethod]
+        public void TestParenthesesRemovedFromSettings() {
+            var loc = LocalizationService.Instance;
+            foreach (var lang in new[] { "hy", "en", "ru", "fr", "es", "zh", "ar" }) {
+                loc.CurrentLanguage = lang;
+                string blur = loc["FocusBlur"];
+                string radius = loc["FocusBlurRadius"];
+                string quickLook = loc["QuickLookKeyRow"];
+                string closePopup = loc["ClosePopupKeyRow"];
+
+                Assert.IsFalse(blur.Contains("(Blur)"), $"Language '{lang}' should not contain (Blur)");
+                Assert.IsFalse(radius.Contains("(Radius)"), $"Language '{lang}' should not contain (Radius)");
+                Assert.IsFalse(quickLook.Contains("(Quick Look)"), $"Language '{lang}' should not contain (Quick Look)");
+                Assert.IsFalse(closePopup.Contains("(Close Popup)"), $"Language '{lang}' should not contain (Close Popup)");
+            }
+        }
+
+        [TestMethod]
+        public void TestWavyProgressBarExpressiveDesignProperties() {
+            var thread = new System.Threading.Thread(() => {
+                var bar = new Panak.Controls.WavyProgressBar();
+                Assert.IsNotNull(bar);
+                Assert.AreEqual(2.8, bar.WaveAmplitude, 0.01);
+                Assert.AreEqual(24.0, bar.WaveLength, 0.01);
+                Assert.AreEqual(4.0, bar.TrackHeight, 0.01);
+                Assert.AreEqual(4.0, bar.WaveStrokeThickness, 0.01);
+                Assert.AreEqual(28.0, bar.WaveSpeed, 0.01);
+
+                bar.WaveAmplitude = 5.0;
+                Assert.AreEqual(5.0, bar.WaveAmplitude, 0.01);
+
+                bar.Value = 50.0;
+                Assert.AreEqual(50.0, bar.Value, 0.01);
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
         }
     }
 }

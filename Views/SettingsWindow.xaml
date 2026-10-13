@@ -811,7 +811,7 @@
     </Window.Resources>
 
     <!-- Main Window Surface: Pure borderless Material You card -->
-    <Border x:Name="MainWindowBorder" Margin="2" CornerRadius="24" Background="{DynamicResource M3SurfaceBrush}" BorderThickness="1" BorderBrush="{DynamicResource M3SurfaceContainerBrush}">
+    <Border x:Name="MainWindowBorder" Margin="0" CornerRadius="24" Background="{DynamicResource M3SurfaceBrush}" BorderThickness="0" BorderBrush="Transparent">
         <Grid Margin="22">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header -->
@@ -1023,7 +1023,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Grid Columns -->
+                    <!-- Folder Blur & Radius -->
                     <Border Style="{StaticResource SectionCardStyle}">
                         <StackPanel>
                             <Grid Margin="0,0,0,8">
@@ -1031,10 +1031,91 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="GridColumnsLabel" Text="Items per row (Grid count)" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                                <TextBlock x:Name="GridColumnsValueText" Grid.Column="1" Text="5" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="FolderBlurLabel" Text="Folder Blur Effect" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="FolderBlurDescText" Text="Blur desktop background behind folder cards" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="FolderBlurCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
+                            </Grid>
+                            <StackPanel x:Name="FolderBlurSliderContainer" ClipToBounds="True">
+                                <Grid Margin="0,8,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="FolderBlurRadiusLabel" Text="Blur Radius" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                                    <TextBlock x:Name="FolderBlurValueText" Grid.Column="1" Text="28 px" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                </Grid>
+                                <Slider x:Name="FolderBlurSlider" Minimum="2" Maximum="60" Value="28" Style="{StaticResource MaterialSliderStyle}" ValueChanged="FolderBlurSlider_ValueChanged"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Grid Layout & Paging Mode -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <!-- Paging Mode -->
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="PagingModeLabel" Text="Page Navigation Mode" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="PagingModeDescText" Text="Use paged slider or vertical scrollbar" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <RadioButton x:Name="PagingSliderRadio" Content="Slider" GroupName="PagingModeGroup" IsChecked="True" Margin="0,0,10,0" Checked="PagingModeRadio_Checked"/>
+                                    <RadioButton x:Name="PagingScrollbarRadio" Content="ScrollBar" GroupName="PagingModeGroup" Checked="PagingModeRadio_Checked"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Columns Slider -->
+                            <Grid Margin="0,4,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="GridColumnsLabel" Text="Items per row" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock x:Name="GridColumnsValueText" Grid.Column="1" Text="5" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}"/>
                             </Grid>
                             <Slider x:Name="GridColumnsSlider" Minimum="3" Maximum="8" Value="5" IsSnapToTickEnabled="True" TickFrequency="1" Style="{StaticResource MaterialSliderStyle}" ValueChanged="GridColumnsSlider_ValueChanged"/>
+
+                            <!-- Rows Slider (for Slider mode) -->
+                            <StackPanel x:Name="GridRowsContainer" Margin="0,8,0,0">
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="GridRowsLabel" Text="Rows per page" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="GridRowsValueText" Grid.Column="1" Text="3" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                </Grid>
+                                <Slider x:Name="GridRowsSlider" Minimum="1" Maximum="5" Value="3" IsSnapToTickEnabled="True" TickFrequency="1" Style="{StaticResource MaterialSliderStyle}" ValueChanged="GridRowsSlider_ValueChanged"/>
+                            </StackPanel>
+
+                            <!-- Slider Navigation Options -->
+                            <StackPanel x:Name="SliderInteractionsContainer" Margin="0,10,0,0">
+                                <Border Height="1" Background="{DynamicResource M3SurfaceContainerBrush}" Margin="0,0,0,10" BorderThickness="0"/>
+                                
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="SliderArrowsLabel" Text="Show arrow navigation buttons" FontSize="13" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                    <CheckBox x:Name="SliderArrowsCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="SliderDragLabel" Text="Mouse drag swipe on pages" FontSize="13" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                    <CheckBox x:Name="SliderDragCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
+                                </Grid>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
@@ -1075,15 +1156,17 @@
                                 </StackPanel>
                                 <CheckBox x:Name="FocusBlurCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
                             </Grid>
-                            <Grid Margin="0,8,0,4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="FocusBlurRadiusLabel" Text="Blur Radius" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
-                                <TextBlock x:Name="FocusBlurValueText" Grid.Column="1" Text="28 px" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
-                            </Grid>
-                            <Slider x:Name="FocusBlurSlider" Minimum="2" Maximum="60" Value="28" Style="{StaticResource MaterialSliderStyle}" ValueChanged="FocusBlurSlider_ValueChanged"/>
+                            <StackPanel x:Name="FocusBlurSliderContainer" ClipToBounds="True">
+                                <Grid Margin="0,8,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="FocusBlurRadiusLabel" Text="Blur Radius" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                                    <TextBlock x:Name="FocusBlurValueText" Grid.Column="1" Text="28 px" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                </Grid>
+                                <Slider x:Name="FocusBlurSlider" Minimum="2" Maximum="60" Value="28" Style="{StaticResource MaterialSliderStyle}" ValueChanged="FocusBlurSlider_ValueChanged"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
@@ -1252,7 +1335,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock x:Name="UpdateStatusTitleText" Text="Current version: v1.8.0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                        <TextBlock x:Name="UpdateStatusTitleText" Text="Current version: v1.9.0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                                         <TextBlock x:Name="UpdateStatusDetailText" Text="You are using the latest version" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
                                     </StackPanel>
                                     <TextBlock x:Name="UpdateStatusBadge" Grid.Column="1" Text="✓ Latest" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}" VerticalAlignment="Center"/>
@@ -1324,7 +1407,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Panak v1.8.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="Panak v1.9.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button x:Name="CancelBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Margin="0,0,10,0" Click="CancelBtn_Click"/>
                     <Button x:Name="ApplyBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Apply" Margin="0,0,10,0" Click="ApplyBtn_Click"/>

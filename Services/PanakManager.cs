@@ -84,6 +84,22 @@ namespace Panak.Services {
             }
         }
 
+        public void UpdateOpenPopupSettings() {
+            if (_isOpen && _popupWindow != null && _popupWindow.IsVisible) {
+                try {
+                    if (_popupWindow.Dispatcher.Thread.IsAlive && !_popupWindow.Dispatcher.HasShutdownStarted) {
+                        if (_popupWindow.Dispatcher.CheckAccess()) {
+                            _popupWindow.ApplySettingsFromGlobal();
+                        } else {
+                            _popupWindow.Dispatcher.BeginInvoke(() => {
+                                try { _popupWindow?.ApplySettingsFromGlobal(); } catch { }
+                            });
+                        }
+                    }
+                } catch { }
+            }
+        }
+
         public PanakManager() {
             ScanDesktopForPanakFolders();
         }
@@ -622,10 +638,36 @@ namespace Panak.Services {
             }
         }
 
+        public void TemporarilyHideBackdropForDrag() {
+            Application.Current?.Dispatcher.Invoke(() => {
+                if (_backdropWindow != null && _backdropWindow.IsVisible) {
+                    _backdropWindow.Visibility = Visibility.Hidden;
+                }
+            });
+        }
+
+        public void RestoreBackdropAfterDrag() {
+            Application.Current?.Dispatcher.Invoke(() => {
+                if (_isOpen && _popupWindow != null && _popupWindow.IsVisible &&
+                    SettingsService.Instance.Current.FocusModeEnabled) {
+                    if (_backdropWindow != null) {
+                        _backdropWindow.Visibility = Visibility.Visible;
+                        IntPtr popupHwnd = new System.Windows.Interop.WindowInteropHelper(_popupWindow).Handle;
+                        IntPtr backdropHwnd = new System.Windows.Interop.WindowInteropHelper(_backdropWindow).Handle;
+                        if (popupHwnd != IntPtr.Zero && backdropHwnd != IntPtr.Zero) {
+                            ShellHelper.SetWindowPos(backdropHwnd, popupHwnd, 0, 0, 0, 0, ShellHelper.SWP_NOMOVE | ShellHelper.SWP_NOSIZE | ShellHelper.SWP_NOACTIVATE);
+                            ShellHelper.BringWindowToTop(popupHwnd);
+                        }
+                    }
+                }
+            });
+        }
+
         private static void CloseExplorerWindowForPath(string folderPath) {
             Task.Run(async () => {
-                for (int attempt = 0; attempt < 3; attempt++) {
-                    await Task.Delay(attempt == 0 ? 60 : 220);
+                int[] delays = new[] { 60, 100, 150, 200, 250, 350, 450, 600 };
+                for (int attempt = 0; attempt < delays.Length; attempt++) {
+                    await Task.Delay(delays[attempt]);
                     try {
                         Type? shellType = Type.GetTypeFromProgID("Shell.Application");
                         if (shellType == null) {
@@ -648,8 +690,16 @@ namespace Panak.Services {
                                     Uri uri = new Uri(loc);
                                     if (uri.LocalPath.TrimEnd('\\').Equals(folderPath.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) {
                                         item.Quit();
+                                        continue;
                                     }
                                 }
+                                try {
+                                    string? docPath = (string?)item.Document?.Folder?.Self?.Path;
+                                    if (!string.IsNullOrEmpty(docPath) &&
+                                        docPath.TrimEnd('\\').Equals(folderPath.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) {
+                                        item.Quit();
+                                    }
+                                } catch { }
                             } catch {
                                 // Ignore window iteration errors
                             }

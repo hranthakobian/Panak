@@ -3,8 +3,8 @@ if (-not $baseDir -or -not (Test-Path (Join-Path $baseDir "Panak.csproj"))) {
     $baseDir = "c:\Users\hrant\Documents\GitHub\Panak"
 }
 $staging = Join-Path $baseDir "staging_zip"
-$zipPath = Join-Path $baseDir "Panak-Installer-v1.8.0.zip"
-$publishZip = Join-Path $baseDir "publish\Panak-Installer-v1.8.0.zip"
+$zipPath = Join-Path $baseDir "Panak-Installer-v1.9.0.zip"
+$publishZip = Join-Path $baseDir "publish\Panak-Installer-v1.9.0.zip"
 
 if (Test-Path $staging) {
     Remove-Item -Recurse -Force $staging
@@ -15,7 +15,7 @@ Copy-Item (Join-Path $baseDir "publish\Setup.exe") -Destination $staging
 
 $readmeContent = @"
 ==================================================
-                 PANAK v1.8.0
+                 PANAK v1.9.0
        Material You Popup Folders for Windows
 ==================================================
 

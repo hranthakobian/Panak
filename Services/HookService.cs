@@ -179,28 +179,33 @@ namespace Panak.Services {
                     _leftDragSelectedFiles = null;
 
                     uint doubleClickTime = ShellHelper.GetDoubleClickTime();
+                    if (doubleClickTime == 0) doubleClickTime = 500;
                     int maxDeltaX = ShellHelper.GetSystemMetrics(ShellHelper.SM_CXDOUBLECLK);
+                    if (maxDeltaX <= 0) maxDeltaX = 4;
                     int maxDeltaY = ShellHelper.GetSystemMetrics(ShellHelper.SM_CYDOUBLECLK);
+                    if (maxDeltaY <= 0) maxDeltaY = 4;
 
                     TimeSpan elapsed = DateTime.Now - _lastLeftDown;
                     int dx = Math.Abs(hookStruct.pt.x - _lastLeftDownPt.x);
                     int dy = Math.Abs(hookStruct.pt.y - _lastLeftDownPt.y);
 
                     if (elapsed.TotalMilliseconds <= doubleClickTime && dx <= maxDeltaX && dy <= maxDeltaY) {
-                        _lastLeftDown = DateTime.MinValue;
-
                         ExplorerHelper.ItemInfo? item = ExplorerHelper.GetSelectedItemInActiveExplorer();
                         if (item == null || string.IsNullOrEmpty(item.Value.Path) || !PanakManager.Instance.IsPanakFolder(item.Value.Path)) {
                             item = ExplorerHelper.GetItemUnderCursor();
                         }
 
                         if (item != null && !string.IsNullOrEmpty(item.Value.Path) && PanakManager.Instance.IsPanakFolder(item.Value.Path)) {
+                            _lastLeftDown = DateTime.MinValue;
                             _suppressNextLeftUp = true;
                             var targetItem = item.Value;
                             Application.Current.Dispatcher.BeginInvoke(() => {
                                 LeftDoubleClickTriggered?.Invoke(targetItem);
                             });
                             return (IntPtr)1; // Swallow second click so Windows Explorer does not open the folder!
+                        } else {
+                            _lastLeftDown = DateTime.Now;
+                            _lastLeftDownPt = hookStruct.pt;
                         }
                     } else {
                         _lastLeftDown = DateTime.Now;

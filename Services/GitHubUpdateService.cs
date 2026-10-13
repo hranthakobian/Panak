@@ -76,7 +76,7 @@ namespace Panak.Services {
         public GitHubUpdateService() {
             var asm = Assembly.GetExecutingAssembly();
             var ver = asm.GetName().Version;
-            CurrentVersion = ver != null ? new Version(ver.Major, Math.Max(0, ver.Minor), Math.Max(0, ver.Build)) : new Version(1, 8, 0);
+            CurrentVersion = ver != null ? new Version(ver.Major, Math.Max(0, ver.Minor), Math.Max(0, ver.Build)) : new Version(1, 9, 0);
             CurrentVersionString = $"{CurrentVersion.Major}.{CurrentVersion.Minor}.{CurrentVersion.Build}";
 
             _httpClient = new HttpClient();
@@ -392,10 +392,11 @@ namespace Panak.Services {
             }
 
             try {
+                string currentLang = LocalizationService.Instance.CurrentLanguage;
                 if (filePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) {
                     ProcessStartInfo psi = new ProcessStartInfo {
                         FileName = filePath,
-                        Arguments = "--update",
+                        Arguments = $"--update --lang {currentLang}",
                         UseShellExecute = true
                     };
                     Process.Start(psi);
@@ -417,7 +418,7 @@ namespace Panak.Services {
                     if (!string.IsNullOrEmpty(targetExe)) {
                         ProcessStartInfo psi = new ProcessStartInfo {
                             FileName = targetExe,
-                            Arguments = "--update",
+                            Arguments = $"--update --lang {currentLang}",
                             UseShellExecute = true
                         };
                         Process.Start(psi);

@@ -27,34 +27,35 @@ namespace Panak.Views {
             Width = screenBounds.Width;
             Height = screenBounds.Height;
 
-            try {
-                double dpi = 1.0;
+            if (blurEnabled && blurRadius > 0) {
                 try {
-                    dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
-                } catch { }
-                if (dpi <= 0) dpi = 1.0;
+                    double dpi = 1.0;
+                    try {
+                        dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
+                    } catch { }
+                    if (dpi <= 0) dpi = 1.0;
 
-                var screenBmp = ShellHelper.CaptureScreenArea(
-                    (int)screenBounds.Left,
-                    (int)screenBounds.Top,
-                    (int)screenBounds.Width,
-                    (int)screenBounds.Height,
-                    dpi);
+                    var screenBmp = ShellHelper.CaptureScreenArea(
+                        (int)screenBounds.Left,
+                        (int)screenBounds.Top,
+                        (int)screenBounds.Width,
+                        (int)screenBounds.Height,
+                        dpi);
 
-                if (screenBmp != null) {
-                    BlurImage.Source = screenBmp;
-                    BlurImage.Visibility = Visibility.Visible;
-                    if (blurEnabled && blurRadius > 0) {
+                    if (screenBmp != null) {
+                        BlurImage.Source = screenBmp;
+                        BlurImage.Visibility = Visibility.Visible;
                         BackdropBlurEffect.Radius = Math.Clamp(blurRadius, 1.0, 100.0);
                         BlurImage.Effect = BackdropBlurEffect;
                     } else {
-                        BlurImage.Effect = null;
+                        BlurImage.Source = null;
+                        BlurImage.Visibility = Visibility.Collapsed;
                     }
-                } else {
+                } catch {
                     BlurImage.Source = null;
                     BlurImage.Visibility = Visibility.Collapsed;
                 }
-            } catch {
+            } else {
                 BlurImage.Source = null;
                 BlurImage.Visibility = Visibility.Collapsed;
             }

@@ -162,7 +162,8 @@ namespace Panak.Services {
             bool createStartMenuShortcut,
             bool autoStart,
             bool installDotNetRuntime = false,
-            IProgress<(double percent, string status)>? progress = null) {
+            IProgress<(double percent, string status)>? progress = null,
+            bool isUpdate = false) {
 
             if (installDotNetRuntime) {
                 var (dnSuccess, dnError) = await InstallDotNet8DesktopRuntimeAsync(progress);
@@ -173,7 +174,8 @@ namespace Panak.Services {
 
             return await Task.Run(() => {
                 try {
-                    progress?.Report((0.25, LocalizationService.Instance["InstallDesc"] ?? "Preparing installation..."));
+                    var loc = LocalizationService.Instance;
+                    progress?.Report((0.25, isUpdate ? loc["PreparingUpdate"] : loc["PreparingInstall"]));
 
                     if (string.IsNullOrWhiteSpace(targetDir)) {
                         targetDir = GetDefaultInstallDirectory();
@@ -184,11 +186,11 @@ namespace Panak.Services {
                     }
 
                     // 1. Terminate existing instances
-                    progress?.Report((0.30, "Stopping running Panak processes..."));
+                    progress?.Report((0.30, loc["StoppingProcesses"]));
                     TerminateRunningPanak();
 
                     // 2. Extract embedded payload zip or fallback to local directory files
-                    progress?.Report((0.35, "Extracting application files..."));
+                    progress?.Report((0.35, loc["ExtractingFiles"]));
                     bool extractedFromPayload = TryExtractEmbeddedPayload(targetDir, progress);
 
                     if (!extractedFromPayload) {
@@ -223,7 +225,7 @@ namespace Panak.Services {
                     } catch { }
 
                     // 4. Create Shortcuts
-                    progress?.Report((0.75, LocalizationService.Instance["DesktopShortcut"] ?? "Creating shortcuts..."));
+                    progress?.Report((0.75, loc["CreatingShortcuts"]));
                     if (createDesktopShortcut) {
                         string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                         string shortcutPath = Path.Combine(desktopPath, "Panak.lnk");
@@ -237,15 +239,15 @@ namespace Panak.Services {
                     }
 
                     // 5. Register Context Menu in Windows Explorer
-                    progress?.Report((0.85, LocalizationService.Instance["Integration"] ?? "Registering Explorer context menus..."));
+                    progress?.Report((0.85, loc["RegisteringMenus"]));
                     ContextMenuRegistry.RegisterAll(targetExe);
 
                     // 6. Auto-start with Windows
-                    progress?.Report((0.90, LocalizationService.Instance["AutoStart"] ?? "Configuring auto-start..."));
+                    progress?.Report((0.90, loc["ConfiguringAutoStart"]));
                     SetAutoStart(targetExe, autoStart);
 
                     // 7. Windows Add/Remove Programs (Registry)
-                    progress?.Report((0.95, "Registering application..."));
+                    progress?.Report((0.95, loc["RegisteringApp"]));
                     string uninstallExeInTarget = Path.Combine(targetDir, "Uninstall.exe");
                     string setupExeInTarget = Path.Combine(targetDir, "Setup.exe");
                     string uninstallCommand;
@@ -269,14 +271,14 @@ namespace Panak.Services {
                     using (var key = Registry.CurrentUser.CreateSubKey(UNINSTALL_REG_KEY)) {
                         key.SetValue("DisplayName", "Panak - Material You Folders");
                         key.SetValue("DisplayIcon", displayIcon);
-                        key.SetValue("DisplayVersion", "1.8.0");
+                        key.SetValue("DisplayVersion", "1.9.0");
                         key.SetValue("Publisher", "Panak Team");
                         key.SetValue("InstallLocation", targetDir);
                         key.SetValue("UninstallString", uninstallCommand);
                         key.SetValue("QuietUninstallString", quietUninstallCommand);
                     }
 
-                    progress?.Report((1.0, LocalizationService.Instance["InstalledSuccess"] ?? "Installation completed successfully!"));
+                    progress?.Report((1.0, isUpdate ? loc["UpdatedSuccess"] : loc["InstalledSuccess"]));
                     return (true, string.Empty);
                 } catch (Exception ex) {
                     Debug.WriteLine($"Install error: {ex}");
@@ -291,13 +293,14 @@ namespace Panak.Services {
 
             return await Task.Run(() => {
                 try {
-                    progress?.Report((0.10, "Stopping Panak processes..."));
+                    var loc = LocalizationService.Instance;
+                    progress?.Report((0.10, loc["StoppingProcesses"]));
                     TerminateRunningPanak();
 
-                    progress?.Report((0.30, "Removing Explorer context menus..."));
+                    progress?.Report((0.30, loc["RemovingMenus"]));
                     ContextMenuRegistry.UnregisterAll();
 
-                    progress?.Report((0.50, "Removing shortcuts..."));
+                    progress?.Report((0.50, loc["RemovingShortcuts"]));
                     // Remove shortcuts
                     string desktopShortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Panak.lnk");
                     if (File.Exists(desktopShortcut)) {
@@ -309,14 +312,14 @@ namespace Panak.Services {
                         try { File.Delete(startMenuShortcut); } catch { }
                     }
 
-                    progress?.Report((0.70, "Removing registry settings..."));
+                    progress?.Report((0.70, loc["CleaningRegistry"]));
                     SetAutoStart(string.Empty, false);
 
                     try {
                         Registry.CurrentUser.DeleteSubKeyTree(UNINSTALL_REG_KEY, false);
                     } catch { }
 
-                    progress?.Report((0.85, "Cleaning program files..."));
+                    progress?.Report((0.85, loc["CleaningFiles"]));
                     string installDir = !string.IsNullOrEmpty(targetDir) ? targetDir : GetInstalledDirectory();
                     string currentExe = Environment.ProcessPath
                         ?? Process.GetCurrentProcess().MainModule?.FileName
@@ -348,7 +351,7 @@ namespace Panak.Services {
                         }
                     }
 
-                    progress?.Report((1.0, LocalizationService.Instance["UninstalledSuccess"] ?? "Uninstallation completed successfully!"));
+                    progress?.Report((1.0, loc["UninstalledSuccess"]));
                     return (true, string.Empty);
                 } catch (Exception ex) {
                     Debug.WriteLine($"Uninstall error: {ex}");
@@ -394,7 +397,8 @@ namespace Panak.Services {
 
                     entry.ExtractToFile(destPath, overwrite: true);
                     double pct = 0.25 + (0.45 * currentIndex / totalEntries);
-                    progress?.Report((pct, $"Extracting: {entry.Name}"));
+                    var loc = LocalizationService.Instance;
+                    progress?.Report((pct, $"{loc["Extracting"]}: {entry.Name}"));
                 }
 
                 return true;
@@ -444,7 +448,8 @@ namespace Panak.Services {
                 } catch { }
 
                 double pct = 0.25 + (0.45 * (i + 1) / count);
-                progress?.Report((pct, $"Copying: {Path.GetFileName(src)}"));
+                var loc = LocalizationService.Instance;
+                progress?.Report((pct, $"{loc["Copying"]}: {Path.GetFileName(src)}"));
             }
 
             // Ensure Panak.ShellExt files are also copied if present in build directory

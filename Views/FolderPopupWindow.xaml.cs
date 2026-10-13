@@ -49,7 +49,7 @@ namespace Panak.Views {
         private bool _isCurrentThemeDark = true;
 
         public bool IsWithinOpenGracePeriod() {
-            return _isOpening || (DateTime.UtcNow - _openedTime).TotalMilliseconds < 450;
+            return _isOpening || (DateTime.UtcNow - _openedTime).TotalMilliseconds < 750;
         }
 
         public ObservableCollection<PanakItem> Items { get; } = new ObservableCollection<PanakItem>();
@@ -213,6 +213,7 @@ namespace Panak.Views {
             _animationSessionId++;
 
             // Cancel any in-flight animations and reset transforms
+            CloseEditPanelImmediate();
             RootContainer.BeginAnimation(OpacityProperty, null);
             PopupScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             PopupScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
@@ -383,19 +384,223 @@ namespace Panak.Views {
             }
         }
 
+        private int _currentSliderPage = 0;
+        private int _totalSliderPages = 1;
+        private bool _isDraggingPages = false;
+        private double _dragStartX = 0;
+        private double _dragStartTranslateX = 0;
+
         private void ApplySettings() {
             int columns = GetConfiguredColumns();
+            bool isSlider = string.Equals(SettingsService.Instance.Current.PagingMode, "Slider", StringComparison.OrdinalIgnoreCase);
 
-            if (_itemsUniformGrid != null) {
-                _itemsUniformGrid.Columns = columns;
+            if (isSlider) {
+                ItemsScrollViewer.Visibility = Visibility.Collapsed;
+                SliderPagesViewport.Visibility = Items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                BuildSliderPages();
+            } else {
+                SliderPagesViewport.Visibility = Visibility.Collapsed;
+                FooterPagerGrid.Visibility = Visibility.Collapsed;
+                ItemsScrollViewer.Visibility = Items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                FolderItemsControl.ItemsSource = Items;
+
+                if (_itemsUniformGrid != null) {
+                    _itemsUniformGrid.Columns = columns;
+                    return;
+                }
+
+                // Find UniformGrid in template or children
+                var uniformGrid = FindVisualChild<UniformGrid>(FolderItemsControl);
+                if (uniformGrid != null) {
+                    _itemsUniformGrid = uniformGrid;
+                    uniformGrid.Columns = columns;
+                }
+            }
+        }
+
+        public void ApplySettingsFromGlobal() {
+            ApplySettings();
+        }
+
+        private void BuildSliderPages() {
+            if (Items.Count == 0) {
+                SliderPagesPanel.Children.Clear();
+                FooterPagerGrid.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            // Find UniformGrid in template or children
-            var uniformGrid = FindVisualChild<UniformGrid>(FolderItemsControl);
-            if (uniformGrid != null) {
-                _itemsUniformGrid = uniformGrid;
-                uniformGrid.Columns = columns;
+            int cols = GetConfiguredColumns();
+            int rows = Math.Clamp(SettingsService.Instance.Current.GridRows, 1, 5);
+            int itemsPerPage = Math.Max(1, cols * rows);
+
+            _totalSliderPages = Math.Max(1, (int)Math.Ceiling((double)Items.Count / itemsPerPage));
+            if (_currentSliderPage >= _totalSliderPages) {
+                _currentSliderPage = _totalSliderPages - 1;
+            }
+            if (_currentSliderPage < 0) {
+                _currentSliderPage = 0;
+            }
+
+            double itemW = 70.0;
+            double pageW = Math.Max(cols * itemW, SliderPagesViewport.ActualWidth > 0 ? SliderPagesViewport.ActualWidth : cols * itemW);
+
+            SliderPagesPanel.Children.Clear();
+            var itemTemplate = (DataTemplate)Resources["PanakItemDataTemplate"];
+
+            for (int p = 0; p < _totalSliderPages; p++) {
+                var pageItems = Items.Skip(p * itemsPerPage).Take(itemsPerPage).ToList();
+
+                var factory = new FrameworkElementFactory(typeof(UniformGrid));
+                factory.SetValue(UniformGrid.ColumnsProperty, cols);
+                factory.SetValue(UniformGrid.RowsProperty, rows);
+
+                var itemsCtrl = new ItemsControl {
+                    ItemsSource = pageItems,
+                    ItemTemplate = itemTemplate,
+                    ItemsPanel = new ItemsPanelTemplate(factory),
+                    Width = pageW,
+                    HorizontalAlignment = HorizontalAlignment.Center
+                };
+
+                SliderPagesPanel.Children.Add(itemsCtrl);
+            }
+
+            UpdateSliderDots();
+            NavigateToSliderPage(_currentSliderPage);
+        }
+
+        private void UpdateSliderDots() {
+            SliderDotsPanel.Children.Clear();
+            for (int i = 0; i < _totalSliderPages; i++) {
+                bool isActive = (i == _currentSliderPage);
+                var dot = new Border {
+                    Width = isActive ? 20.0 : 7.0,
+                    Height = 7.0,
+                    CornerRadius = new CornerRadius(3.5),
+                    Margin = new Thickness(2.5, 0, 2.5, 0),
+                    Background = isActive ? (TryFindResource("PopupTextBrush") as Brush ?? Brushes.White) : (TryFindResource("PopupSubtextBrush") as Brush ?? Brushes.Gray),
+                    Opacity = isActive ? 0.95 : 0.45,
+                    Cursor = Cursors.Hand,
+                    Tag = i
+                };
+                dot.MouseLeftButtonDown += (s, e) => {
+                    if (s is FrameworkElement fe && fe.Tag is int targetPage) {
+                        NavigateToSliderPage(targetPage);
+                    }
+                };
+                SliderDotsPanel.Children.Add(dot);
+            }
+
+            bool arrowsEnabled = SettingsService.Instance.Current.SliderArrowsEnabled;
+            SliderPrevButton.Visibility = arrowsEnabled ? Visibility.Visible : Visibility.Collapsed;
+            SliderNextButton.Visibility = arrowsEnabled ? Visibility.Visible : Visibility.Collapsed;
+
+            SliderPrevButton.IsEnabled = _currentSliderPage > 0;
+            SliderNextButton.IsEnabled = _currentSliderPage < _totalSliderPages - 1;
+            SliderPrevButton.Opacity = _currentSliderPage > 0 ? 1.0 : 0.35;
+            SliderNextButton.Opacity = _currentSliderPage < _totalSliderPages - 1 ? 1.0 : 0.35;
+
+            FooterPagerGrid.Visibility = (_totalSliderPages > 1) ? Visibility.Visible : Visibility.Collapsed;
+            FooterItemCountText.Text = $"{Items.Count} {LocalizationService.Instance["FilesCount"]}";
+        }
+
+        private void NavigateToSliderPage(int targetPage) {
+            if (_totalSliderPages <= 0) return;
+            targetPage = Math.Clamp(targetPage, 0, _totalSliderPages - 1);
+            _currentSliderPage = targetPage;
+
+            double pageWidth = SliderPagesViewport.ActualWidth > 0
+                ? SliderPagesViewport.ActualWidth
+                : (GetConfiguredColumns() * 70.0);
+
+            double targetX = -targetPage * pageWidth;
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var anim = new DoubleAnimation(PagesTranslateX.X, targetX, TimeSpan.FromMilliseconds(240)) {
+                EasingFunction = ease
+            };
+            PagesTranslateX.BeginAnimation(TranslateTransform.XProperty, anim);
+
+            for (int i = 0; i < SliderDotsPanel.Children.Count; i++) {
+                if (SliderDotsPanel.Children[i] is Border dot) {
+                    bool isActive = (i == _currentSliderPage);
+                    double targetW = isActive ? 20.0 : 7.0;
+                    double targetOp = isActive ? 0.95 : 0.45;
+                    var brush = isActive
+                        ? (TryFindResource("PopupTextBrush") as Brush ?? Brushes.White)
+                        : (TryFindResource("PopupSubtextBrush") as Brush ?? Brushes.Gray);
+
+                    var wAnim = new DoubleAnimation(dot.Width, targetW, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease };
+                    var opAnim = new DoubleAnimation(dot.Opacity, targetOp, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease };
+                    dot.BeginAnimation(WidthProperty, wAnim);
+                    dot.BeginAnimation(OpacityProperty, opAnim);
+                    dot.Background = brush;
+                }
+            }
+
+            SliderPrevButton.IsEnabled = _currentSliderPage > 0;
+            SliderNextButton.IsEnabled = _currentSliderPage < _totalSliderPages - 1;
+            SliderPrevButton.Opacity = _currentSliderPage > 0 ? 1.0 : 0.35;
+            SliderNextButton.Opacity = _currentSliderPage < _totalSliderPages - 1 ? 1.0 : 0.35;
+        }
+
+        private void SliderViewport_PreviewMouseDown(object sender, MouseButtonEventArgs e) {
+            if (!SettingsService.Instance.Current.SliderDragEnabled) return;
+            if (e.LeftButton == MouseButtonState.Pressed && _totalSliderPages > 1) {
+                _dragStartX = e.GetPosition(SliderPagesViewport).X;
+                _dragStartTranslateX = PagesTranslateX.X;
+                _isDraggingPages = true;
+            }
+        }
+
+        private void SliderViewport_PreviewMouseMove(object sender, MouseEventArgs e) {
+            if (!_isDraggingPages || !SettingsService.Instance.Current.SliderDragEnabled) return;
+            if (e.LeftButton == MouseButtonState.Pressed) {
+                double curX = e.GetPosition(SliderPagesViewport).X;
+                double delta = curX - _dragStartX;
+                if (Math.Abs(delta) > 8) {
+                    SliderPagesViewport.CaptureMouse();
+                    double pageWidth = SliderPagesViewport.ActualWidth > 0 ? SliderPagesViewport.ActualWidth : 350;
+                    double minX = -(_totalSliderPages - 1) * pageWidth;
+                    double maxX = 0;
+                    double proposedX = _dragStartTranslateX + delta;
+                    if (proposedX > maxX) proposedX = maxX + (proposedX - maxX) * 0.3;
+                    if (proposedX < minX) proposedX = minX + (proposedX - minX) * 0.3;
+                    PagesTranslateX.BeginAnimation(TranslateTransform.XProperty, null);
+                    PagesTranslateX.X = proposedX;
+                }
+            } else {
+                _isDraggingPages = false;
+                SliderPagesViewport.ReleaseMouseCapture();
+            }
+        }
+
+        private void SliderViewport_PreviewMouseUp(object sender, MouseButtonEventArgs e) {
+            if (!_isDraggingPages) return;
+            _isDraggingPages = false;
+            SliderPagesViewport.ReleaseMouseCapture();
+
+            double curX = e.GetPosition(SliderPagesViewport).X;
+            double delta = curX - _dragStartX;
+
+            if (delta < -35 && _currentSliderPage < _totalSliderPages - 1) {
+                NavigateToSliderPage(_currentSliderPage + 1);
+            } else if (delta > 35 && _currentSliderPage > 0) {
+                NavigateToSliderPage(_currentSliderPage - 1);
+            } else {
+                NavigateToSliderPage(_currentSliderPage);
+            }
+        }
+
+        private void SliderPrevButton_Click(object sender, RoutedEventArgs e) {
+            if (_currentSliderPage > 0) {
+                NavigateToSliderPage(_currentSliderPage - 1);
+            }
+        }
+
+        private void SliderNextButton_Click(object sender, RoutedEventArgs e) {
+            if (_currentSliderPage < _totalSliderPages - 1) {
+                NavigateToSliderPage(_currentSliderPage + 1);
             }
         }
 
@@ -659,42 +864,48 @@ namespace Panak.Views {
             // Capture screen area behind the popup for frosted glass / acrylic blur
             // Capture screen area behind the popup for frosted glass / acrylic blur
             try {
-                double dpi = 1.0;
-                try {
-                    dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
-                } catch { }
-                if (dpi <= 0) dpi = 1.0;
-
-                double blurMargin = 25;
-                double cardW = Math.Max(10, popupW);
-                double cardH = Math.Max(10, popupH);
-                double imgW = cardW + blurMargin * 2;
-                double imgH = cardH + blurMargin * 2;
-
-                CardClipGeometry.Rect = new Rect(0, 0, cardW, cardH);
-                Canvas.SetLeft(PopupBlurImage, -blurMargin);
-                Canvas.SetTop(PopupBlurImage, -blurMargin);
-                PopupBlurImage.Width = imgW;
-                PopupBlurImage.Height = imgH;
-
-                double cardLeft = targetLeft;
-                double cardTop = targetTop;
-                double capLeft = Math.Max(screenLeft, cardLeft - blurMargin);
-                double capTop = Math.Max(screenTop, cardTop - blurMargin);
-
-                var screenBmp = ShellHelper.CaptureScreenArea(
-                    (int)Math.Round(capLeft),
-                    (int)Math.Round(capTop),
-                    (int)Math.Round(imgW),
-                    (int)Math.Round(imgH),
-                    dpi);
-
-                if (screenBmp != null) {
-                    PopupBlurImage.Source = screenBmp;
-                    PopupBlurImage.Visibility = Visibility.Visible;
-                } else {
+                if (!SettingsService.Instance.Current.FolderBlurEnabled || SettingsService.Instance.Current.FolderBlurRadius <= 0) {
                     PopupBlurImage.Source = null;
                     PopupBlurImage.Visibility = Visibility.Collapsed;
+                } else {
+                    double dpi = 1.0;
+                    try {
+                        dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
+                    } catch { }
+                    if (dpi <= 0) dpi = 1.0;
+
+                    double blurMargin = 25;
+                    double cardW = Math.Max(10, popupW);
+                    double cardH = Math.Max(10, popupH);
+                    double imgW = cardW + blurMargin * 2;
+                    double imgH = cardH + blurMargin * 2;
+
+                    CardClipGeometry.Rect = new Rect(0, 0, cardW, cardH);
+                    Canvas.SetLeft(PopupBlurImage, -blurMargin);
+                    Canvas.SetTop(PopupBlurImage, -blurMargin);
+                    PopupBlurImage.Width = imgW;
+                    PopupBlurImage.Height = imgH;
+
+                    double cardLeft = targetLeft;
+                    double cardTop = targetTop;
+                    double capLeft = Math.Max(screenLeft, cardLeft - blurMargin);
+                    double capTop = Math.Max(screenTop, cardTop - blurMargin);
+
+                    var screenBmp = ShellHelper.CaptureScreenArea(
+                        (int)Math.Round(capLeft),
+                        (int)Math.Round(capTop),
+                        (int)Math.Round(imgW),
+                        (int)Math.Round(imgH),
+                        dpi);
+
+                    if (screenBmp != null) {
+                        PopupBlurImage.Source = screenBmp;
+                        PopupBlurImage.Visibility = Visibility.Visible;
+                        PopupBlurEffect.Radius = Math.Clamp(SettingsService.Instance.Current.FolderBlurRadius, 1.0, 60.0);
+                    } else {
+                        PopupBlurImage.Source = null;
+                        PopupBlurImage.Visibility = Visibility.Collapsed;
+                    }
                 }
             } catch {
                 PopupBlurImage.Source = null;
@@ -784,10 +995,10 @@ namespace Panak.Views {
                 }
             }
 
-            if (Math.Abs(Left - newLeft) > 1) {
+            if (Math.Abs(Left - newLeft) > 0.1) {
                 Left = newLeft;
             }
-            if (Math.Abs(Top - newTop) > 1) {
+            if (Math.Abs(Top - newTop) > 0.1) {
                 Top = newTop;
             }
 
@@ -809,12 +1020,20 @@ namespace Panak.Views {
         }
 
         private bool _isEditPanelOpen = false;
+        private double _normalPopupWidth = 0;
 
         private void CloseEditPanelImmediate() {
             _isEditPanelOpen = false;
             EditPanelContainer.BeginAnimation(HeightProperty, null);
             EditPanel.BeginAnimation(OpacityProperty, null);
             EditPanelTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+            this.BeginAnimation(WidthProperty, null);
+            this.Width = double.NaN;
+            this.SizeToContent = SizeToContent.WidthAndHeight;
+            if (_itemsUniformGrid != null) {
+                _itemsUniformGrid.Columns = GetConfiguredColumns();
+            }
+            _normalPopupWidth = 0;
             EditPanelContainer.Height = 0;
             EditPanelContainer.Visibility = Visibility.Collapsed;
             EditPanel.Opacity = 0.0;
@@ -838,6 +1057,22 @@ namespace Panak.Views {
                 EditPanelContainer.BeginAnimation(HeightProperty, null);
                 EditPanel.BeginAnimation(OpacityProperty, null);
                 EditPanelTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+                this.BeginAnimation(WidthProperty, null);
+
+                // Remember natural width before expanding
+                if (_normalPopupWidth <= 0) {
+                    _normalPopupWidth = ActualWidth > 0 ? ActualWidth : (GetConfiguredColumns() * 70 + 24);
+                }
+
+                // Target width: EditPanel.Width (234) + 24px margins = 258px
+                double targetWidth = EditPanel.Width + 24.0;
+                double currentWidth = ActualWidth > 0 ? ActualWidth : _normalPopupWidth;
+
+                // Temporarily allow explicit Width animation
+                this.SizeToContent = SizeToContent.Height;
+                if (_itemsUniformGrid != null) {
+                    _itemsUniformGrid.Columns = 3;
+                }
 
                 // Measure natural height of EditPanel (fixed 3-column width)
                 double availableWidth = 234;
@@ -850,6 +1085,7 @@ namespace Panak.Views {
 
                 var easeOut = new CubicEase { EasingMode = EasingMode.EaseOut };
                 var heightAnim = new DoubleAnimation(currentHeight, targetHeight, duration) { EasingFunction = easeOut };
+                var widthAnim = new DoubleAnimation(currentWidth, targetWidth, duration) { EasingFunction = easeOut };
                 var opacityAnim = new DoubleAnimation(EditPanel.Opacity, 1.0, duration) { EasingFunction = easeOut };
                 var translateAnim = new DoubleAnimation(EditPanelTranslate.Y, 0.0, duration) { EasingFunction = easeOut };
 
@@ -863,10 +1099,14 @@ namespace Panak.Views {
                 };
 
                 EditPanelContainer.BeginAnimation(HeightProperty, heightAnim);
+                this.BeginAnimation(WidthProperty, widthAnim);
                 EditPanel.BeginAnimation(OpacityProperty, opacityAnim);
                 EditPanelTranslate.BeginAnimation(TranslateTransform.YProperty, translateAnim);
             } else {
                 double startHeight = EditPanelContainer.ActualHeight;
+                double startWidth = ActualWidth;
+                double returnWidth = _normalPopupWidth > 0 ? _normalPopupWidth : (GetConfiguredColumns() * 70 + 24);
+
                 if (startHeight <= 0) {
                     CloseEditPanelImmediate();
                     return;
@@ -876,9 +1116,11 @@ namespace Panak.Views {
                 EditPanelContainer.BeginAnimation(HeightProperty, null);
                 EditPanel.BeginAnimation(OpacityProperty, null);
                 EditPanelTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+                this.BeginAnimation(WidthProperty, null);
 
                 var easeIn = new CubicEase { EasingMode = EasingMode.EaseInOut };
                 var heightAnim = new DoubleAnimation(startHeight, 0.0, duration) { EasingFunction = easeIn };
+                var widthAnim = new DoubleAnimation(startWidth, returnWidth, duration) { EasingFunction = easeIn };
                 var opacityAnim = new DoubleAnimation(EditPanel.Opacity, 0.0, duration) { EasingFunction = easeIn };
                 var translateAnim = new DoubleAnimation(EditPanelTranslate.Y, -10.0, duration) { EasingFunction = easeIn };
 
@@ -890,7 +1132,20 @@ namespace Panak.Views {
                     }
                 };
 
+                widthAnim.Completed += (s, e) => {
+                    if (!_isEditPanelOpen) {
+                        this.BeginAnimation(WidthProperty, null);
+                        this.Width = double.NaN;
+                        this.SizeToContent = SizeToContent.WidthAndHeight;
+                        if (_itemsUniformGrid != null) {
+                            _itemsUniformGrid.Columns = GetConfiguredColumns();
+                        }
+                        _normalPopupWidth = 0;
+                    }
+                };
+
                 EditPanelContainer.BeginAnimation(HeightProperty, heightAnim);
+                this.BeginAnimation(WidthProperty, widthAnim);
                 EditPanel.BeginAnimation(OpacityProperty, opacityAnim);
                 EditPanelTranslate.BeginAnimation(TranslateTransform.YProperty, translateAnim);
             }
@@ -1409,7 +1664,12 @@ namespace Panak.Views {
                     if (sender is FrameworkElement elem && elem.DataContext is PanakItem item) {
                         string[] files = new[] { item.FullPath };
                         DataObject data = new DataObject(DataFormats.FileDrop, files);
-                        DragDropEffects effect = DragDrop.DoDragDrop(elem, data, DragDropEffects.Copy | DragDropEffects.Move);
+                        PanakManager.Instance.TemporarilyHideBackdropForDrag();
+                        try {
+                            DragDropEffects effect = DragDrop.DoDragDrop(elem, data, DragDropEffects.Copy | DragDropEffects.Move);
+                        } finally {
+                            PanakManager.Instance.RestoreBackdropAfterDrag();
+                        }
 
                         // If files were moved or deleted out of the folder, immediately check dissolution or refresh
                         if (PanakManager.Instance.CheckAndDissolveFolder(_rootFolderPath)) {

@@ -378,9 +378,9 @@
     </Window.Resources>
 
     <!-- Main Window Surface: Borderless Material You card -->
-    <Border x:Name="MainWindowBorder" Margin="2" CornerRadius="24"
+    <Border x:Name="MainWindowBorder" Margin="0" CornerRadius="24"
             Background="{DynamicResource M3SurfaceBrush}"
-            BorderThickness="1" BorderBrush="{DynamicResource M3SurfaceContainerBrush}">
+            BorderThickness="0" BorderBrush="Transparent">
 
         <Grid Margin="22">
             <Grid.RowDefinitions>
@@ -575,7 +575,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Text="Panak v1.8.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="Panak v1.9.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button x:Name="CancelBtn" Style="{StaticResource SecondaryButtonStyle}" Content="Չեղարկել" Margin="0,0,10,0" Click="CancelBtn_Click"/>

@@ -354,7 +354,7 @@
     </Window.Resources>
 
     <!-- Main Window Surface: Borderless Material You card -->
-    <Border x:Name="MainWindowBorder" Margin="2" CornerRadius="24" Background="{DynamicResource M3SurfaceBrush}" BorderThickness="1" BorderBrush="{DynamicResource M3SurfaceContainerBrush}">
+    <Border x:Name="MainWindowBorder" Margin="0" CornerRadius="24" Background="{DynamicResource M3SurfaceBrush}" BorderThickness="0" BorderBrush="Transparent">
 
         <Grid Margin="22">
             <Grid.RowDefinitions>
@@ -519,7 +519,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="CancelActionBtn" Grid.Column="0" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Click="CancelButton_Click"/>
-                <TextBlock Grid.Column="1" Text="Panak v1.8.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
+                <TextBlock Grid.Column="1" Text="Panak v1.8.1" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8,0"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Button x:Name="MainActionBtn" Style="{StaticResource ActionButtonStyle}" Content="Install Now" Click="MainActionBtn_Click"/>
                     <Button x:Name="FinishBtn" Style="{StaticResource ActionButtonStyle}" Content="Finish" Visibility="Collapsed" Click="FinishBtn_Click"/>

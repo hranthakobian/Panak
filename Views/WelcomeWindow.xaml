@@ -1,9 +1,9 @@
 <Window x:Class="Panak.Views.WelcomeWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Welcome to Panak"
-        Height="460"
-        Width="500"
+        Title="Panak - Setup &amp; Welcome"
+        Height="550"
+        Width="820"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -21,6 +21,7 @@
         <SolidColorBrush x:Key="M3OnSurfaceBrush" Color="#2B1D11"/>
         <SolidColorBrush x:Key="M3OnSurfaceVariantBrush" Color="#6E5643"/>
         <SolidColorBrush x:Key="M3TrackInactiveBrush" Color="#EED7C5"/>
+        <SolidColorBrush x:Key="SettingsHueThumbBrush" Color="#7A5427"/>
 
         <!-- Dynamic Logo Brushes -->
         <SolidColorBrush x:Key="LogoContainerBrush" Color="#E5CBB4"/>
@@ -29,6 +30,227 @@
         <SolidColorBrush x:Key="LogoShieldBrush" Color="#CFA636"/>
         <SolidColorBrush x:Key="LogoEllipseBrush" Color="#CF5D36"/>
         <SolidColorBrush x:Key="LogoTextBrush" Color="#481A0A"/>
+
+        <!-- 5 Shape Geometries -->
+        <StreamGeometry x:Key="GeomCircle">M 12,1 A 11,11 0 1 1 11.99,1 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeomSquircle">M 7,1 L 17,1 A 6,6 0 0 1 23,7 L 23,17 A 6,6 0 0 1 17,23 L 7,23 A 6,6 0 0 1 1,17 L 1,7 A 6,6 0 0 1 7,1 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeomClover">M 1,7 A 6,6 0 0 1 7,1 C 9.5,2.4 14.5,2.4 17,1 A 6,6 0 0 1 23,7 C 21.6,9.5 21.6,14.5 23,17 A 6,6 0 0 1 17,23 C 14.5,21.6 9.5,21.6 7,23 A 6,6 0 0 1 1,17 C 2.4,14.5 2.4,9.5 1,7 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeomScallop">M 12.00,0.80 Q 14.54,2.53 17.60,2.30 Q 18.93,5.07 21.70,6.40 Q 21.47,9.46 23.20,12.00 Q 21.47,14.54 21.70,17.60 Q 18.93,18.93 17.60,21.70 Q 14.54,21.47 12.00,23.20 Q 9.46,21.47 6.40,21.70 Q 5.07,18.93 2.30,17.60 Q 2.53,14.54 0.80,12.00 Q 2.53,9.46 2.30,6.40 Q 5.07,5.07 6.40,2.30 Q 9.46,2.53 12.00,0.80 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeomArch">M 1,12 A 11,11 0 0 1 23,12 L 23,19 A 4,4 0 0 1 19,23 L 5,23 A 4,4 0 0 1 1,19 Z</StreamGeometry>
+
+        <!-- Material 3 Shape Selector Radio Style -->
+        <Style x:Key="ShapeSelectorRadioStyle" TargetType="RadioButton">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid x:Name="RootGrid" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border x:Name="UnselectedBg" Width="30" Height="30" CornerRadius="15"
+                                    Background="{DynamicResource M3SurfaceContainerBrush}"
+                                    BorderThickness="0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border x:Name="SelectedBg" Width="30" Height="30" CornerRadius="11"
+                                    Background="{DynamicResource M3PrimaryBrush}"
+                                    BorderThickness="0" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Path x:Name="ShapePath" Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
+                                  Stretch="Uniform" Width="15" Height="15"
+                                  Fill="{DynamicResource M3PrimaryBrush}"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="UnselectedBg" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="SelectedBg" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="ShapePath" Property="Fill" Value="{DynamicResource M3OnPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RootGrid" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Color Swatch Radio Style -->
+        <Style x:Key="ColorSwatchStyle" TargetType="RadioButton">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid x:Name="SwatchRoot">
+                            <Ellipse x:Name="SelectionRing" Width="24" Height="24" Fill="{DynamicResource M3PrimaryBrush}" Visibility="Collapsed" Opacity="0.35"/>
+                            <Ellipse x:Name="InnerColor" Width="18" Height="18" Fill="{TemplateBinding Background}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="SelectionRing" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="InnerColor" Property="Width" Value="20"/>
+                                <Setter TargetName="InnerColor" Property="Height" Value="20"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SwatchRoot" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Hue Slider Thumb -->
+        <Style x:Key="PastelHueThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Grid Width="18" Height="18">
+                            <Ellipse Fill="#FFFFFF"/>
+                            <Ellipse Width="10" Height="10" Fill="{DynamicResource SettingsHueThumbBrush}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Pastel Hue Slider -->
+        <Style x:Key="PastelHueSliderStyle" TargetType="{x:Type Slider}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Slider}">
+                        <Grid VerticalAlignment="Center" Height="22">
+                            <Border Height="10" CornerRadius="5" BorderThickness="0" Margin="4,0,4,0">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop Color="#FCC5C5" Offset="0.0"/>
+                                        <GradientStop Color="#FCDDC5" Offset="0.073"/>
+                                        <GradientStop Color="#FCFCC5" Offset="0.166"/>
+                                        <GradientStop Color="#DFFCC5" Offset="0.25"/>
+                                        <GradientStop Color="#C5FCC5" Offset="0.333"/>
+                                        <GradientStop Color="#C5FCDD" Offset="0.416"/>
+                                        <GradientStop Color="#C5FCFC" Offset="0.5"/>
+                                        <GradientStop Color="#C5DDFC" Offset="0.583"/>
+                                        <GradientStop Color="#C5C5FC" Offset="0.666"/>
+                                        <GradientStop Color="#DDC5FC" Offset="0.75"/>
+                                        <GradientStop Color="#FCC5FC" Offset="0.833"/>
+                                        <GradientStop Color="#FCC5DD" Offset="0.916"/>
+                                        <GradientStop Color="#FCC5C5" Offset="1.0"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}" Opacity="0" Focusable="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Opacity="0" Focusable="False"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource PastelHueThumbStyle}"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material 3 Standard Slider -->
+        <Style x:Key="MaterialSliderThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Grid Width="16" Height="16">
+                            <Ellipse Fill="{DynamicResource M3PrimaryBrush}"/>
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource M3OnPrimaryBrush}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MaterialSliderStyle" TargetType="{x:Type Slider}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Slider}">
+                        <Grid VerticalAlignment="Center" Height="22">
+                            <Border Height="8" CornerRadius="4" Background="{DynamicResource M3SurfaceContainerBrush}" BorderThickness="0" Margin="4,0,4,0"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="8" CornerRadius="4" Background="{DynamicResource M3PrimaryBrush}" BorderThickness="0" Margin="4,0,-8,0"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource MaterialSliderThumbStyle}"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Material Switch Style -->
+        <Style x:Key="MaterialSwitchStyle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent" VerticalAlignment="Center">
+                            <Border x:Name="SwitchTrack" Width="36" Height="20" CornerRadius="10"
+                                    BorderThickness="2" BorderBrush="{DynamicResource M3TrackInactiveBrush}" Background="{DynamicResource M3TrackInactiveBrush}">
+                                <Canvas Width="32" Height="16" ClipToBounds="False">
+                                    <Border x:Name="SwitchThumb" Width="12" Height="12" CornerRadius="6"
+                                            Background="{DynamicResource M3OnSurfaceVariantBrush}" Canvas.Left="2" Canvas.Top="2"/>
+                                </Canvas>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
+                                <Setter TargetName="SwitchTrack" Property="BorderBrush" Value="{DynamicResource M3PrimaryBrush}"/>
+                                <Setter TargetName="SwitchThumb" Property="Background" Value="{DynamicResource M3OnPrimaryBrush}"/>
+                                <Setter TargetName="SwitchThumb" Property="Canvas.Left" Value="18"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <!-- Close Icon Button Style -->
         <Style x:Key="CloseIconButtonStyle" TargetType="Button">
@@ -39,7 +261,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="HoverCircle" Width="32" Height="32" CornerRadius="16" Background="Transparent">
+                        <Border x:Name="HoverCircle" Width="30" Height="30" CornerRadius="15" Background="Transparent">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -58,17 +280,14 @@
             <Setter Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource M3OnPrimaryBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="Padding" Value="18,8"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}" RenderTransformOrigin="0.5,0.5">
-                            <Border.RenderTransform>
-                                <ScaleTransform x:Name="BtnScale" ScaleX="1.0" ScaleY="1.0"/>
-                            </Border.RenderTransform>
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="18" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -84,22 +303,19 @@
             </Setter>
         </Style>
 
-        <!-- Material 3 Pill Button Style (Secondary / Tonal Container) -->
+        <!-- Material 3 Pill Button Style (Secondary) -->
         <Style x:Key="SecondaryActionButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="18,10"/>
+            <Setter Property="Padding" Value="16,8"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20" Padding="{TemplateBinding Padding}" RenderTransformOrigin="0.5,0.5">
-                            <Border.RenderTransform>
-                                <ScaleTransform x:Name="BtnScale" ScaleX="1.0" ScaleY="1.0"/>
-                            </Border.RenderTransform>
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="18" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -115,49 +331,45 @@
             </Setter>
         </Style>
 
-        <!-- Feature Item Card Style -->
-        <Style x:Key="FeatureCardStyle" TargetType="Border">
+        <!-- Mini Section Card Style -->
+        <Style x:Key="MiniSectionCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource M3CardBrush}"/>
-            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="CornerRadius" Value="14"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Padding" Value="12,8"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
     </Window.Resources>
 
-    <!-- Main Window Surface: Pure borderless Material You card without shadow -->
-    <Border x:Name="MainWindowBorder" Margin="2" CornerRadius="24" Background="{DynamicResource M3SurfaceBrush}" BorderThickness="1" BorderBrush="{DynamicResource M3SurfaceContainerBrush}">
-        <Grid Margin="24">
+    <!-- Main Window Surface: Pure borderless Material You card -->
+    <Border x:Name="MainWindowBorder" Margin="0" CornerRadius="24" Background="{DynamicResource M3SurfaceBrush}" BorderThickness="0" BorderBrush="Transparent">
+        <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header -->
-                <RowDefinition Height="*"/>    <!-- Content Body -->
+                <RowDefinition Height="*"/>    <!-- Content Area (Step 1, Step 2, Step 3) -->
                 <RowDefinition Height="Auto"/> <!-- Actions Footer -->
             </Grid.RowDefinitions>
 
-            <!-- Header: Draggable with Close Button -->
-            <Grid Grid.Row="0" Margin="0,0,0,12" Background="Transparent" MouseDown="Header_MouseDown" Cursor="SizeAll">
+            <!-- Header: Draggable with Title & Close Button -->
+            <Grid Grid.Row="0" Margin="0,0,0,10" Background="Transparent" MouseDown="Header_MouseDown" Cursor="SizeAll">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
+                <!-- Left: Panak Logo + Title -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Dynamic Vector Panak SVG Logo (svg/settings.svg) -->
-                    <Viewbox Width="34" Height="34" Margin="0,0,10,0" VerticalAlignment="Center">
-                        <Canvas Width="88" Height="88" Clip="M 0,0 L 88,0 L 88,88 L 0,88 Z">
-                            <!-- 1. Scalloped container badge base -->
+                    <Viewbox Width="28" Height="28" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <Canvas Width="88" Height="88">
                             <Path Data="M59.4086 1.20571C76.2803 -3.9745 92.0771 11.8223 86.8968 28.694L84.1639 37.595C82.8719 41.8029 82.8719 46.3016 84.1639 50.5095L86.8968 59.4105C92.0771 76.2822 76.2803 92.079 59.4086 86.8988L50.5076 84.1659C46.2997 82.8739 41.8009 82.8739 37.593 84.1659L28.6921 86.8988C11.8203 92.079 -3.97645 76.2822 1.20376 59.4105L3.93668 50.5095C5.22865 46.3016 5.22865 41.8029 3.93668 37.595L1.20376 28.694C-3.97645 11.8223 11.8203 -3.9745 28.692 1.20571L37.593 3.93863C41.8009 5.23061 46.2997 5.23061 50.5076 3.93863L59.4086 1.20571Z"
                                   Fill="{DynamicResource LogoContainerBrush}"/>
-                            <!-- 2. Dark brown flower/scallop bottom-left shape -->
                             <Path Data="M23.0319 48.198C24.8429 45.2673 29.1571 45.2673 30.9681 48.198C31.9209 49.7399 33.7031 50.5863 35.5195 50.3597C38.9718 49.9288 41.6617 53.2555 40.4677 56.4791C39.8394 58.1752 40.2795 60.0771 41.5918 61.3364C44.0858 63.7298 43.1258 67.878 39.8258 68.9672C38.0895 69.5402 36.8562 71.0654 36.6761 72.8624C36.3338 76.2778 32.4467 78.1239 29.5259 76.2585C27.989 75.2769 26.011 75.2769 24.4741 76.2585C21.5533 78.1239 17.6662 76.2778 17.3239 72.8624C17.1438 71.0654 15.9105 69.5402 14.1742 68.9672C10.8742 67.878 9.91423 63.7298 12.4082 61.3364C13.7205 60.0771 14.1606 58.1752 13.5323 56.4791C12.3383 53.2555 15.0282 49.9288 18.4805 50.3597C20.2969 50.5863 22.0791 49.7399 23.0319 48.198Z"
                                   Fill="{DynamicResource LogoCloudBrush}"/>
-                            <!-- 3. Upper left triangle shape -->
                             <Path Data="M22.303 11.7907C24.3905 8.06977 29.6095 8.06976 31.697 11.7907L42.2653 30.6279C44.3528 34.3488 41.7434 39 37.5683 39H16.4317C12.2566 39 9.64716 34.3488 11.7347 30.6279L22.303 11.7907Z"
                                   Fill="{DynamicResource LogoTriangleBrush}"/>
-                            <!-- 4. Lower right shield shape -->
                             <Path Data="M60.69 47.1992C62.9839 45.6003 66.0161 45.6003 68.31 47.1992L78.0961 54.0203C80.5738 55.7472 81.6123 58.9305 80.6373 61.8093L77.0467 72.4109C76.117 75.1559 73.5649 77 70.6955 77H58.3045C55.4351 77 52.883 75.1559 51.9533 72.4109L48.3627 61.8093C47.3877 58.9305 48.4262 55.7472 50.9039 54.0203L60.69 47.1992Z"
                                   Fill="{DynamicResource LogoShieldBrush}"/>
-                            <!-- 5. Rotated ellipse shape -->
                             <Path Fill="{DynamicResource LogoEllipseBrush}">
                                 <Path.Data>
                                     <EllipseGeometry Center="63.5067,24.3126" RadiusX="17.9667" RadiusY="10.1973">
@@ -169,92 +381,581 @@
                             </Path>
                         </Canvas>
                     </Viewbox>
-                    <TextBlock Text="Panak" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="Panak" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <Button Grid.Column="1" Style="{StaticResource CloseIconButtonStyle}" Content="✕" Width="32" Height="32" Click="CloseBtn_Click"/>
+                <!-- Center: Step Progress Badge -->
+                <Border Grid.Column="1" HorizontalAlignment="Center" Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="12" Padding="12,4">
+                    <TextBlock x:Name="StepIndicatorText" Text="Step 1 of 3" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                </Border>
+
+                <!-- Right: Close Button -->
+                <Button Grid.Column="2" Style="{StaticResource CloseIconButtonStyle}" Content="✕" Width="28" Height="28" Click="CloseBtn_Click"/>
             </Grid>
 
-            <!-- Content Body -->
-            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,4,0,12">
-                <!-- Dynamic Vector Panak Brand Logo with Text (svg/logo with text.svg) -->
-                <Viewbox Height="46" MaxWidth="220" HorizontalAlignment="Center" Margin="0,0,0,12" Stretch="Uniform">
-                    <Canvas Width="296" Height="88">
-                        <!-- 1. Scalloped container badge base -->
-                        <Path Data="M59.4086 1.20571C76.2803 -3.9745 92.0771 11.8223 86.8968 28.694L84.1639 37.595C82.8719 41.8029 82.8719 46.3016 84.1639 50.5095L86.8968 59.4105C92.0771 76.2822 76.2803 92.079 59.4086 86.8988L50.5076 84.1659C46.2997 82.8739 41.8009 82.8739 37.593 84.1659L28.6921 86.8988C11.8203 92.079 -3.97645 76.2822 1.20376 59.4105L3.93668 50.5095C5.22865 46.3016 5.22865 41.8029 3.93668 37.595L1.20376 28.694C-3.97645 11.8223 11.8203 -3.9745 28.692 1.20571L37.593 3.93863C41.8009 5.23061 46.2997 5.23061 50.5076 3.93863L59.4086 1.20571Z"
-                              Fill="{DynamicResource LogoContainerBrush}"/>
-                        <!-- 2. Dark brown flower/scallop bottom-left shape -->
-                        <Path Data="M23.0319 48.198C24.8429 45.2673 29.1571 45.2673 30.9681 48.198C31.9209 49.7399 33.7031 50.5863 35.5195 50.3597C38.9718 49.9288 41.6617 53.2555 40.4677 56.4791C39.8394 58.1752 40.2795 60.0771 41.5918 61.3364C44.0858 63.7298 43.1258 67.878 39.8258 68.9672C38.0895 69.5402 36.8562 71.0654 36.6761 72.8624C36.3338 76.2778 32.4467 78.1239 29.5259 76.2585C27.989 75.2769 26.011 75.2769 24.4741 76.2585C21.5533 78.1239 17.6662 76.2778 17.3239 72.8624C17.1438 71.0654 15.9105 69.5402 14.1742 68.9672C10.8742 67.878 9.91423 63.7298 12.4082 61.3364C13.7205 60.0771 14.1606 58.1752 13.5323 56.4791C12.3383 53.2555 15.0282 49.9288 18.4805 50.3597C20.2969 50.5863 22.0791 49.7399 23.0319 48.198Z"
-                              Fill="{DynamicResource LogoCloudBrush}"/>
-                        <!-- 3. Upper left triangle shape -->
-                        <Path Data="M22.303 11.7907C24.3905 8.06977 29.6095 8.06976 31.697 11.7907L42.2653 30.6279C44.3528 34.3488 41.7434 39 37.5683 39H16.4317C12.2566 39 9.64716 34.3488 11.7347 30.6279L22.303 11.7907Z"
-                              Fill="{DynamicResource LogoTriangleBrush}"/>
-                        <!-- 4. Lower right shield shape -->
-                        <Path Data="M60.69 47.1992C62.9839 45.6003 66.0161 45.6003 68.31 47.1992L78.0961 54.0203C80.5738 55.7472 81.6123 58.9305 80.6373 61.8093L77.0467 72.4109C76.117 75.1559 73.5649 77 70.6955 77H58.3045C55.4351 77 52.883 75.1559 51.9533 72.4109L48.3627 61.8093C47.3877 58.9305 48.4262 55.7472 50.9039 54.0203L60.69 47.1992Z"
-                              Fill="{DynamicResource LogoShieldBrush}"/>
-                        <!-- 5. Rotated ellipse shape -->
-                        <Path Fill="{DynamicResource LogoEllipseBrush}">
-                            <Path.Data>
-                                <EllipseGeometry Center="63.5067,24.3126" RadiusX="17.9667" RadiusY="10.1973">
-                                    <EllipseGeometry.Transform>
-                                        <RotateTransform Angle="-49.923" CenterX="63.5067" CenterY="24.3126"/>
-                                    </EllipseGeometry.Transform>
-                                </EllipseGeometry>
-                            </Path.Data>
-                        </Path>
-                        <!-- 6. PANAK Wordmark text -->
-                        <Path Data="M109.016 25.896H116.184C118.275 25.896 120.248 26.1307 122.104 26.6C123.96 27.0693 125.581 27.8053 126.968 28.808C128.355 29.8107 129.453 31.1013 130.264 32.68C131.075 34.2587 131.48 36.1573 131.48 38.376C131.48 40.6587 131.107 42.6213 130.36 44.264C129.613 45.8853 128.568 47.2187 127.224 48.264C125.88 49.288 124.269 50.0453 122.392 50.536C120.515 51.0053 118.445 51.24 116.184 51.24H113.496V59.976H105.432V29.288C105.432 28.8187 105.528 28.3813 105.72 27.976C105.912 27.5707 106.168 27.2187 106.488 26.92C106.808 26.6 107.181 26.3547 107.608 26.184C108.056 25.992 108.525 25.896 109.016 25.896ZM113.496 43.944H116.408C117.603 43.944 118.637 43.8373 119.512 43.624C120.408 43.3893 121.144 43.048 121.72 42.6C122.296 42.152 122.723 41.5867 123 40.904C123.277 40.2213 123.416 39.4213 123.416 38.504C123.416 37.5867 123.277 36.7973 123 36.136C122.723 35.4747 122.296 34.9307 121.72 34.504C121.165 34.056 120.451 33.736 119.576 33.544C118.723 33.3307 117.709 33.224 116.536 33.224H113.496V43.944ZM109.464 65.096C108.909 65.096 108.387 65 107.896 64.808C107.405 64.5947 106.979 64.3173 106.616 63.976C106.253 63.6347 105.965 63.24 105.752 62.792C105.539 62.3227 105.432 61.8213 105.432 61.288V59.976H113.496V61.288C113.496 61.8213 113.389 62.3227 113.176 62.792C112.963 63.24 112.664 63.6347 112.28 63.976C111.917 64.3173 111.491 64.5947 111 64.808C110.531 65 110.019 65.096 109.464 65.096ZM152.659 26.024C153.939 26.024 155.027 26.3653 155.923 27.048C156.819 27.7093 157.459 28.584 157.843 29.672L168.883 60.008C169.096 60.5413 169.203 61.0853 169.203 61.64C169.224 62.1947 169.139 62.7173 168.947 63.208C168.755 63.6773 168.467 64.104 168.083 64.488C167.699 64.872 167.219 65.16 166.643 65.352C166.046 65.5653 165.448 65.64 164.851 65.576C164.254 65.5333 163.699 65.384 163.187 65.128C162.675 64.872 162.216 64.52 161.811 64.072C161.406 63.6027 161.107 63.0693 160.915 62.472L158.099 54.376L147.507 54.28L144.627 62.472C144.371 63.1547 144.019 63.7307 143.571 64.2C143.123 64.648 142.622 64.9787 142.067 65.192C141.534 65.4267 140.968 65.544 140.371 65.544C139.795 65.5653 139.24 65.48 138.707 65.288C138.131 65.0747 137.662 64.7867 137.299 64.424C136.958 64.04 136.702 63.6133 136.531 63.144C136.36 62.6533 136.286 62.1413 136.307 61.608C136.328 61.0747 136.435 60.552 136.627 60.04L147.283 29.928C147.667 28.776 148.328 27.8373 149.267 27.112C150.227 26.3867 151.358 26.024 152.659 26.024ZM152.659 37.032L149.427 47.08H156.051L152.787 37.416C152.766 37.352 152.744 37.288 152.723 37.224C152.702 37.16 152.68 37.096 152.659 37.032ZM178.153 25.896C179.39 25.896 180.446 26.0027 181.321 26.216C182.196 26.408 182.964 26.728 183.625 27.176C184.286 27.624 184.873 28.2 185.385 28.904C185.897 29.608 186.409 30.4613 186.921 31.464L197.577 52.616C197.598 52.6587 197.62 52.7013 197.641 52.744C197.662 52.7867 197.684 52.8293 197.705 52.872C197.705 52.7867 197.705 52.712 197.705 52.648C197.705 52.584 197.705 52.5093 197.705 52.424L197.641 30.856H205.705V61.704C205.705 62.28 205.588 62.7813 205.353 63.208C205.14 63.6133 204.852 63.9547 204.489 64.232C204.126 64.5093 203.71 64.712 203.241 64.84C202.772 64.968 202.281 65.032 201.769 65.032C200.532 65.032 199.476 64.936 198.601 64.744C197.726 64.5307 196.958 64.2107 196.297 63.784C195.636 63.336 195.049 62.76 194.537 62.056C194.025 61.352 193.513 60.4987 193.001 59.496L182.121 37.704V60.392H174.057V29.224C174.057 28.6267 174.174 28.1147 174.409 27.688C174.644 27.2613 174.953 26.92 175.337 26.664C175.721 26.3867 176.158 26.1947 176.649 26.088C177.14 25.96 177.641 25.896 178.153 25.896ZM201.673 25.736C202.228 25.736 202.75 25.8427 203.241 26.056C203.732 26.248 204.158 26.5147 204.521 26.856C204.884 27.1973 205.172 27.6027 205.385 28.072C205.598 28.52 205.705 29.0107 205.705 29.544V30.856H197.641V29.544C197.641 29.0107 197.748 28.52 197.961 28.072C198.174 27.6027 198.462 27.1973 198.825 26.856C199.209 26.5147 199.646 26.248 200.137 26.056C200.628 25.8427 201.14 25.736 201.673 25.736ZM178.089 65.192C177.534 65.192 177.012 65.096 176.521 64.904C176.03 64.6907 175.604 64.4133 175.241 64.072C174.878 63.7093 174.59 63.304 174.377 62.856C174.164 62.3867 174.057 61.8853 174.057 61.352V60.392H182.121V61.352C182.121 61.8853 182.014 62.3867 181.801 62.856C181.588 63.304 181.289 63.7093 180.905 64.072C180.542 64.4133 180.116 64.6907 179.625 64.904C179.156 65.096 178.644 65.192 178.089 65.192ZM226.909 26.024C228.189 26.024 229.277 26.3653 230.173 27.048C231.069 27.7093 231.709 28.584 232.093 29.672L243.133 60.008C243.346 60.5413 243.453 61.0853 243.453 61.64C243.474 62.1947 243.389 62.7173 243.197 63.208C243.005 63.6773 242.717 64.104 242.333 64.488C241.949 64.872 241.469 65.16 240.893 65.352C240.296 65.5653 239.698 65.64 239.101 65.576C238.504 65.5333 237.949 65.384 237.437 65.128C236.925 64.872 236.466 64.52 236.061 64.072C235.656 63.6027 235.357 63.0693 235.165 62.472L232.349 54.376L221.757 54.28L218.877 62.472C218.621 63.1547 218.269 63.7307 217.821 64.2C217.373 64.648 216.872 64.9787 216.317 65.192C215.784 65.4267 215.218 65.544 214.621 65.544C214.045 65.5653 213.49 65.48 212.957 65.288C212.381 65.0747 211.912 64.7867 211.549 64.424C211.208 64.04 210.952 63.6133 210.781 63.144C210.61 62.6533 210.536 62.1413 210.557 61.608C210.578 61.0747 210.685 60.552 210.877 60.04L221.533 29.928C221.917 28.776 222.578 27.8373 223.517 27.112C224.477 26.3867 225.608 26.024 226.909 26.024ZM226.909 37.032L223.677 47.08H230.301L227.037 37.416C227.016 37.352 226.994 37.288 226.973 37.224C226.952 37.16 226.93 37.096 226.909 37.032ZM248.307 30.696H256.339V39.592L266.547 27.144C266.91 26.7173 267.326 26.376 267.795 26.12C268.264 25.8427 268.744 25.672 269.235 25.608C269.747 25.544 270.259 25.5867 270.771 25.736C271.283 25.864 271.763 26.1093 272.211 26.472C273.043 27.1333 273.491 27.944 273.555 28.904C273.64 29.864 273.342 30.7493 272.659 31.56L262.355 43.56L274.515 59.176C275.198 60.0293 275.486 60.9253 275.379 61.864C275.294 62.8027 274.803 63.6133 273.907 64.296C273.459 64.6373 272.968 64.8827 272.435 65.032C271.923 65.2027 271.4 65.256 270.867 65.192C270.334 65.1493 269.822 65 269.331 64.744C268.862 64.488 268.456 64.1253 268.115 63.656L256.339 48.232V60.616H248.307V30.696ZM252.339 65.48C251.784 65.48 251.262 65.3733 250.771 65.16C250.28 64.968 249.854 64.7013 249.491 64.36C249.128 64.0187 248.84 63.6133 248.627 63.144C248.414 62.6747 248.307 62.184 248.307 61.672V60.36H256.371V61.672C256.371 62.184 256.264 62.6747 256.051 63.144C255.838 63.6133 255.539 64.0187 255.155 64.36C254.792 64.7013 254.366 64.968 253.875 65.16C253.406 65.3733 252.894 65.48 252.339 65.48ZM252.339 25.736C252.894 25.736 253.406 25.8427 253.875 26.056C254.366 26.248 254.792 26.5147 255.155 26.856C255.539 27.1973 255.838 27.6027 256.051 28.072C256.264 28.52 256.371 29.0107 256.371 29.544V30.856H248.307V29.544C248.307 29.0107 248.414 28.52 248.627 28.072C248.84 27.6027 249.128 27.1973 249.491 26.856C249.854 26.5147 250.28 26.248 250.771 26.056C251.262 25.8427 251.784 25.736 252.339 25.736Z"
-                              Fill="{DynamicResource LogoTextBrush}"/>
-                    </Canvas>
-                </Viewbox>
+            <!-- Main Multi-Step Content Area -->
+            <Grid Grid.Row="1" Margin="0,4,0,10" ClipToBounds="True">
+                <!-- STEP 1: Color, Shape, Opacity, Blur -->
+                <Grid x:Name="Step1Grid" Visibility="Visible">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.1*"/>
+                        <ColumnDefinition Width="1.15*"/>
+                    </Grid.ColumnDefinitions>
 
-                <!-- Welcome Titles -->
-                <TextBlock x:Name="WelcomeTitleText" Text="Welcome to Panak" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center" TextAlignment="Center"/>
-                <TextBlock x:Name="WelcomeSubtitleText" Text="Material 3 Expressive popup folders for Windows" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,16"/>
+                    <!-- Left: Step 1 Controls -->
+                    <StackPanel Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="Step1TitleText" Text="Step 1: Color, Shape &amp; Blur" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                        <TextBlock x:Name="Step1SubtitleText" Text="Personalize the visual look and feel of your folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,10"/>
 
-                <!-- Highlights Card -->
-                <Border Style="{StaticResource FeatureCardStyle}" Margin="4,0,4,0">
-                    <StackPanel>
-                        <Grid Margin="0,2,0,4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="24"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="🎨" FontSize="13" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="Feature1Text" Grid.Column="1" Text="Material You dynamic color palettes &amp; expressive shapes" FontSize="11.5" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                        <!-- Shape Selector Card -->
+                        <Border Style="{StaticResource MiniSectionCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="Step1ShapeLabel" Text="Icon Shape" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <RadioButton x:Name="ShapeCircleRadio" GroupName="WizardShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                 Tag="{StaticResource GeomCircle}" ToolTip="Circle" Click="ShapeRadio_Click"/>
+                                    <RadioButton x:Name="ShapeSquircleRadio" GroupName="WizardShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                 Tag="{StaticResource GeomSquircle}" ToolTip="Squircle" IsChecked="True" Click="ShapeRadio_Click"/>
+                                    <RadioButton x:Name="ShapeCloverRadio" GroupName="WizardShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                 Tag="{StaticResource GeomClover}" ToolTip="Clover" Click="ShapeRadio_Click"/>
+                                    <RadioButton x:Name="ShapeScallopRadio" GroupName="WizardShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                 Tag="{StaticResource GeomScallop}" ToolTip="Scallop" Click="ShapeRadio_Click"/>
+                                    <RadioButton x:Name="ShapeArchRadio" GroupName="WizardShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                 Tag="{StaticResource GeomArch}" ToolTip="Arch" Click="ShapeRadio_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Theme Color Card -->
+                        <Border Style="{StaticResource MiniSectionCardStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="Step1ColorLabel" Text="Theme Color &amp; Hue" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <Border x:Name="Step1ColorIndicator" Grid.Column="1" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource M3PrimaryBrush}"/>
+                                </Grid>
+                                <!-- Pastel Swatches -->
+                                <StackPanel x:Name="Step1SwatchesPanel" Orientation="Horizontal" Margin="0,0,0,6">
+                                    <RadioButton GroupName="WizardColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCDDC5" Tag="#FCDDC5" ToolTip="Peach" Checked="WizardColorSwatch_Checked"/>
+                                    <RadioButton GroupName="WizardColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#C5FCC5" Tag="#C5FCC5" ToolTip="Mint" Checked="WizardColorSwatch_Checked"/>
+                                    <RadioButton GroupName="WizardColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#C5FCFC" Tag="#C5FCFC" ToolTip="Cyan" Checked="WizardColorSwatch_Checked"/>
+                                    <RadioButton GroupName="WizardColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#C5DDFC" Tag="#C5DDFC" ToolTip="Sky Blue" Checked="WizardColorSwatch_Checked"/>
+                                    <RadioButton GroupName="WizardColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#DDC5FC" Tag="#DDC5FC" ToolTip="Lavender" Checked="WizardColorSwatch_Checked"/>
+                                    <RadioButton GroupName="WizardColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCC5FC" Tag="#FCC5FC" ToolTip="Pink" Checked="WizardColorSwatch_Checked"/>
+                                    <RadioButton GroupName="WizardColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCFCC5" Tag="#FCFCC5" ToolTip="Butter" Checked="WizardColorSwatch_Checked"/>
+                                    <RadioButton GroupName="WizardColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#E6E0E9" Tag="#E6E0E9" ToolTip="Silver" Checked="WizardColorSwatch_Checked"/>
+                                </StackPanel>
+                                <!-- Hue Slider -->
+                                <Slider x:Name="Step1HueSlider" Minimum="0" Maximum="360" Style="{StaticResource PastelHueSliderStyle}" ValueChanged="Step1HueSlider_ValueChanged"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Folder Opacity Card -->
+                        <Border Style="{StaticResource MiniSectionCardStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="Step1OpacityLabel" Text="Folder Opacity" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="Step1OpacityValueText" Grid.Column="1" Text="85%" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                </Grid>
+                                <Slider x:Name="Step1OpacitySlider" Minimum="20" Maximum="100" Value="85" Style="{StaticResource MaterialSliderStyle}" ValueChanged="Step1OpacitySlider_ValueChanged"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Folder Blur Card -->
+                        <Border Style="{StaticResource MiniSectionCardStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="Step1BlurLabel" Text="Folder Blur Effect" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                    <CheckBox x:Name="Step1BlurCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" Click="Step1BlurCheckBox_Click"/>
+                                </Grid>
+                                <StackPanel x:Name="Step1BlurRadiusContainer">
+                                    <Grid Margin="0,2,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="Step1RadiusLabel" Text="Blur Radius" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                                        <TextBlock x:Name="Step1RadiusValueText" Grid.Column="1" Text="28 px" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                    </Grid>
+                                    <Slider x:Name="Step1BlurRadiusSlider" Minimum="2" Maximum="60" Value="28" Style="{StaticResource MaterialSliderStyle}" ValueChanged="Step1BlurRadiusSlider_ValueChanged"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Right: Step 1 Live Desktop Preview -->
+                    <Border Grid.Column="1" Margin="12,0,0,0" CornerRadius="18" Background="#181824" BorderThickness="0" ClipToBounds="True">
+                        <Grid>
+                            <!-- Simulated Wallpaper Background -->
+                            <Border x:Name="Step1WallpaperBg" CornerRadius="18">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#2B3A42" Offset="0.0"/>
+                                        <GradientStop Color="#4F6D7A" Offset="0.5"/>
+                                        <GradientStop Color="#C0D6DF" Offset="1.0"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+
+                            <!-- Live Preview Badge -->
+                            <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Background="#80000000" CornerRadius="8" Padding="8,4">
+                                <TextBlock Text="★ LIVE PREVIEW" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF"/>
+                            </Border>
+
+                            <!-- Folder Popup Card Mockup -->
+                            <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16">
+                                <!-- Simulated Folder Card Blur Underlay -->
+                                <Border x:Name="Step1FolderBlurUnderlay" Width="260" Height="230" CornerRadius="18" Background="#40000000">
+                                    <Border.Effect>
+                                        <BlurEffect x:Name="Step1BlurFx" Radius="14"/>
+                                    </Border.Effect>
+                                </Border>
+
+                                <!-- Folder Card Foreground Surface -->
+                                <Border x:Name="Step1FolderCardBorder" Width="260" Height="230" CornerRadius="18" Background="#E6FCDDC5" Padding="12">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <!-- Header -->
+                                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <!-- Mini Shape Icon -->
+                                            <Border x:Name="Step1PreviewShapeBadge" Width="24" Height="24" CornerRadius="12" Background="{DynamicResource M3PrimaryBrush}">
+                                                <Path x:Name="Step1PreviewShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="12" Height="12" Fill="{DynamicResource M3OnPrimaryBrush}"/>
+                                            </Border>
+                                            <TextBlock Text="Pictures &amp; Work" Grid.Column="1" Margin="8,0,0,0" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="🔍" Grid.Column="2" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
+                                        </Grid>
+
+                                        <!-- Mini Items 3x2 Grid -->
+                                        <UniformGrid Grid.Row="1" Columns="3" Rows="2">
+                                            <!-- Item 1 -->
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource M3SurfaceBrush}" HorizontalAlignment="Center">
+                                                    <TextBlock Text="🖼️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Photo.jpg" FontSize="9" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <!-- Item 2 -->
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource M3SurfaceBrush}" HorizontalAlignment="Center">
+                                                    <TextBlock Text="📄" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Notes.pdf" FontSize="9" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <!-- Item 3 -->
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource M3SurfaceBrush}" HorizontalAlignment="Center">
+                                                    <TextBlock Text="📊" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Data.xlsx" FontSize="9" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <!-- Item 4 -->
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource M3SurfaceBrush}" HorizontalAlignment="Center">
+                                                    <TextBlock Text="🎵" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Audio.mp3" FontSize="9" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <!-- Item 5 -->
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource M3SurfaceBrush}" HorizontalAlignment="Center">
+                                                    <TextBlock Text="📦" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Arch.zip" FontSize="9" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <!-- Item 6 -->
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource M3SurfaceBrush}" HorizontalAlignment="Center">
+                                                    <TextBlock Text="⚙️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Config.json" FontSize="9" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </UniformGrid>
+                                    </Grid>
+                                </Border>
+                            </Grid>
                         </Grid>
-                        <Grid Margin="0,2,0,4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="24"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="📂" FontSize="13" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="Feature2Text" Grid.Column="1" Text="Instant popup widgets with 2x2 live file previews" FontSize="11.5" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                    </Border>
+                </Grid>
+
+                <!-- STEP 2: Layout & Behavior -->
+                <Grid x:Name="Step2Grid" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.15*"/>
+                        <ColumnDefinition Width="1.1*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: Step 2 Live Preview (Demonstrating Focus Mode & Slider Navigation) -->
+                    <Border Grid.Column="0" Margin="0,0,12,0" CornerRadius="18" Background="#181824" BorderThickness="0" ClipToBounds="True">
+                        <Grid>
+                            <!-- Simulated Wallpaper -->
+                            <Border CornerRadius="18">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#2B3A42" Offset="0.0"/>
+                                        <GradientStop Color="#4F6D7A" Offset="0.5"/>
+                                        <GradientStop Color="#C0D6DF" Offset="1.0"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+
+                            <!-- Focus Mode Dimming Backdrop -->
+                            <Border x:Name="Step2FocusDimOverlay" Background="#000000" Opacity="0.45"/>
+
+                            <!-- Live Focus & Slider Card -->
+                            <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16">
+                                <Border x:Name="Step2FolderCardBorder" Width="260" Height="250" CornerRadius="18" Background="#F0FCDDC5" Padding="12">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Header -->
+                                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border x:Name="Step2PreviewShapeBadge" Width="20" Height="20" CornerRadius="10" Background="{DynamicResource M3PrimaryBrush}">
+                                                <Path x:Name="Step2PreviewShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="10" Height="10" Fill="{DynamicResource M3OnPrimaryBrush}"/>
+                                            </Border>
+                                            <TextBlock Text="Work Projects" Grid.Column="1" Margin="6,0,0,0" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                        </Grid>
+
+                                        <!-- Items Container -->
+                                        <UniformGrid x:Name="Step2PreviewItemsGrid" Grid.Row="1" Columns="4" Rows="2" VerticalAlignment="Center">
+                                            <StackPanel HorizontalAlignment="Center" Margin="2">
+                                                <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource M3SurfaceBrush}">
+                                                    <TextBlock Text="📁" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Docs" FontSize="8.5" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel HorizontalAlignment="Center" Margin="2">
+                                                <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource M3SurfaceBrush}">
+                                                    <TextBlock Text="🎨" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Design" FontSize="8.5" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel HorizontalAlignment="Center" Margin="2">
+                                                <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource M3SurfaceBrush}">
+                                                    <TextBlock Text="💻" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Code" FontSize="8.5" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel HorizontalAlignment="Center" Margin="2">
+                                                <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource M3SurfaceBrush}">
+                                                    <TextBlock Text="📊" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Stats" FontSize="8.5" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </UniformGrid>
+
+                                        <!-- Footer: Slider Dots & Arrows Mockup -->
+                                        <Grid x:Name="Step2PreviewFooterGrid" Grid.Row="2" Margin="0,6,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="Step2PreviewArrowLeft" Text="◀" FontSize="10" Foreground="{DynamicResource M3PrimaryBrush}" VerticalAlignment="Center"/>
+                                            <!-- Dots: active is pill! -->
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Border Width="20" Height="6" CornerRadius="3" Background="{DynamicResource M3PrimaryBrush}" Margin="2,0"/>
+                                                <Border Width="6" Height="6" CornerRadius="3" Background="{DynamicResource M3TrackInactiveBrush}" Margin="2,0"/>
+                                                <Border Width="6" Height="6" CornerRadius="3" Background="{DynamicResource M3TrackInactiveBrush}" Margin="2,0"/>
+                                            </StackPanel>
+                                            <TextBlock x:Name="Step2PreviewArrowRight" Grid.Column="2" Text="▶" FontSize="10" Foreground="{DynamicResource M3PrimaryBrush}" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </Grid>
                         </Grid>
-                        <Grid Margin="0,2,0,0">
+                    </Border>
+
+                    <!-- Right: Step 2 Controls -->
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="Step2TitleText" Text="Step 2: Layout &amp; Behavior" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                        <TextBlock x:Name="Step2SubtitleText" Text="Configure paging navigation, grid size, and Focus Mode" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,10"/>
+
+                        <!-- Navigation Mode Card -->
+                        <Border Style="{StaticResource MiniSectionCardStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="Step2PagingModeLabel" Text="Page Navigation Mode" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <RadioButton x:Name="Step2SliderRadio" Content="Slider" GroupName="WizardPagingGroup" IsChecked="True" Margin="0,0,8,0" Click="Step2Paging_Click"/>
+                                        <RadioButton x:Name="Step2ScrollbarRadio" Content="ScrollBar" GroupName="WizardPagingGroup" Click="Step2Paging_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                                <!-- Columns & Rows -->
+                                <Grid Margin="0,2,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="Step2ColsLabel" Text="Columns per row" FontSize="11.5" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                                    <TextBlock x:Name="Step2ColsValueText" Grid.Column="1" Text="5" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                </Grid>
+                                <Slider x:Name="Step2ColsSlider" Minimum="3" Maximum="8" Value="5" IsSnapToTickEnabled="True" TickFrequency="1" Style="{StaticResource MaterialSliderStyle}" ValueChanged="Step2ColsSlider_ValueChanged"/>
+
+                                <Grid Margin="0,4,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="Step2RowsLabel" Text="Rows per page" FontSize="11.5" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                                    <TextBlock x:Name="Step2RowsValueText" Grid.Column="1" Text="3" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                </Grid>
+                                <Slider x:Name="Step2RowsSlider" Minimum="1" Maximum="5" Value="3" IsSnapToTickEnabled="True" TickFrequency="1" Style="{StaticResource MaterialSliderStyle}" ValueChanged="Step2RowsSlider_ValueChanged"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Focus Mode Card -->
+                        <Border Style="{StaticResource MiniSectionCardStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="Step2FocusModeLabel" Text="Focus Mode (Dim background)" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                    <CheckBox x:Name="Step2FocusCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" Click="Step2FocusCheckBox_Click"/>
+                                </Grid>
+                                <Grid Margin="0,2,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="Step2DimmingLabel" Text="Dimming opacity" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                                    <TextBlock x:Name="Step2DimmingValueText" Grid.Column="1" Text="45%" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                </Grid>
+                                <Slider x:Name="Step2DimmingSlider" Minimum="10" Maximum="90" Value="45" Style="{StaticResource MaterialSliderStyle}" ValueChanged="Step2DimmingSlider_ValueChanged"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Slider Toggles Card -->
+                        <Border Style="{StaticResource MiniSectionCardStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,2,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="Step2ArrowsLabel" Text="Navigation arrows" FontSize="12" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                    <CheckBox x:Name="Step2ArrowsCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" Click="Step2ArrowsCheckBox_Click"/>
+                                </Grid>
+                                <Grid Margin="0,2,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="Step2DragLabel" Text="Mouse drag swipe" FontSize="12" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                    <CheckBox x:Name="Step2DragCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" IsChecked="True" Click="Step2DragCheckBox_Click"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <!-- STEP 3: Welcome Card & Completion -->
+                <Grid x:Name="Step3Grid" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1.15*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: Final Folder Preview Card -->
+                    <Border Grid.Column="0" Margin="0,0,12,0" CornerRadius="18" Background="#181824" BorderThickness="0" ClipToBounds="True">
+                        <Grid>
+                            <Border CornerRadius="18">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#2B3A42" Offset="0.0"/>
+                                        <GradientStop Color="#4F6D7A" Offset="0.5"/>
+                                        <GradientStop Color="#C0D6DF" Offset="1.0"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            <!-- Badge -->
+                            <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,14,0,0" Background="#90000000" CornerRadius="10" Padding="10,4">
+                                <TextBlock Text="✨ YOUR CUSTOM FOLDER" FontSize="10.5" FontWeight="Bold" Foreground="#FFFFFF"/>
+                            </Border>
+
+                            <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,30,16,16">
+                                <Border x:Name="Step3FolderCardBorder" Width="260" Height="220" CornerRadius="18" Background="#F0FCDDC5" Padding="12">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border x:Name="Step3PreviewShapeBadge" Width="22" Height="22" CornerRadius="11" Background="{DynamicResource M3PrimaryBrush}">
+                                                <Path x:Name="Step3PreviewShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="11" Height="11" Fill="{DynamicResource M3OnPrimaryBrush}"/>
+                                            </Border>
+                                            <TextBlock Text="My Panak Folder" Grid.Column="1" Margin="8,0,0,0" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <UniformGrid Grid.Row="1" Columns="3" Rows="2" VerticalAlignment="Center">
+                                            <StackPanel HorizontalAlignment="Center" Margin="2">
+                                                <Border Width="34" Height="34" CornerRadius="8" Background="{DynamicResource M3SurfaceBrush}">
+                                                    <TextBlock Text="📸" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Photos" FontSize="9" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel HorizontalAlignment="Center" Margin="2">
+                                                <Border Width="34" Height="34" CornerRadius="8" Background="{DynamicResource M3SurfaceBrush}">
+                                                    <TextBlock Text="📄" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Docs" FontSize="9" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel HorizontalAlignment="Center" Margin="2">
+                                                <Border Width="34" Height="34" CornerRadius="8" Background="{DynamicResource M3SurfaceBrush}">
+                                                    <TextBlock Text="⚡" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="Projects" FontSize="9" Foreground="{DynamicResource M3OnSurfaceBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </UniformGrid>
+                                        <!-- Footer dots -->
+                                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                                            <Border Width="18" Height="5" CornerRadius="2.5" Background="{DynamicResource M3PrimaryBrush}" Margin="2,0"/>
+                                            <Border Width="5" Height="5" CornerRadius="2.5" Background="{DynamicResource M3TrackInactiveBrush}" Margin="2,0"/>
+                                            <Border Width="5" Height="5" CornerRadius="2.5" Background="{DynamicResource M3TrackInactiveBrush}" Margin="2,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- Right: Welcome Highlights & Actions -->
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <!-- Dynamic Vector Panak Brand Logo with Text -->
+                        <Viewbox Height="42" MaxWidth="210" HorizontalAlignment="Left" Margin="0,0,0,10" Stretch="Uniform">
+                            <Canvas Width="296" Height="88">
+                                <Path Data="M59.4086 1.20571C76.2803 -3.9745 92.0771 11.8223 86.8968 28.694L84.1639 37.595C82.8719 41.8029 82.8719 46.3016 84.1639 50.5095L86.8968 59.4105C92.0771 76.2822 76.2803 92.079 59.4086 86.8988L50.5076 84.1659C46.2997 82.8739 41.8009 82.8739 37.593 84.1659L28.6921 86.8988C11.8203 92.079 -3.97645 76.2822 1.20376 59.4105L3.93668 50.5095C5.22865 46.3016 5.22865 41.8029 3.93668 37.595L1.20376 28.694C-3.97645 11.8223 11.8203 -3.9745 28.692 1.20571L37.593 3.93863C41.8009 5.23061 46.2997 5.23061 50.5076 3.93863L59.4086 1.20571Z"
+                                      Fill="{DynamicResource LogoContainerBrush}"/>
+                                <Path Data="M23.0319 48.198C24.8429 45.2673 29.1571 45.2673 30.9681 48.198C31.9209 49.7399 33.7031 50.5863 35.5195 50.3597C38.9718 49.9288 41.6617 53.2555 40.4677 56.4791C39.8394 58.1752 40.2795 60.0771 41.5918 61.3364C44.0858 63.7298 43.1258 67.878 39.8258 68.9672C38.0895 69.5402 36.8562 71.0654 36.6761 72.8624C36.3338 76.2778 32.4467 78.1239 29.5259 76.2585C27.989 75.2769 26.011 75.2769 24.4741 76.2585C21.5533 78.1239 17.6662 76.2778 17.3239 72.8624C17.1438 71.0654 15.9105 69.5402 14.1742 68.9672C10.8742 67.878 9.91423 63.7298 12.4082 61.3364C13.7205 60.0771 14.1606 58.1752 13.5323 56.4791C12.3383 53.2555 15.0282 49.9288 18.4805 50.3597C20.2969 50.5863 22.0791 49.7399 23.0319 48.198Z"
+                                      Fill="{DynamicResource LogoCloudBrush}"/>
+                                <Path Data="M22.303 11.7907C24.3905 8.06977 29.6095 8.06976 31.697 11.7907L42.2653 30.6279C44.3528 34.3488 41.7434 39 37.5683 39H16.4317C12.2566 39 9.64716 34.3488 11.7347 30.6279L22.303 11.7907Z"
+                                      Fill="{DynamicResource LogoTriangleBrush}"/>
+                                <Path Data="M60.69 47.1992C62.9839 45.6003 66.0161 45.6003 68.31 47.1992L78.0961 54.0203C80.5738 55.7472 81.6123 58.9305 80.6373 61.8093L77.0467 72.4109C76.117 75.1559 73.5649 77 70.6955 77H58.3045C55.4351 77 52.883 75.1559 51.9533 72.4109L48.3627 61.8093C47.3877 58.9305 48.4262 55.7472 50.9039 54.0203L60.69 47.1992Z"
+                                      Fill="{DynamicResource LogoShieldBrush}"/>
+                                <Path Fill="{DynamicResource LogoEllipseBrush}">
+                                    <Path.Data>
+                                        <EllipseGeometry Center="63.5067,24.3126" RadiusX="17.9667" RadiusY="10.1973">
+                                            <EllipseGeometry.Transform>
+                                                <RotateTransform Angle="-49.923" CenterX="63.5067" CenterY="24.3126"/>
+                                            </EllipseGeometry.Transform>
+                                        </EllipseGeometry>
+                                    </Path.Data>
+                                </Path>
+                                <Path Data="M109.016 25.896H116.184C118.275 25.896 120.248 26.1307 122.104 26.6C123.96 27.0693 125.581 27.8053 126.968 28.808C128.355 29.8107 129.453 31.1013 130.264 32.68C131.075 34.2587 131.48 36.1573 131.48 38.376C131.48 40.6587 131.107 42.6213 130.36 44.264C129.613 45.8853 128.568 47.2187 127.224 48.264C125.88 49.288 124.269 50.0453 122.392 50.536C120.515 51.0053 118.445 51.24 116.184 51.24H113.496V59.976H105.432V29.288C105.432 28.8187 105.528 28.3813 105.72 27.976C105.912 27.5707 106.168 27.2187 106.488 26.92C106.808 26.6 107.181 26.3547 107.608 26.184C108.056 25.992 108.525 25.896 109.016 25.896ZM113.496 43.944H116.408C117.603 43.944 118.637 43.8373 119.512 43.624C120.408 43.3893 121.144 43.048 121.72 42.6C122.296 42.152 122.723 41.5867 123 40.904C123.277 40.2213 123.416 39.4213 123.416 38.504C123.416 37.5867 123.277 36.7973 123 36.136C122.723 35.4747 122.296 34.9307 121.72 34.504C121.165 34.056 120.451 33.736 119.576 33.544C118.723 33.3307 117.709 33.224 116.536 33.224H113.496V43.944ZM109.464 65.096C108.909 65.096 108.387 65 107.896 64.808C107.405 64.5947 106.979 64.3173 106.616 63.976C106.253 63.6347 105.965 63.24 105.752 62.792C105.539 62.3227 105.432 61.8213 105.432 61.288V59.976H113.496V61.288C113.496 61.8213 113.389 62.3227 113.176 62.792C112.963 63.24 112.664 63.6347 112.28 63.976C111.917 64.3173 111.491 64.5947 111 64.808C110.531 65 110.019 65.096 109.464 65.096ZM152.659 26.024C153.939 26.024 155.027 26.3653 155.923 27.048C156.819 27.7093 157.459 28.584 157.843 29.672L168.883 60.008C169.096 60.5413 169.203 61.0853 169.203 61.64C169.224 62.1947 169.139 62.7173 168.947 63.208C168.755 63.6773 168.467 64.104 168.083 64.488C167.699 64.872 167.219 65.16 166.643 65.352C166.046 65.5653 165.448 65.64 164.851 65.576C164.254 65.5333 163.699 65.384 163.187 65.128C162.675 64.872 162.216 64.52 161.811 64.072C161.406 63.6027 161.107 63.0693 160.915 62.472L158.099 54.376L147.507 54.28L144.627 62.472C144.371 63.1547 144.019 63.7307 143.571 64.2C143.123 64.648 142.622 64.9787 142.067 65.192C141.534 65.4267 140.968 65.544 140.371 65.544C139.795 65.5653 139.24 65.48 138.707 65.288C138.131 65.0747 137.662 64.7867 137.299 64.424C136.958 64.04 136.702 63.6133 136.531 63.144C136.36 62.6533 136.286 62.1413 136.307 61.608C136.328 61.0747 136.435 60.552 136.627 60.04L147.283 29.928C147.667 28.776 148.328 27.8373 149.267 27.112C150.227 26.3867 151.358 26.024 152.659 26.024ZM152.659 37.032L149.427 47.08H156.051L152.787 37.416C152.766 37.352 152.744 37.288 152.723 37.224C152.702 37.16 152.68 37.096 152.659 37.032ZM178.153 25.896C179.39 25.896 180.446 26.0027 181.321 26.216C182.196 26.408 182.964 26.728 183.625 27.176C184.286 27.624 184.873 28.2 185.385 28.904C185.897 29.608 186.409 30.4613 186.921 31.464L197.577 52.616C197.598 52.6587 197.62 52.7013 197.641 52.744C197.662 52.7867 197.684 52.8293 197.705 52.872C197.705 52.7867 197.705 52.712 197.705 52.648C197.705 52.584 197.705 52.5093 197.705 52.424L197.641 30.856H205.705V61.704C205.705 62.28 205.588 62.7813 205.353 63.208C205.14 63.6133 204.852 63.9547 204.489 64.232C204.126 64.5093 203.71 64.712 203.241 64.84C202.772 64.968 202.281 65.032 201.769 65.032C200.532 65.032 199.476 64.936 198.601 64.744C197.726 64.5307 196.958 64.2107 196.297 63.784C195.636 63.336 195.049 62.76 194.537 62.056C194.025 61.352 193.513 60.4987 193.001 59.496L182.121 37.704V60.392H174.057V29.224C174.057 28.6267 174.174 28.1147 174.409 27.688C174.644 27.2613 174.953 26.92 175.337 26.664C175.721 26.3867 176.158 26.1947 176.649 26.088C177.14 25.96 177.641 25.896 178.153 25.896ZM201.673 25.736C202.228 25.736 202.75 25.8427 203.241 26.056C203.732 26.248 204.158 26.5147 204.521 26.856C204.884 27.1973 205.172 27.6027 205.385 28.072C205.598 28.52 205.705 29.0107 205.705 29.544V30.856H197.641V29.544C197.641 29.0107 197.748 28.52 197.961 28.072C198.174 27.6027 198.462 27.1973 198.825 26.856C199.209 26.5147 199.646 26.248 200.137 26.056C200.628 25.8427 201.14 25.736 201.673 25.736ZM178.089 65.192C177.534 65.192 177.012 65.096 176.521 64.904C176.03 64.6907 175.604 64.4133 175.241 64.072C174.878 63.7093 174.59 63.304 174.377 62.856C174.164 62.3867 174.057 61.8853 174.057 61.352V60.392H182.121V61.352C182.121 61.8853 182.014 62.3867 181.801 62.856C181.588 63.304 181.289 63.7093 180.905 64.072C180.542 64.4133 180.116 64.6907 179.625 64.904C179.156 65.096 178.644 65.192 178.089 65.192ZM226.909 26.024C228.189 26.024 229.277 26.3653 230.173 27.048C231.069 27.7093 231.709 28.584 232.093 29.672L243.133 60.008C243.346 60.5413 243.453 61.0853 243.453 61.64C243.474 62.1947 243.389 62.7173 243.197 63.208C243.005 63.6773 242.717 64.104 242.333 64.488C241.949 64.872 241.469 65.16 240.893 65.352C240.296 65.5653 239.698 65.64 239.101 65.576C238.504 65.5333 237.949 65.384 237.437 65.128C236.925 64.872 236.466 64.52 236.061 64.072C235.656 63.6027 235.357 63.0693 235.165 62.472L232.349 54.376L221.757 54.28L218.877 62.472C218.621 63.1547 218.269 63.7307 217.821 64.2C217.373 64.648 216.872 64.9787 216.317 65.192C215.784 65.4267 215.218 65.544 214.621 65.544C214.045 65.5653 213.49 65.48 212.957 65.288C212.381 65.0747 211.912 64.7867 211.549 64.424C211.208 64.04 210.952 63.6133 210.781 63.144C210.61 62.6533 210.536 62.1413 210.557 61.608C210.578 61.0747 210.685 60.552 210.877 60.04L221.533 29.928C221.917 28.776 222.578 27.8373 223.517 27.112C224.477 26.3867 225.608 26.024 226.909 26.024ZM226.909 37.032L223.677 47.08H230.301L227.037 37.416C227.016 37.352 226.994 37.288 226.973 37.224C226.952 37.16 226.93 37.096 226.909 37.032ZM248.307 30.696H256.339V39.592L266.547 27.144C266.91 26.7173 267.326 26.376 267.795 26.12C268.264 25.8427 268.744 25.672 269.235 25.608C269.747 25.544 270.259 25.5867 270.771 25.736C271.283 25.864 271.763 26.1093 272.211 26.472C273.043 27.1333 273.491 27.944 273.555 28.904C273.64 29.864 273.342 30.7493 272.659 31.56L262.355 43.56L274.515 59.176C275.198 60.0293 275.486 60.9253 275.379 61.864C275.294 62.8027 274.803 63.6133 273.907 64.296C273.459 64.6373 272.968 64.8827 272.435 65.032C271.923 65.2027 271.4 65.256 270.867 65.192C270.334 65.1493 269.822 65 269.331 64.744C268.862 64.488 268.456 64.1253 268.115 63.656L256.339 48.232V60.616H248.307V30.696ZM252.339 65.48C251.784 65.48 251.262 65.3733 250.771 65.16C250.28 64.968 249.854 64.7013 249.491 64.36C249.128 64.0187 248.84 63.6133 248.627 63.144C248.414 62.6747 248.307 62.184 248.307 61.672V60.36H256.371V61.672C256.371 62.184 256.264 62.6747 256.051 63.144C255.838 63.6133 255.539 64.0187 255.155 64.36C254.792 64.7013 254.366 64.968 253.875 65.16C253.406 65.3733 252.894 65.48 252.339 65.48ZM252.339 25.736C252.894 25.736 253.406 25.8427 253.875 26.056C254.366 26.248 254.792 26.5147 255.155 26.856C255.539 27.1973 255.838 27.6027 256.051 28.072C256.264 28.52 256.371 29.0107 256.371 29.544V30.856H248.307V29.544C248.307 29.0107 248.414 28.52 248.627 28.072C248.84 27.6027 249.128 27.1973 249.491 26.856C249.854 26.5147 250.28 26.248 250.771 26.056C251.262 25.8427 251.784 25.736 252.339 25.736Z"
+                                      Fill="{DynamicResource LogoTextBrush}"/>
+                            </Canvas>
+                        </Viewbox>
+
+                        <!-- Titles -->
+                        <TextBlock x:Name="Step3TitleText" Text="Welcome to Panak" FontSize="19" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                        <TextBlock x:Name="Step3SubtitleText" Text="Material 3 Expressive popup folders for Windows" FontSize="11.5" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,12"/>
+
+                        <!-- Highlights Card -->
+                        <Border Style="{StaticResource MiniSectionCardStyle}" Padding="12,10">
+                            <StackPanel>
+                                <Grid Margin="0,2,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="22"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🎨" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="Feature1Text" Grid.Column="1" Text="Material You dynamic palettes &amp; expressive shapes" FontSize="11" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,2,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="22"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="📂" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="Feature2Text" Grid.Column="1" Text="Instant popup widgets with paged slider navigation" FontSize="11" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,2,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="22"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="⚡" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="Feature3Text" Grid.Column="1" Text="Quick Look via Spacebar &amp; Right Double-Click integration" FontSize="11" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Action Buttons: Ko-fi and Settings -->
+                        <Grid Margin="0,4,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="24"/>
+                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="⚡" FontSize="13" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="Feature3Text" Grid.Column="1" Text="Quick Look via Spacebar &amp; Right Double-Click integration" FontSize="11.5" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                            <Button x:Name="KofiBtn" Grid.Column="0" Margin="0,0,4,0" Style="{StaticResource SecondaryActionButtonStyle}" Content="☕ Ko-fi" Click="KofiBtn_Click"/>
+                            <Button x:Name="SettingsBtn" Grid.Column="1" Margin="4,0,0,0" Style="{StaticResource SecondaryActionButtonStyle}" Content="⚙️ Settings" Click="SettingsBtn_Click"/>
                         </Grid>
                     </StackPanel>
-                </Border>
-            </StackPanel>
+                </Grid>
+            </Grid>
 
-            <!-- Actions Footer: Ko-fi and Go to Settings matching designs -->
-            <Grid Grid.Row="2" Margin="0,8,0,0">
+            <!-- Actions Footer: Back | Step Dots (pill active) | Skip & Next -->
+            <Grid Grid.Row="2" Margin="0,4,0,0">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Ko-fi Support Button -->
-                <Button x:Name="KofiBtn" Grid.Column="0" Margin="0,0,6,0" Style="{StaticResource ActionButtonStyle}" Content="☕ Ko-fi" Click="KofiBtn_Click"/>
+                <!-- Left: Back Button -->
+                <Button x:Name="BackBtn" Grid.Column="0" Style="{StaticResource SecondaryActionButtonStyle}" Content="Back" Visibility="Collapsed" Click="BackBtn_Click"/>
 
-                <!-- Go to Settings Button -->
-                <Button x:Name="SettingsBtn" Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource ActionButtonStyle}" Content="⚙️ Settings" Click="SettingsBtn_Click"/>
+                <!-- Center: Pager Dots (Active dot is elongated pill!) -->
+                <StackPanel x:Name="StepDotsPanel" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Border x:Name="StepDot0" Width="26" Height="8" CornerRadius="4" Background="{DynamicResource M3PrimaryBrush}" Margin="3,0" Cursor="Hand" MouseDown="StepDot_MouseDown" Tag="0"/>
+                    <Border x:Name="StepDot1" Width="8" Height="8" CornerRadius="4" Background="{DynamicResource M3TrackInactiveBrush}" Margin="3,0" Cursor="Hand" MouseDown="StepDot_MouseDown" Tag="1"/>
+                    <Border x:Name="StepDot2" Width="8" Height="8" CornerRadius="4" Background="{DynamicResource M3TrackInactiveBrush}" Margin="3,0" Cursor="Hand" MouseDown="StepDot_MouseDown" Tag="2"/>
+                </StackPanel>
+
+                <!-- Right: Skip and Next Buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="SkipBtn" Style="{StaticResource SecondaryActionButtonStyle}" Content="Skip" Margin="0,0,8,0" Click="SkipBtn_Click"/>
+                    <Button x:Name="NextBtn" Style="{StaticResource ActionButtonStyle}" Content="Next" MinWidth="90" Click="NextBtn_Click"/>
+                </StackPanel>
             </Grid>
         </Grid>
     </Border>

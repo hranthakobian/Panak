@@ -20,6 +20,12 @@ namespace Panak.Models {
         public bool OpenInCenterOnly { get; set; } = false;
         public bool AutoCheckUpdates { get; set; } = true;
         public double FolderOpacity { get; set; } = 0.85;
+        public bool FolderBlurEnabled { get; set; } = true;
+        public double FolderBlurRadius { get; set; } = 28.0;
+        public string PagingMode { get; set; } = "Slider";
+        public int GridRows { get; set; } = 3;
+        public bool SliderArrowsEnabled { get; set; } = true;
+        public bool SliderDragEnabled { get; set; } = true;
         public string GitHubRepo { get; set; } = "hranthakobian/Panak";
         public DateTime? LastUpdateCheck { get; set; }
     }

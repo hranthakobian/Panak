@@ -205,11 +205,11 @@ namespace Panak.Views {
 
             ProgressTitleText.Text = _isUninstallMode ? loc["Uninstall"] : loc["Install"];
             InstallationProgressBar.IsIndeterminate = true;
-            ProgressStatusText.Text = _isUninstallMode ? "Preparing uninstallation..." : "Preparing installation...";
+            ProgressStatusText.Text = _isUninstallMode ? loc["PreparingUninstall"] : loc["PreparingInstall"];
 
             if (_isUninstallMode) {
                 bool success = await System.Threading.Tasks.Task.Run(() => InstallerService.Uninstall());
-                ShowCompleted(success, loc["UninstalledSuccess"], "Uninstallation failed.");
+                ShowCompleted(success, loc["UninstalledSuccess"], loc["UninstallFailed"]);
             } else {
                 bool desktop = DesktopShortcutCheckBox.IsChecked ?? true;
                 bool startMenu = StartMenuShortcutCheckBox.IsChecked ?? true;
@@ -220,7 +220,7 @@ namespace Panak.Views {
                     SettingsService.Instance.Current.Language = LocalizationService.Instance.CurrentLanguage;
                     SettingsService.Instance.SaveSettings();
                 }
-                ShowCompleted(success, loc["InstalledSuccess"], "Installation failed.");
+                ShowCompleted(success, loc["InstalledSuccess"], loc["InstallFailed"]);
             }
         }
 
@@ -241,7 +241,7 @@ namespace Panak.Views {
             } else {
                 StatusEmoji.Text = "⚠️";
                 StatusTitle.Text = failMsg;
-                StatusSubtitle.Text = "Please ensure no files are currently locked and try again.";
+                StatusSubtitle.Text = loc["InstallErrorEnsureUnlocked"];
             }
         }
 
