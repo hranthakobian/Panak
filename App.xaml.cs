@@ -248,7 +248,7 @@ namespace Panak {
 
         private void OnIpcCommandReceived(string command) {
             Dispatcher.Invoke(() => {
-                string[] parts = command.Split('|');
+                string[] parts = command.Split('|', 5);
                 string action = parts[0].ToUpperInvariant();
                 string payload = parts.Length > 1 ? parts[1] : string.Empty;
                 Point? clickPt = null;
@@ -312,9 +312,11 @@ namespace Panak {
         }
 
         private void CreateAndOpenFromPath(string filePath, Point? clickPt = null) {
-            var selected = ExplorerHelper.GetActiveExplorerSelectedPaths();
+            var selected = ExplorerHelper.GetSelectedPathsForTarget(filePath);
             string[] filesToCollect;
             if (selected.Count > 1 && selected.Contains(filePath, StringComparer.OrdinalIgnoreCase)) {
+                filesToCollect = selected.ToArray();
+            } else if (selected.Count > 0) {
                 filesToCollect = selected.ToArray();
             } else {
                 filesToCollect = new[] { filePath };

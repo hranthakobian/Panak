@@ -15,7 +15,8 @@ namespace Panak.Tests {
             var loc = LocalizationService.Instance;
             string[] testKeys = new[] {
                 "CreateFolder", "OpenInPanak", "NewFolder", "Settings",
-                "LockFolders", "IconShape", "ItemsPerRow", "FocusMode",
+                "LockFolders", "IconShape", "ItemsPerRow", "FocusMode", "FocusDimming",
+                "FocusBlur", "FocusBlurDesc", "FocusBlurRadius",
                 "Language", "RightDoubleClick", "SpaceQuickLook", "Install", "Uninstall",
                 "ConvertToPanak", "RevertToRegular", "AlwaysOpenWithPanak",
                 "CombineFilesOnDrop", "CombineFilesOnDropDesc", "CollectIntoPanakFolder",
@@ -196,6 +197,8 @@ namespace Panak.Tests {
                 GridColumns = 6,
                 FocusModeEnabled = true,
                 FocusDimmingOpacity = 0.55,
+                FocusBlurEnabled = false,
+                FocusBlurRadius = 35.0,
                 IconShape = "Circle",
                 IsLocked = true,
                 ThemeColor = "#8B5CF6",
@@ -210,6 +213,8 @@ namespace Panak.Tests {
             Assert.AreEqual("hy", deserialized.Language);
             Assert.AreEqual(6, deserialized.GridColumns);
             Assert.AreEqual(0.55, deserialized.FocusDimmingOpacity);
+            Assert.IsFalse(deserialized.FocusBlurEnabled);
+            Assert.AreEqual(35.0, deserialized.FocusBlurRadius);
             Assert.AreEqual("Circle", deserialized.IconShape);
             Assert.IsTrue(deserialized.IsLocked);
             Assert.AreEqual("#8B5CF6", deserialized.ThemeColor);

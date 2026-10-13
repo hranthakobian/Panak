@@ -1061,6 +1061,29 @@
                                 <TextBlock x:Name="FocusDimmingValueText" Grid.Column="1" Text="45%" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
                             </Grid>
                             <Slider x:Name="FocusDimmingSlider" Minimum="0" Maximum="80" Value="45" Style="{StaticResource MaterialSliderStyle}" ValueChanged="FocusDimmingSlider_ValueChanged"/>
+
+                            <Border Height="1" Background="{DynamicResource M3SurfaceContainerBrush}" Margin="0,10,0,10" BorderThickness="0"/>
+
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="FocusBlurLabel" Text="Background Blur Effect" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="FocusBlurDescText" Text="Blur desktop background behind popup" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="FocusBlurCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
+                            </Grid>
+                            <Grid Margin="0,8,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="FocusBlurRadiusLabel" Text="Blur Radius" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                                <TextBlock x:Name="FocusBlurValueText" Grid.Column="1" Text="28 px" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                            </Grid>
+                            <Slider x:Name="FocusBlurSlider" Minimum="2" Maximum="60" Value="28" Style="{StaticResource MaterialSliderStyle}" ValueChanged="FocusBlurSlider_ValueChanged"/>
                         </StackPanel>
                     </Border>
 

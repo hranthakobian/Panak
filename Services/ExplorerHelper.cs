@@ -395,114 +395,225 @@ namespace Panak.Services {
             return null;
         }
 
-        public static List<string> GetActiveExplorerSelectedPaths() {
+        [ComImport]
+        [Guid("85CB6900-4D95-11CF-960C-0080C7F4EE85")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
+        private interface IShellWindows {
+            int Count { get; }
+            [return: MarshalAs(UnmanagedType.IDispatch)]
+            object Item([In, Optional] object index);
+            [return: MarshalAs(UnmanagedType.IDispatch)]
+            object FindWindowSW([In] ref object pvarLoc, [In] ref object pvarLocRoot, [In] int swClass, out int pHWND, [In] int swFlags);
+        }
+
+        public static List<string> GetDesktopSelectedPaths() {
             var result = new List<string>();
             try {
-                IntPtr activeHwnd = ShellHelper.GetForegroundWindow();
                 Type? shellType = Type.GetTypeFromProgID("Shell.Application");
-                if (shellType == null) {
-                    return result;
-                }
+                if (shellType == null) return result;
                 dynamic? shell = Activator.CreateInstance(shellType);
-                if (shell == null) {
-                    return result;
-                }
-
+                if (shell == null) return result;
                 dynamic windows = shell.Windows();
-                int count = windows.Count;
-
-                for (int i = 0; i < count; i++) {
-                    dynamic item = windows.Item(i);
-                    if (item == null) {
-                        continue;
-                    }
-
-                    try {
-                        long hwnd = item.HWND;
-                        if (activeHwnd == IntPtr.Zero || hwnd == activeHwnd.ToInt64()) {
-                            dynamic? doc = item.Document;
-                            if (doc != null) {
-                                dynamic? selected = doc.SelectedItems();
-                                if (selected != null && (int)selected.Count > 0) {
-                                    int cnt = (int)selected.Count;
-                                    for (int s = 0; s < cnt; s++) {
-                                        dynamic? sel = selected.Item(s);
-                                        if (sel != null) {
-                                            string? path = (string?)sel.Path;
-                                            if (!string.IsNullOrEmpty(path)) {
-                                                result.Add(path);
-                                            }
-                                        }
-                                    }
-                                    if (result.Count > 0) {
-                                        return result;
-                                    }
-                                }
-
-                                dynamic? focusedItem = doc.FocusedItem;
-                                if (focusedItem != null) {
-                                    string? fpath = (string?)focusedItem.Path;
-                                    if (!string.IsNullOrEmpty(fpath)) {
-                                        result.Add(fpath);
-                                        return result;
+                IShellWindows sw = (IShellWindows)windows;
+                object loc = 0; // CSIDL_DESKTOP
+                object locRoot = 0;
+                int hwnd = 0;
+                // SWC_DESKTOP = 8, SWFO_NEEDDISPATCH = 1
+                object disp = sw.FindWindowSW(ref loc, ref locRoot, 8, out hwnd, 1);
+                if (disp != null) {
+                    dynamic d = disp;
+                    dynamic? doc = d.Document;
+                    if (doc != null) {
+                        dynamic? selected = doc.SelectedItems();
+                        if (selected != null && (int)selected.Count > 0) {
+                            int cnt = (int)selected.Count;
+                            for (int s = 0; s < cnt; s++) {
+                                dynamic? sel = selected.Item(s);
+                                if (sel != null) {
+                                    string? path = (string?)sel.Path;
+                                    if (!string.IsNullOrEmpty(path) && !result.Contains(path, StringComparer.OrdinalIgnoreCase)) {
+                                        result.Add(path);
                                     }
                                 }
                             }
                         }
-                    } catch {
-                        // Skip
                     }
                 }
-            } catch {
-                // COM error
+            } catch { }
+            return result;
+        }
+
+        public static List<string> GetSelectedPathsForTarget(string? targetPath = null) {
+            var result = new List<string>();
+            bool isTargetOnDesktop = false;
+            string targetDir = string.Empty;
+
+            if (!string.IsNullOrEmpty(targetPath)) {
+                targetDir = Path.GetDirectoryName(targetPath) ?? string.Empty;
+                string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                string commonDesktop = Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
+                string oneDriveDesktop = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OneDrive", "Desktop");
+
+                if (string.Equals(targetDir, desktop, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(targetDir, commonDesktop, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(targetDir, oneDriveDesktop, StringComparison.OrdinalIgnoreCase)) {
+                    isTargetOnDesktop = true;
+                }
             }
 
-            // Fallback: check selected elements in UIAutomation
+            // 1. If target is on Desktop or target not specified, check Desktop selection first
+            if (isTargetOnDesktop || string.IsNullOrEmpty(targetPath)) {
+                var desktopItems = GetDesktopSelectedPaths();
+                if (desktopItems.Count > 0) {
+                    if (string.IsNullOrEmpty(targetPath) || desktopItems.Contains(targetPath, StringComparer.OrdinalIgnoreCase)) {
+                        return desktopItems;
+                    }
+                }
+            }
+
+            // 2. Query open Explorer windows via Shell.Application
             try {
-                IntPtr fg = ShellHelper.GetForegroundWindow();
-                if (fg != IntPtr.Zero) {
-                    AutomationElement? root = AutomationElement.FromHandle(fg);
-                    if (root != null) {
-                        string[] desktopDirs = new[] {
-                            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                            Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
-                            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OneDrive", "Desktop")
-                        };
+                Type? shellType = Type.GetTypeFromProgID("Shell.Application");
+                if (shellType != null) {
+                    dynamic? shell = Activator.CreateInstance(shellType);
+                    if (shell != null) {
+                        dynamic windows = shell.Windows();
+                        int count = windows.Count;
+
+                        // First pass: look for window whose SelectedItems contains targetPath
+                        for (int i = 0; i < count; i++) {
+                            dynamic item = windows.Item(i);
+                            if (item == null) continue;
+                            try {
+                                dynamic? doc = item.Document;
+                                if (doc != null) {
+                                    dynamic? selected = doc.SelectedItems();
+                                    if (selected != null && (int)selected.Count > 0) {
+                                        var windowList = new List<string>();
+                                        int cnt = (int)selected.Count;
+                                        for (int s = 0; s < cnt; s++) {
+                                            dynamic? sel = selected.Item(s);
+                                            if (sel != null) {
+                                                string? p = (string?)sel.Path;
+                                                if (!string.IsNullOrEmpty(p) && !windowList.Contains(p, StringComparer.OrdinalIgnoreCase)) {
+                                                    windowList.Add(p);
+                                                }
+                                            }
+                                        }
+
+                                        if (!string.IsNullOrEmpty(targetPath) && windowList.Contains(targetPath, StringComparer.OrdinalIgnoreCase)) {
+                                            return windowList;
+                                        }
+
+                                        if (string.IsNullOrEmpty(targetPath) && windowList.Count > 0) {
+                                            IntPtr activeHwnd = ShellHelper.GetForegroundWindow();
+                                            IntPtr rootHwnd = ShellHelper.GetAncestor(activeHwnd, ShellHelper.GA_ROOT);
+                                            long hwnd = item.HWND;
+                                            if (hwnd == activeHwnd.ToInt64() || (rootHwnd != IntPtr.Zero && hwnd == rootHwnd.ToInt64())) {
+                                                return windowList;
+                                            }
+                                            if (result.Count == 0) {
+                                                result = windowList;
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch { }
+                        }
+
+                        // Second pass: match by window's folder path
+                        if (!string.IsNullOrEmpty(targetDir)) {
+                            for (int i = 0; i < count; i++) {
+                                dynamic item = windows.Item(i);
+                                if (item == null) continue;
+                                try {
+                                    dynamic? doc = item.Document;
+                                    if (doc != null) {
+                                        string? folderPath = (string?)doc.Folder?.Self?.Path;
+                                        if (!string.IsNullOrEmpty(folderPath) && folderPath.TrimEnd('\\').Equals(targetDir.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) {
+                                            dynamic? selected = doc.SelectedItems();
+                                            if (selected != null && (int)selected.Count > 0) {
+                                                var windowList = new List<string>();
+                                                int cnt = (int)selected.Count;
+                                                for (int s = 0; s < cnt; s++) {
+                                                    dynamic? sel = selected.Item(s);
+                                                    if (sel != null) {
+                                                        string? p = (string?)sel.Path;
+                                                        if (!string.IsNullOrEmpty(p) && !windowList.Contains(p, StringComparer.OrdinalIgnoreCase)) {
+                                                            windowList.Add(p);
+                                                        }
+                                                    }
+                                                }
+                                                if (windowList.Count > 0) {
+                                                    return windowList;
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch { }
+                            }
+                        }
+                    }
+                }
+            } catch { }
+
+            // 3. Check Desktop listview via UIAutomation directly
+            try {
+                IntPtr listview = GetDesktopListView();
+                if (listview != IntPtr.Zero) {
+                    AutomationElement? desktopElem = AutomationElement.FromHandle(listview);
+                    if (desktopElem != null) {
                         var selectedCondition = new PropertyCondition(SelectionItemPattern.IsSelectedProperty, true);
-                        var selectedElements = root.FindAll(TreeScope.Descendants, selectedCondition);
+                        var selectedElements = desktopElem.FindAll(TreeScope.Children, selectedCondition);
                         if (selectedElements != null && selectedElements.Count > 0) {
+                            string[] desktopDirs = new[] {
+                                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                                Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
+                                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OneDrive", "Desktop")
+                            };
+
+                            var desktopSelected = new List<string>();
                             foreach (AutomationElement el in selectedElements) {
                                 string name = el.Current.Name;
-                                if (string.IsNullOrEmpty(name)) {
-                                    continue;
-                                }
+                                if (string.IsNullOrEmpty(name)) continue;
                                 foreach (var d in desktopDirs) {
                                     if (!string.IsNullOrEmpty(d) && Directory.Exists(d)) {
                                         string candidate = Path.Combine(d, name);
                                         if (File.Exists(candidate) || Directory.Exists(candidate)) {
-                                            if (!result.Contains(candidate, StringComparer.OrdinalIgnoreCase)) {
-                                                result.Add(candidate);
+                                            if (!desktopSelected.Contains(candidate, StringComparer.OrdinalIgnoreCase)) {
+                                                desktopSelected.Add(candidate);
                                             }
                                             break;
                                         }
-                                        try {
-                                            var matches = Directory.GetFiles(d, name + ".*");
-                                            if (matches.Length > 0 && !result.Contains(matches[0], StringComparer.OrdinalIgnoreCase)) {
-                                                result.Add(matches[0]);
-                                                break;
-                                            }
-                                        } catch { }
                                     }
+                                }
+                            }
+
+                            if (desktopSelected.Count > 0) {
+                                if (string.IsNullOrEmpty(targetPath) || desktopSelected.Contains(targetPath, StringComparer.OrdinalIgnoreCase)) {
+                                    return desktopSelected;
                                 }
                             }
                         }
                     }
                 }
-            } catch {
-                // Fallback
+            } catch { }
+
+            // 4. Return any items found in open windows
+            if (result.Count > 0) {
+                return result;
+            }
+
+            // 5. If specific target was given and not found in any multi-selection, return the single target
+            if (!string.IsNullOrEmpty(targetPath)) {
+                return new List<string> { targetPath };
             }
 
             return result;
+        }
+
+        public static List<string> GetActiveExplorerSelectedPaths() {
+            return GetSelectedPathsForTarget(null);
         }
 
         public static bool IsFocusInsideTextEdit() {

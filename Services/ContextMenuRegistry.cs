@@ -36,13 +36,16 @@ namespace Panak.Services {
                 string openText = LocalizationService.Instance["OpenInPanak"];
                 string convertText = LocalizationService.Instance["ConvertToPanak"];
 
-                // 1. HKCU\Software\Classes\*\shell\PanakCreate (Create Panak folder from file / selection)
-                using (var key = Registry.CurrentUser.CreateSubKey($@"{HKCU_CLASSES}\*\shell\PanakCreate")) {
-                    key.SetValue("", createText);
-                    key.SetValue("MultiSelectModel", "Player");
-                    key.SetValue("Icon", $"\"{exePath}\",0");
-                    using var cmdKey = key.CreateSubKey("command");
-                    cmdKey.SetValue("", $"\"{exePath}\" --create \"%1\"");
+                // 1. HKCU\Software\Classes\*\shell\PanakCreate, Directory, Folder, AllFilesystemObjects
+                string[] createKeys = new[] { "*", "Directory", "Folder", "AllFilesystemObjects" };
+                foreach (var ck in createKeys) {
+                    using (var key = Registry.CurrentUser.CreateSubKey($@"{HKCU_CLASSES}\{ck}\shell\PanakCreate")) {
+                        key.SetValue("", createText);
+                        key.SetValue("MultiSelectModel", "Player");
+                        key.SetValue("Icon", $"\"{exePath}\",0");
+                        using var cmdKey = key.CreateSubKey("command");
+                        cmdKey.SetValue("", $"\"{exePath}\" --create \"%1\"");
+                    }
                 }
 
                 // 2. HKCU\Software\Classes\Directory\shell\PanakOpen and Folder\shell\PanakOpen (Open with Panak)
@@ -95,10 +98,10 @@ namespace Panak.Services {
                 if (!File.Exists(comhostPath)) {
                     string[] candidates = new[] {
                         Path.Combine(dir, "Panak.ShellExt.comhost.dll"),
-                        Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "Panak.ShellExt", "bin", "Debug", "net8.0-windows", "Panak.ShellExt.comhost.dll")),
-                        Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "..", "Panak.ShellExt", "bin", "Debug", "net8.0-windows", "Panak.ShellExt.comhost.dll")),
                         Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "Panak.ShellExt", "bin", "Release", "net8.0-windows", "Panak.ShellExt.comhost.dll")),
                         Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "..", "Panak.ShellExt", "bin", "Release", "net8.0-windows", "Panak.ShellExt.comhost.dll")),
+                        Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "Panak.ShellExt", "bin", "Debug", "net8.0-windows", "Panak.ShellExt.comhost.dll")),
+                        Path.GetFullPath(Path.Combine(dir, "..", "..", "..", "..", "Panak.ShellExt", "bin", "Debug", "net8.0-windows", "Panak.ShellExt.comhost.dll")),
                     };
                     foreach (var cand in candidates) {
                         if (File.Exists(cand)) {
@@ -192,6 +195,9 @@ namespace Panak.Services {
                 } catch { }
 
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\*\shell\PanakCreate", false);
+                Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Directory\shell\PanakCreate", false);
+                Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Folder\shell\PanakCreate", false);
+                Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\AllFilesystemObjects\shell\PanakCreate", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Directory\shell\PanakOpen", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Directory\shell\PanakConvert", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Folder\shell\PanakOpen", false);

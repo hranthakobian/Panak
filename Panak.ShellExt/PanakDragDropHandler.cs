@@ -44,6 +44,8 @@ namespace Panak.ShellExt {
         private const uint MIIM_STRING = 0x00000040;
         private const uint MIIM_BITMAP = 0x00000080;
         private const uint MFS_ENABLED = 0x00000000;
+        private const uint MF_BYPOSITION = 0x00000400;
+        private const uint MF_STRING = 0x00000000;
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct MENUITEMINFO {
@@ -89,8 +91,14 @@ namespace Panak.ShellExt {
         [DllImport("ole32.dll")]
         private static extern void ReleaseStgMedium(ref STGMEDIUM pmedium);
 
+        [DllImport("user32.dll")]
+        private static extern int GetMenuItemCount(IntPtr hMenu);
+
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern bool InsertMenuItemW(IntPtr hMenu, uint uItem, bool fByPosition, ref MENUITEMINFO lpmii);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool InsertMenuW(IntPtr hMenu, uint uPosition, uint uFlags, UIntPtr uIDNewItem, string lpNewItem);
 
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
@@ -115,6 +123,10 @@ namespace Panak.ShellExt {
                     if (SHGetPathFromIDListW(pidlFolder, sb) && sb.Length > 0) {
                         _targetDir = sb.ToString();
                     }
+                }
+
+                if (string.IsNullOrEmpty(_targetDir)) {
+                    _targetDir = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                 }
 
                 if (pDataObj != IntPtr.Zero) {
@@ -158,26 +170,46 @@ namespace Panak.ShellExt {
             }
 
             try {
+                int menuCount = GetMenuItemCount(hmenu);
+                uint targetPos = indexMenu;
+                if (menuCount >= 0 && targetPos > (uint)menuCount) {
+                    targetPos = (uint)menuCount;
+                }
+
                 string title = GetLocalizedMenuTitle();
                 string menuText = _files.Count > 1 ? $"{title} ({_files.Count})" : title;
 
                 IntPtr hIconBmp = GetPanakIconBitmap();
 
-                MENUITEMINFO mii = new MENUITEMINFO {
-                    cbSize = (uint)Marshal.SizeOf<MENUITEMINFO>(),
-                    fMask = MIIM_STRING | MIIM_ID | MIIM_STATE,
-                    fState = MFS_ENABLED,
-                    wID = idCmdFirst,
-                    dwTypeData = menuText
-                };
-
+                bool inserted = false;
                 if (hIconBmp != IntPtr.Zero) {
-                    mii.fMask |= MIIM_BITMAP;
-                    mii.hbmpItem = hIconBmp;
+                    MENUITEMINFO mii = new MENUITEMINFO {
+                        cbSize = (uint)Marshal.SizeOf<MENUITEMINFO>(),
+                        fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_BITMAP,
+                        fState = MFS_ENABLED,
+                        wID = idCmdFirst,
+                        dwTypeData = menuText,
+                        hbmpItem = hIconBmp
+                    };
+                    inserted = InsertMenuItemW(hmenu, targetPos, true, ref mii);
                 }
 
-                InsertMenuItemW(hmenu, indexMenu, true, ref mii);
-                return 1; // 1 item added (offset 0)
+                if (!inserted) {
+                    MENUITEMINFO miiTextOnly = new MENUITEMINFO {
+                        cbSize = (uint)Marshal.SizeOf<MENUITEMINFO>(),
+                        fMask = MIIM_STRING | MIIM_ID | MIIM_STATE,
+                        fState = MFS_ENABLED,
+                        wID = idCmdFirst,
+                        dwTypeData = menuText
+                    };
+                    inserted = InsertMenuItemW(hmenu, targetPos, true, ref miiTextOnly);
+                }
+
+                if (!inserted) {
+                    inserted = InsertMenuW(hmenu, targetPos, MF_BYPOSITION | MF_STRING, (UIntPtr)idCmdFirst, menuText);
+                }
+
+                return inserted ? 1 : 0; // 1 item added (offset 0), or 0 if failed
             } catch {
                 return 0;
             }
@@ -331,6 +363,17 @@ namespace Panak.ShellExt {
                 }
 
                 // 3. Check adjacent folder (same directory as DLL)
+                try {
+                    string asmLoc = typeof(PanakDragDropHandler).Assembly.Location;
+                    if (!string.IsNullOrEmpty(asmLoc)) {
+                        string asmDir = Path.GetDirectoryName(asmLoc) ?? string.Empty;
+                        string candidate = Path.Combine(asmDir, "Panak.exe");
+                        if (File.Exists(candidate)) {
+                            return candidate;
+                        }
+                    }
+                } catch { }
+
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string localExe = Path.Combine(baseDir, "Panak.exe");
                 if (File.Exists(localExe)) {

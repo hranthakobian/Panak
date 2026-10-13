@@ -29,6 +29,9 @@ namespace Panak.Views {
             ApplyLocalization();
             _isInitializing = false;
 
+            FocusModeCheckBox.Click += (s, e) => UpdateFocusModeControlsEnabled();
+            FocusBlurCheckBox.Click += (s, e) => UpdateFocusModeControlsEnabled();
+
             GitHubUpdateService.Instance.StatusChanged += OnUpdateStatusChanged;
             GitHubUpdateService.Instance.DownloadProgressChanged += OnDownloadProgressChanged;
             Closed += (s, e) => {
@@ -270,6 +273,10 @@ namespace Panak.Views {
             FocusModeCheckBox.IsChecked = s.FocusModeEnabled;
             FocusDimmingSlider.Value = s.FocusDimmingOpacity * 100;
             FocusDimmingValueText.Text = $"{(int)(s.FocusDimmingOpacity * 100)}%";
+            FocusBlurCheckBox.IsChecked = s.FocusBlurEnabled;
+            FocusBlurSlider.Value = s.FocusBlurRadius;
+            FocusBlurValueText.Text = $"{(int)s.FocusBlurRadius} px";
+            UpdateFocusModeControlsEnabled();
 
             // Lock & Hooks
             LockFoldersCheckBox.IsChecked = s.IsLocked;
@@ -319,6 +326,9 @@ namespace Panak.Views {
             FocusModeLabel.Text = loc["FocusMode"];
             FocusModeDescText.Text = loc["FocusModeDesc"];
             FocusDimmingLabel.Text = loc["FocusDimming"];
+            FocusBlurLabel.Text = loc["FocusBlur"];
+            FocusBlurDescText.Text = loc["FocusBlurDesc"];
+            FocusBlurRadiusLabel.Text = loc["FocusBlurRadius"];
             CenterPopupLabel.Text = loc["CenterPopupOnly"];
             CenterPopupDescText.Text = loc["CenterPopupOnlyDesc"];
             LockFoldersLabel.Text = loc["LockFolders"];
@@ -465,6 +475,21 @@ namespace Panak.Views {
             }
         }
 
+        private void FocusBlurSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (FocusBlurValueText != null) {
+                FocusBlurValueText.Text = $"{(int)e.NewValue} px";
+            }
+        }
+
+        private void UpdateFocusModeControlsEnabled() {
+            bool focusOn = FocusModeCheckBox?.IsChecked ?? true;
+            bool blurOn = FocusBlurCheckBox?.IsChecked ?? true;
+
+            if (FocusDimmingSlider != null) FocusDimmingSlider.IsEnabled = focusOn;
+            if (FocusBlurCheckBox != null) FocusBlurCheckBox.IsEnabled = focusOn;
+            if (FocusBlurSlider != null) FocusBlurSlider.IsEnabled = focusOn && blurOn;
+        }
+
         private void GeneralFolderOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
             if (GeneralFolderOpacityValueText != null) {
                 GeneralFolderOpacityValueText.Text = $"{(int)e.NewValue}%";
@@ -489,6 +514,8 @@ namespace Panak.Views {
             s.GridColumns = (int)GridColumnsSlider.Value;
             s.FocusModeEnabled = FocusModeCheckBox.IsChecked ?? true;
             s.FocusDimmingOpacity = FocusDimmingSlider.Value / 100.0;
+            s.FocusBlurEnabled = FocusBlurCheckBox.IsChecked ?? true;
+            s.FocusBlurRadius = FocusBlurSlider.Value;
             s.IsLocked = LockFoldersCheckBox.IsChecked ?? false;
             s.OpenInCenterOnly = CenterPopupCheckBox.IsChecked ?? false;
             s.RightDoubleClickEnabled = RightDoubleClickCheckBox.IsChecked ?? true;

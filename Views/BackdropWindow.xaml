@@ -5,15 +5,15 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
-        Topmost="False"
+        Topmost="True"
         ShowInTaskbar="False"
         ShowActivated="False"
         Focusable="False"
         WindowStartupLocation="Manual">
     <Grid x:Name="BackdropGrid" ClipToBounds="True" Opacity="0" MouseDown="BackdropGrid_MouseDown">
-        <Image x:Name="BlurImage" Stretch="Fill" Margin="-25">
+        <Image x:Name="BlurImage" Stretch="Fill" Margin="-35">
             <Image.Effect>
-                <BlurEffect Radius="28" KernelType="Gaussian" RenderingBias="Performance"/>
+                <BlurEffect x:Name="BackdropBlurEffect" Radius="28" KernelType="Gaussian" RenderingBias="Performance"/>
             </Image.Effect>
         </Image>
         <Rectangle x:Name="DimOverlay" Fill="#000000" Opacity="0.40"/>

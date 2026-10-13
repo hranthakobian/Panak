@@ -23,6 +23,7 @@ namespace Panak.Services {
         private readonly HashSet<string> _knownFolders = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, System.Threading.Timer> _debounceTimers = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, long> _lastUpdateTicks = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, long> _creationTimes = new(StringComparer.OrdinalIgnoreCase);
         private readonly object _debounceLock = new();
 
         public bool IsPopupOpen => _isOpen;
@@ -270,6 +271,11 @@ namespace Panak.Services {
                     return false;
                 }
 
+                // Never dissolve while popup is open for this folder
+                if (_isOpen && string.Equals(_currentOpenPath, folderPath, StringComparison.OrdinalIgnoreCase)) {
+                    return false;
+                }
+
                 var userItems = GetUserItems(folderPath);
                 if (userItems.Count > 1) {
                     return false;
@@ -345,6 +351,10 @@ namespace Panak.Services {
                     _lastUpdateTicks.Remove(folderPath);
                 }
 
+                lock (_creationTimes) {
+                    _creationTimes.Remove(folderPath);
+                }
+
                 // Clean up system files and remove ReadOnly on folder
                 try {
                     string desktopIni = Path.Combine(folderPath, "desktop.ini");
@@ -396,7 +406,18 @@ namespace Panak.Services {
                 return;
             }
 
-            if (CheckAndDissolveFolder(folderPath)) {
+            bool inGracePeriod = false;
+            lock (_creationTimes) {
+                if (_creationTimes.TryGetValue(folderPath, out long createTime)) {
+                    if (Environment.TickCount64 - createTime < 15000) {
+                        inGracePeriod = true;
+                    } else {
+                        _creationTimes.Remove(folderPath);
+                    }
+                }
+            }
+
+            if (!inGracePeriod && CheckAndDissolveFolder(folderPath)) {
                 return;
             }
 
@@ -444,7 +465,18 @@ namespace Panak.Services {
                             return;
                         }
 
-                        if (CheckAndDissolveFolder(folderPath)) {
+                        bool inTimerGrace = false;
+                        lock (_creationTimes) {
+                            if (_creationTimes.TryGetValue(folderPath, out long createTime)) {
+                                if (Environment.TickCount64 - createTime < 15000) {
+                                    inTimerGrace = true;
+                                } else {
+                                    _creationTimes.Remove(folderPath);
+                                }
+                            }
+                        }
+
+                        if (!inTimerGrace && CheckAndDissolveFolder(folderPath)) {
                             return;
                         }
 
@@ -568,8 +600,23 @@ namespace Panak.Services {
                 _backdropWindow.ClickedOutside -= OnBackdropClicked;
                 _backdropWindow.ClickedOutside += OnBackdropClicked;
 
-                Rect workArea = SystemParameters.WorkArea;
-                _backdropWindow.ShowBackdrop(workArea, SettingsService.Instance.Current.FocusDimmingOpacity);
+                Rect fullScreen = new Rect(
+                    SystemParameters.VirtualScreenLeft,
+                    SystemParameters.VirtualScreenTop,
+                    SystemParameters.VirtualScreenWidth,
+                    SystemParameters.VirtualScreenHeight);
+
+                var s = SettingsService.Instance.Current;
+                _backdropWindow.ShowBackdrop(fullScreen, s.FocusDimmingOpacity, s.FocusBlurEnabled, s.FocusBlurRadius);
+
+                if (_popupWindow != null && _popupWindow.IsVisible) {
+                    IntPtr popupHwnd = new System.Windows.Interop.WindowInteropHelper(_popupWindow).Handle;
+                    IntPtr backdropHwnd = new System.Windows.Interop.WindowInteropHelper(_backdropWindow).Handle;
+                    if (popupHwnd != IntPtr.Zero && backdropHwnd != IntPtr.Zero) {
+                        ShellHelper.SetWindowPos(backdropHwnd, popupHwnd, 0, 0, 0, 0, ShellHelper.SWP_NOMOVE | ShellHelper.SWP_NOSIZE | ShellHelper.SWP_NOACTIVATE);
+                        ShellHelper.BringWindowToTop(popupHwnd);
+                    }
+                }
             } else {
                 _backdropWindow?.HideBackdrop();
             }
@@ -702,6 +749,12 @@ namespace Panak.Services {
                 _lastUpdateTicks.Remove(oldPath);
             }
 
+            lock (_creationTimes) {
+                if (_creationTimes.Remove(oldPath, out var ct)) {
+                    _creationTimes[newPath] = ct;
+                }
+            }
+
             if (string.Equals(_currentOpenPath, oldPath, StringComparison.OrdinalIgnoreCase)) {
                 _currentOpenPath = newPath;
             }
@@ -824,22 +877,39 @@ namespace Panak.Services {
                 File.WriteAllText(metaFile, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
                 File.SetAttributes(metaFile, FileAttributes.Hidden);
 
-                _knownFolders.Add(targetPath);
-                WatchFolder(targetPath);
+                lock (_creationTimes) {
+                    _creationTimes[targetPath] = Environment.TickCount64;
+                }
 
-                // Copy or move initial files
+                // Copy or move initial files and directories before starting watcher
                 if (filesToInclude != null && filesToInclude.Length > 0) {
                     foreach (var file in filesToInclude) {
                         try {
                             if (File.Exists(file)) {
                                 string dest = Path.Combine(targetPath, Path.GetFileName(file));
-                                File.Move(file, dest, true);
+                                int c = 1;
+                                while (File.Exists(dest) || Directory.Exists(dest)) {
+                                    string fn = Path.GetFileNameWithoutExtension(file);
+                                    string ext = Path.GetExtension(file);
+                                    dest = Path.Combine(targetPath, $"{fn} ({c++}){ext}");
+                                }
+                                File.Move(file, dest);
+                            } else if (Directory.Exists(file)) {
+                                string dest = Path.Combine(targetPath, Path.GetFileName(file));
+                                int c = 1;
+                                while (File.Exists(dest) || Directory.Exists(dest)) {
+                                    dest = Path.Combine(targetPath, $"{Path.GetFileName(file)} ({c++})");
+                                }
+                                Directory.Move(file, dest);
                             }
                         } catch {
-                            // Ignore single file move failure
+                            // Ignore single file or directory move failure
                         }
                     }
                 }
+
+                _knownFolders.Add(targetPath);
+                WatchFolder(targetPath);
 
                 // Generate initial Android-style 2x2 preview icon
                 IconGenerator.GenerateFolderIcon(targetPath, data.IconShape, data.Color, data.BackgroundOpacity);
@@ -869,8 +939,13 @@ namespace Panak.Services {
                     return string.Empty;
                 }
 
+                var validFiles = files.Where(f => !string.IsNullOrEmpty(f) && (File.Exists(f) || Directory.Exists(f))).ToArray();
+                if (validFiles.Length == 0) {
+                    return string.Empty;
+                }
+
                 if (string.IsNullOrEmpty(targetDir) || !Directory.Exists(targetDir)) {
-                    string first = files.FirstOrDefault(f => !string.IsNullOrEmpty(f)) ?? string.Empty;
+                    string first = validFiles.FirstOrDefault(f => !string.IsNullOrEmpty(f)) ?? string.Empty;
                     if (!string.IsNullOrEmpty(first)) {
                         targetDir = Path.GetDirectoryName(first);
                     }
@@ -884,8 +959,11 @@ namespace Panak.Services {
                     targetPos = new Point(bounds.Value.X + bounds.Value.Width / 2, bounds.Value.Y + bounds.Value.Height / 2);
                 }
 
-                string baseName = Path.GetFileNameWithoutExtension(files[0]);
-                string newFolder = CreatePanakFolder(targetDir, files, baseName, targetPos);
+                string baseName = Path.GetFileNameWithoutExtension(validFiles[0]);
+                if (string.IsNullOrEmpty(baseName)) {
+                    baseName = LocalizationService.Instance["NewFolder"];
+                }
+                string newFolder = CreatePanakFolder(targetDir, validFiles, baseName, targetPos);
                 if (!string.IsNullOrEmpty(newFolder)) {
                     Rect openBounds = (bounds != null && !bounds.Value.IsEmpty)
                         ? bounds.Value

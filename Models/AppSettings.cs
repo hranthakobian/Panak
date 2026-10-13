@@ -4,6 +4,8 @@ namespace Panak.Models {
         public int GridColumns { get; set; } = 5;
         public bool FocusModeEnabled { get; set; } = true;
         public double FocusDimmingOpacity { get; set; } = 0.40;
+        public bool FocusBlurEnabled { get; set; } = true;
+        public double FocusBlurRadius { get; set; } = 28.0;
         public string IconShape { get; set; } = "Squircle";
         public bool IsLocked { get; set; } = false;
         public bool RightDoubleClickEnabled { get; set; } = true;
