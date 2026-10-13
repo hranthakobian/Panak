@@ -62,13 +62,14 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
                         <Grid x:Name="RootGrid" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <!-- Unselected soft container -->
-                            <Border x:Name="UnselectedBg" Width="34" Height="34" CornerRadius="17"
-                                    Background="{DynamicResource M3SurfaceContainerBrush}"
-                                    BorderThickness="0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <!-- Unselected soft container: Rounded-corner square (CornerRadius 10) -->
+                            <Border x:Name="UnselectedBg" Width="34" Height="34" CornerRadius="10"
+                                    Background="{DynamicResource M3SurfaceContainerHighBrush}"
+                                    BorderBrush="{DynamicResource M3SurfaceContainerHighestBrush}"
+                                    BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             
-                            <!-- Selected primary badge -->
-                            <Border x:Name="SelectedBg" Width="34" Height="34" CornerRadius="12"
+                            <!-- Selected primary badge: Rounded-corner square (CornerRadius 10) -->
+                            <Border x:Name="SelectedBg" Width="34" Height="34" CornerRadius="10"
                                     Background="{DynamicResource M3PrimaryBrush}"
                                     BorderThickness="0" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
@@ -988,8 +989,8 @@
                                 </StackPanel>
                             </Grid>
 
-                            <!-- Preset Pastel Swatches: Now with 8 colors -->
-                            <StackPanel x:Name="SettingsColorSwatchesPanel" Orientation="Horizontal" Margin="0,0,0,6">
+                            <!-- Preset Pastel Swatches + Inline Custom Swatches (All side-by-side) -->
+                            <WrapPanel x:Name="SettingsColorSwatchesPanel" Orientation="Horizontal" Margin="0,0,0,6">
                                 <RadioButton x:Name="SettingsAccentSwatch" GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCDDC5" Tag="#FCDDC5" ToolTip="Peach / Default" Checked="SettingsColorSwatch_Checked"/>
                                 <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#C5FCC5" Tag="#C5FCC5" ToolTip="Mint" Checked="SettingsColorSwatch_Checked"/>
                                 <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#C5FCFC" Tag="#C5FCFC" ToolTip="Cyan" Checked="SettingsColorSwatch_Checked"/>
@@ -998,10 +999,8 @@
                                 <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCC5FC" Tag="#FCC5FC" ToolTip="Lilac" Checked="SettingsColorSwatch_Checked"/>
                                 <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCC5DD" Tag="#FCC5DD" ToolTip="Rose" Checked="SettingsColorSwatch_Checked"/>
                                 <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCFCC5" Tag="#FCFCC5" ToolTip="Butter Yellow" Checked="SettingsColorSwatch_Checked"/>
-                            </StackPanel>
-
-                            <!-- Dynamic Custom Saved Swatches -->
-                            <WrapPanel x:Name="CustomSwatchesWrapPanel" Margin="0,0,0,8" VerticalAlignment="Center"/>
+                                <WrapPanel x:Name="CustomSwatchesWrapPanel" Orientation="Horizontal" VerticalAlignment="Center"/>
+                            </WrapPanel>
 
                             <!-- Pastel Hue Slider: Panel updates in real time (Stretched full width) -->
                             <Slider x:Name="SettingsHueSlider"
@@ -1395,6 +1394,24 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Backup & Restore Configuration: Export & Import -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="ExportImportSectionTitle" Text="Կարգավորումների պահուստավորում" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                <TextBlock x:Name="ExportImportSectionDesc" Text="Արտահանեք կամ ներմուծեք JSON ֆայլով" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="ExportSettingsBtn" Style="{StaticResource SecondaryButtonStyle}" Content="Արտահանել" Padding="14,6" Margin="0,0,8,0" Click="ExportSettingsBtn_Click"/>
+                                <Button x:Name="ImportSettingsBtn" Style="{StaticResource SecondaryButtonStyle}" Content="Ներմուծել" Padding="14,6" Click="ImportSettingsBtn_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
                     <!-- Installer & Uninstaller Tools -->
                     <Border Style="{StaticResource SectionCardStyle}">
                         <Grid>
@@ -1421,8 +1438,6 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Panak v1.9.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <Button x:Name="ExportSettingsBtn" Style="{StaticResource SecondaryButtonStyle}" Content="Export" Padding="10,4" Margin="0,0,6,0" FontSize="11" Click="ExportSettingsBtn_Click"/>
-                    <Button x:Name="ImportSettingsBtn" Style="{StaticResource SecondaryButtonStyle}" Content="Import" Padding="10,4" FontSize="11" Click="ImportSettingsBtn_Click"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button x:Name="CancelBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Margin="0,0,10,0" Click="CancelBtn_Click"/>

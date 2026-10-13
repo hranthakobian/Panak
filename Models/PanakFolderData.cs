@@ -43,11 +43,31 @@ namespace Panak.Models {
                 // Ignore load error
             }
 
+            var s = SettingsService.Instance.Current;
+            string shape = string.IsNullOrEmpty(s.IconShape) ? "Squircle" : s.IconShape;
+            if (s.RandomShapeOnCreate) {
+                string[] shapes = { "Squircle", "Circle", "Clover", "Scallop", "Arch" };
+                shape = shapes[Random.Shared.Next(shapes.Length)];
+            }
+
+            string color = string.IsNullOrEmpty(s.ThemeColor) ? ShellHelper.GetDefaultPastelColorHex() : s.ThemeColor;
+            if (s.RandomColorOnCreate) {
+                int randomHue = Random.Shared.Next(0, 360);
+                var (_, _, c) = ShellHelper.GetMaterialYouTonalPalette(randomHue);
+                color = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+            }
+
+            double opacity = s.FolderOpacity > 0 ? s.FolderOpacity : 0.85;
+            if (s.RandomOpacityOnCreate) {
+                opacity = Math.Round(0.40 + Random.Shared.NextDouble() * 0.55, 2);
+            }
+
             return new PanakFolderData {
                 Title = diskFolderName,
-                Color = ShellHelper.GetDefaultPastelColorHex(),
-                BackgroundOpacity = 0.85,
-                ThemeMode = "Auto"
+                Color = color,
+                IconShape = shape,
+                BackgroundOpacity = opacity,
+                ThemeMode = s.ThemeMode ?? "Auto"
             };
         }
 

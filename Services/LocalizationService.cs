@@ -218,6 +218,8 @@ namespace Panak.Services {
                 ["InvalidSettingsFile"] = "Անվավեր կարգավորումների ֆայլ",
                 ["ItemsCountBadge"] = "{0} նիշք",
                 ["AddCustomColor"] = "Ավելացնել ընթացիկ գույնը",
+                ["BackupAndRestore"] = "Կարգավորումների պահուստավորում",
+                ["ExportImportDesc"] = "Արտահանեք կամ ներմուծեք JSON ֆայլով",
             },
             ["en"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Popup Folders",
@@ -420,6 +422,8 @@ namespace Panak.Services {
                 ["InvalidSettingsFile"] = "Invalid settings file",
                 ["ItemsCountBadge"] = "{0} items",
                 ["AddCustomColor"] = "Add current color to swatches",
+                ["BackupAndRestore"] = "Backup & Restore",
+                ["ExportImportDesc"] = "Export or import configuration via JSON file",
             },
             ["ru"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Папки",
@@ -622,6 +626,8 @@ namespace Panak.Services {
                 ["InvalidSettingsFile"] = "Неверный файл настроек",
                 ["ItemsCountBadge"] = "{0} объектов",
                 ["AddCustomColor"] = "Добавить текущий цвет в палитру",
+                ["BackupAndRestore"] = "Резервное копирование",
+                ["ExportImportDesc"] = "Экспорт или импорт настроек через JSON",
             },
             ["fr"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Dossiers popup",
@@ -819,6 +825,8 @@ namespace Panak.Services {
                 ["InvalidSettingsFile"] = "Fichier de paramètres invalide",
                 ["ItemsCountBadge"] = "{0} éléments",
                 ["AddCustomColor"] = "Ajouter la couleur actuelle",
+                ["BackupAndRestore"] = "Sauvegarde et restauration",
+                ["ExportImportDesc"] = "Exporter ou importer via un fichier JSON",
             },
             ["es"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Carpetas emergentes",
@@ -1016,6 +1024,8 @@ namespace Panak.Services {
                 ["InvalidSettingsFile"] = "Archivo de configuración no válido",
                 ["ItemsCountBadge"] = "{0} elementos",
                 ["AddCustomColor"] = "Agregar color actual",
+                ["BackupAndRestore"] = "Copia de seguridad y restauración",
+                ["ExportImportDesc"] = "Exportar o importar configuración mediante archivo JSON",
             },
             ["zh"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - 弹出式文件夹",
@@ -1213,6 +1223,8 @@ namespace Panak.Services {
                 ["InvalidSettingsFile"] = "无效的设置文件",
                 ["ItemsCountBadge"] = "{0} 个项目",
                 ["AddCustomColor"] = "将当前颜色添加到调色板",
+                ["BackupAndRestore"] = "备份与恢复",
+                ["ExportImportDesc"] = "通过 JSON 文件导出或导入配置",
             },
             ["ar"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - مجلدات منبثقة",
@@ -1410,6 +1422,8 @@ namespace Panak.Services {
                 ["InvalidSettingsFile"] = "ملف إعدادات غير صالح",
                 ["ItemsCountBadge"] = "{0} عناصر",
                 ["AddCustomColor"] = "إضافة اللون الحالي إلى اللوحة",
+                ["BackupAndRestore"] = "النسخ الاحتياطي والاستعادة",
+                ["ExportImportDesc"] = "تصدير أو استيراد الإعدادات عبر ملف JSON",
             },
         };
 

@@ -133,17 +133,10 @@ namespace Panak.Views {
             Step1HueSlider.Value = hue;
             Step1OpacitySlider.Value = Math.Round(_folderOpacity * 100);
             Step1OpacityValueText.Text = $"{(int)Step1OpacitySlider.Value}%";
-            Step1BlurCheckBox.IsChecked = _folderBlurEnabled;
             Step1BlurRadiusSlider.Value = _folderBlurRadius;
             Step1RadiusValueText.Text = $"{(int)_folderBlurRadius} px";
-            Step1BlurRadiusContainer.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
+            RebuildStep1CustomSwatchesUI();
 
-            if (Step1RandomShapeCheckBox != null) Step1RandomShapeCheckBox.IsChecked = s.RandomShapeOnCreate;
-            if (Step1RandomColorCheckBox != null) Step1RandomColorCheckBox.IsChecked = s.RandomColorOnCreate;
-            if (Step1RandomOpacityCheckBox != null) Step1RandomOpacityCheckBox.IsChecked = s.RandomOpacityOnCreate;
-
-            if (Step1DirectBlurSlider != null) Step1DirectBlurSlider.Value = _folderBlurRadius;
-            if (Step1DirectBlurValueText != null) Step1DirectBlurValueText.Text = $"{(int)_folderBlurRadius}px";
 
             // Step 2 controls
             if (string.Equals(_pagingMode, "Scrollbar", StringComparison.OrdinalIgnoreCase)) Step2ScrollbarRadio.IsChecked = true;
@@ -203,7 +196,7 @@ namespace Panak.Views {
 
             Title = loc["WelcomeToPanak"];
             StepIndicatorText.Text = $"{loc["Step"]} {_currentStep + 1} / 3";
-            Step1TitleText.Text = $"{loc["Step"]} 1: {loc["Step1Title"]}";
+            Step1TitleText.Text = loc["Step1Title"] ?? "Գույն, ձեւ եւ թափանցիկություն";
             Step1SubtitleText.Text = loc["Step1Subtitle"];
             Step1ShapeLabel.Text = loc["IconShape"];
             ShapeCircleRadio.ToolTip = loc["Circle"];
@@ -214,15 +207,14 @@ namespace Panak.Views {
             Step1ColorLabel.Text = loc["DefaultFolderColor"];
             Step1OpacityLabel.Text = loc["GeneralFolderOpacity"];
             Step1BlurLabel.Text = loc["FolderBlur"];
-            Step1RadiusLabel.Text = loc["FolderBlurRadius"];
             Step1LivePreviewBadge.Text = loc["LivePreview"];
 
-            if (Step1RandomShapeCheckBox != null) Step1RandomShapeCheckBox.ToolTip = loc["RandomShape"] ?? "Random shape";
-            if (Step1RandomColorCheckBox != null) Step1RandomColorCheckBox.ToolTip = loc["RandomColor"] ?? "Random color";
-            if (Step1RandomOpacityCheckBox != null) Step1RandomOpacityCheckBox.ToolTip = loc["RandomOpacity"] ?? "Random opacity";
-            if (Step1PreviewCountText != null) Step1PreviewCountText.Text = $"{MockItems.Length} {loc["ItemsCountBadge"] ?? "նիշք"}";
+            string countFormatted = string.Format(loc["ItemsCountBadge"] ?? "{0} նիշք", MockItems.Length);
+            if (Step1PreviewCountText != null) Step1PreviewCountText.Text = countFormatted;
+            if (Step2PreviewCountText != null) Step2PreviewCountText.Text = countFormatted;
+            if (Step3PreviewCountText != null) Step3PreviewCountText.Text = countFormatted;
 
-            Step2TitleText.Text = $"{loc["Step"]} 2: {loc["Step2Title"]}";
+            Step2TitleText.Text = loc["Step2Title"] ?? "Դասավորություն եւ վարքագիծ";
             Step2SubtitleText.Text = loc["Step2Subtitle"];
             Step2PagingModeLabel.Text = loc["PagingMode"];
             Step2SliderRadio.Content = loc["PagingModeSlider"];
@@ -305,6 +297,8 @@ namespace Panak.Views {
             if (Step1FolderCardBorder != null) { Step1FolderCardBorder.Width = popupW; Step1FolderCardBorder.Height = popupH; }
             if (Step2BlurUnderlay != null) { Step2BlurUnderlay.Width = popupW; Step2BlurUnderlay.Height = popupH; }
             if (Step2FolderCardBorder != null) { Step2FolderCardBorder.Width = popupW; Step2FolderCardBorder.Height = popupH; }
+            if (Step3BlurUnderlay != null) { Step3BlurUnderlay.Width = popupW; Step3BlurUnderlay.Height = popupH; }
+            if (Step3FolderCardBorder != null) { Step3FolderCardBorder.Width = popupW; Step3FolderCardBorder.Height = popupH; }
 
             bool isSlider = string.Equals(_pagingMode, "Slider", StringComparison.OrdinalIgnoreCase);
             int itemsPerPage = Math.Max(1, actualCols * actualRows);
@@ -330,27 +324,39 @@ namespace Panak.Views {
                 Step2NextBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
             }
 
+            if (Step3SliderViewport != null && Step3ScrollViewer != null && Step3FooterPagerGrid != null) {
+                Step3SliderViewport.Visibility = isSlider ? Visibility.Visible : Visibility.Collapsed;
+                Step3ScrollViewer.Visibility = isSlider ? Visibility.Collapsed : Visibility.Visible;
+                Step3FooterPagerGrid.Visibility = showPager ? Visibility.Visible : Visibility.Collapsed;
+                Step3PrevBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
+                Step3NextBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
+            }
+
             BuildSliderPages(Step1SliderPagesPanel, actualCols, actualRows, itemsPerPage);
             BuildSliderPages(Step2SliderPagesPanel, actualCols, actualRows, itemsPerPage);
+            BuildSliderPages(Step3SliderPagesPanel, actualCols, actualRows, itemsPerPage);
 
             BuildScrollGrid(Step1ScrollGrid, actualCols);
             BuildScrollGrid(Step2ScrollGrid, actualCols);
+            BuildScrollGrid(Step3ScrollGrid, actualCols);
 
             UpdatePreviewDots(Step1DotsPanel);
             UpdatePreviewDots(Step2DotsPanel);
+            UpdatePreviewDots(Step3DotsPanel);
             AnimatePreviewPage(false);
 
             var loc = LocalizationService.Instance;
-            if (Step1PreviewCountText != null) {
-                Step1PreviewCountText.Text = $"{totalItems} {loc["ItemsCountBadge"] ?? "նիշք"}";
-            }
+            string countFormatted = string.Format(loc["ItemsCountBadge"] ?? "{0} նիշք", totalItems);
+            if (Step1PreviewCountText != null) Step1PreviewCountText.Text = countFormatted;
+            if (Step2PreviewCountText != null) Step2PreviewCountText.Text = countFormatted;
+            if (Step3PreviewCountText != null) Step3PreviewCountText.Text = countFormatted;
         }
 
         private FrameworkElement CreateMockItemView(string name, string icon) {
             var border = new Border {
                 Width = 68,
                 Height = 76,
-                Margin = new Thickness(1),
+                Margin = new Thickness(5),
                 CornerRadius = new CornerRadius(10),
                 Background = Brushes.Transparent,
                 Cursor = Cursors.Hand
@@ -403,8 +409,8 @@ namespace Panak.Views {
                 var grid = new UniformGrid {
                     Columns = cols,
                     Rows = rows,
-                    Width = cols * 70.0,
-                    Height = rows * 78.0,
+                    Width = cols * 78.0,
+                    Height = rows * 86.0,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
                 };
@@ -424,7 +430,7 @@ namespace Panak.Views {
             if (grid == null) return;
             grid.Children.Clear();
             grid.Columns = cols;
-            grid.Width = cols * 70.0;
+            grid.Width = cols * 78.0;
             foreach (var item in MockItems) {
                 grid.Children.Add(CreateMockItemView(item.Name, item.Icon));
             }
@@ -455,6 +461,7 @@ namespace Panak.Views {
                     AnimatePreviewPage(true);
                     UpdatePreviewDots(Step1DotsPanel);
                     UpdatePreviewDots(Step2DotsPanel);
+                    UpdatePreviewDots(Step3DotsPanel);
                 };
                 panel.Children.Add(dot);
             }
@@ -470,6 +477,7 @@ namespace Panak.Views {
                 };
                 if (Step1PagesTranslate != null) Step1PagesTranslate.BeginAnimation(TranslateTransform.XProperty, anim);
                 if (Step2PagesTranslate != null) Step2PagesTranslate.BeginAnimation(TranslateTransform.XProperty, anim);
+                if (Step3PagesTranslate != null) Step3PagesTranslate.BeginAnimation(TranslateTransform.XProperty, anim);
             } else {
                 if (Step1PagesTranslate != null) {
                     Step1PagesTranslate.BeginAnimation(TranslateTransform.XProperty, null);
@@ -478,6 +486,10 @@ namespace Panak.Views {
                 if (Step2PagesTranslate != null) {
                     Step2PagesTranslate.BeginAnimation(TranslateTransform.XProperty, null);
                     Step2PagesTranslate.X = targetX;
+                }
+                if (Step3PagesTranslate != null) {
+                    Step3PagesTranslate.BeginAnimation(TranslateTransform.XProperty, null);
+                    Step3PagesTranslate.X = targetX;
                 }
             }
         }
@@ -489,12 +501,14 @@ namespace Panak.Views {
                     AnimatePreviewPage(true);
                     UpdatePreviewDots(Step1DotsPanel);
                     UpdatePreviewDots(Step2DotsPanel);
+                    UpdatePreviewDots(Step3DotsPanel);
                     e.Handled = true;
                 } else if (e.Delta > 0 && _currentPreviewPage > 0) {
                     _currentPreviewPage--;
                     AnimatePreviewPage(true);
                     UpdatePreviewDots(Step1DotsPanel);
                     UpdatePreviewDots(Step2DotsPanel);
+                    UpdatePreviewDots(Step3DotsPanel);
                     e.Handled = true;
                 }
             }
@@ -521,11 +535,13 @@ namespace Panak.Views {
                     AnimatePreviewPage(true);
                     UpdatePreviewDots(Step1DotsPanel);
                     UpdatePreviewDots(Step2DotsPanel);
+                    UpdatePreviewDots(Step3DotsPanel);
                 } else if (deltaX > 30 && _currentPreviewPage > 0) {
                     _currentPreviewPage--;
                     AnimatePreviewPage(true);
                     UpdatePreviewDots(Step1DotsPanel);
                     UpdatePreviewDots(Step2DotsPanel);
+                    UpdatePreviewDots(Step3DotsPanel);
                 }
             }
         }
@@ -536,6 +552,7 @@ namespace Panak.Views {
                 AnimatePreviewPage(true);
                 UpdatePreviewDots(Step1DotsPanel);
                 UpdatePreviewDots(Step2DotsPanel);
+                UpdatePreviewDots(Step3DotsPanel);
             }
         }
 
@@ -545,6 +562,7 @@ namespace Panak.Views {
                 AnimatePreviewPage(true);
                 UpdatePreviewDots(Step1DotsPanel);
                 UpdatePreviewDots(Step2DotsPanel);
+                UpdatePreviewDots(Step3DotsPanel);
             }
         }
 
@@ -559,33 +577,38 @@ namespace Panak.Views {
         }
 
         private void TogglePopupVisibility() {
-            if (Step1PopupContainer == null || Step1PopupScale == null) return;
             bool openInCenter = SettingsService.Instance.Current.OpenInCenterOnly;
-            Step1PopupContainer.RenderTransformOrigin = openInCenter ? new Point(0.5, 0.5) : new Point(0.0, 1.0);
+            var origin = openInCenter ? new Point(0.5, 0.5) : new Point(0.0, 1.0);
 
-            if (_isPreviewOpen) {
-                var scaleAnim = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(200)) {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-                };
-                var opacityAnim = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(180));
-                scaleAnim.Completed += (s, e) => {
-                    Step1PopupContainer.Visibility = Visibility.Collapsed;
-                };
-                Step1PopupScale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
-                Step1PopupScale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
-                Step1PopupContainer.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
-                _isPreviewOpen = false;
-            } else {
-                Step1PopupContainer.Visibility = Visibility.Visible;
-                var scaleAnim = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(220)) {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                };
-                var opacityAnim = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(200));
-                Step1PopupScale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
-                Step1PopupScale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
-                Step1PopupContainer.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
-                _isPreviewOpen = true;
+            void AnimateContainer(Grid? container, ScaleTransform? scale) {
+                if (container == null || scale == null) return;
+                container.RenderTransformOrigin = origin;
+                if (_isPreviewOpen) {
+                    var scaleAnim = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(200)) {
+                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+                    };
+                    var opacityAnim = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(180));
+                    scaleAnim.Completed += (s, e) => {
+                        container.Visibility = Visibility.Collapsed;
+                    };
+                    scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
+                    scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
+                    container.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+                } else {
+                    container.Visibility = Visibility.Visible;
+                    var scaleAnim = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(220)) {
+                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                    };
+                    var opacityAnim = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(200));
+                    scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
+                    scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
+                    container.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+                }
             }
+
+            AnimateContainer(Step1PopupContainer, Step1PopupScale);
+            AnimateContainer(Step3PopupContainer, Step3PopupScale);
+            _isPreviewOpen = !_isPreviewOpen;
         }
 
         private void UpdateLivePreview() {
@@ -603,9 +626,8 @@ namespace Panak.Views {
                 // Step 1
                 if (Step1FolderCardBorder != null) {
                     Step1FolderCardBorder.Background = folderBrush;
-                    Step1FolderBlurFx.Radius = _folderBlurRadius;
-                    Step1BlurUnderlay.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
-                    ApplyShapeToPreviewBadge(Step1PreviewShapePath, Step1PreviewShapeBadge, _selectedShape);
+                    if (Step1FolderBlurFx != null) Step1FolderBlurFx.Radius = _folderBlurRadius;
+                    if (Step1BlurUnderlay != null) Step1BlurUnderlay.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
                     if (Step1DesktopIconShapePath != null) {
                         Step1DesktopIconShapePath.Fill = folderBrush;
                         ApplyShapeToDesktopIconPlate(Step1DesktopIconShapePath, null, _selectedShape);
@@ -615,18 +637,20 @@ namespace Panak.Views {
                 // Step 2
                 if (Step2FolderCardBorder != null) {
                     Step2FolderCardBorder.Background = folderBrush;
-                    Step2FolderBlurFx.Radius = _folderBlurRadius;
-                    Step2BlurUnderlay.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
-                    Step2FocusDimOverlay.Opacity = _focusMode ? _focusDimming : 0.0;
-                    ApplyShapeToPreviewBadge(Step2PreviewShapePath, Step2PreviewShapeBadge, _selectedShape);
+                    if (Step2FolderBlurFx != null) Step2FolderBlurFx.Radius = _folderBlurRadius;
+                    if (Step2BlurUnderlay != null) Step2BlurUnderlay.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
+                    if (Step2FocusDimOverlay != null) Step2FocusDimOverlay.Opacity = _focusMode ? _focusDimming : 0.0;
                 }
 
                 // Step 3
                 if (Step3FolderCardBorder != null) {
                     Step3FolderCardBorder.Background = folderBrush;
-                    Step3FolderBlurFx.Radius = _folderBlurRadius;
-                    Step3BlurUnderlay.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
-                    ApplyShapeToPreviewBadge(Step3PreviewShapePath, Step3PreviewShapeBadge, _selectedShape);
+                    if (Step3FolderBlurFx != null) Step3FolderBlurFx.Radius = _folderBlurRadius;
+                    if (Step3BlurUnderlay != null) Step3BlurUnderlay.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
+                    if (Step3DesktopIconShapePath != null) {
+                        Step3DesktopIconShapePath.Fill = folderBrush;
+                        ApplyShapeToDesktopIconPlate(Step3DesktopIconShapePath, null, _selectedShape);
+                    }
                 }
             } catch { }
         }
@@ -757,12 +781,8 @@ namespace Panak.Views {
             s.IconShape = _selectedShape;
             s.ThemeColor = _selectedColor;
             s.FolderOpacity = _folderOpacity;
-            s.FolderBlurEnabled = _folderBlurEnabled;
+            s.FolderBlurEnabled = _folderBlurRadius > 0;
             s.FolderBlurRadius = _folderBlurRadius;
-
-            if (Step1RandomShapeCheckBox != null) s.RandomShapeOnCreate = Step1RandomShapeCheckBox.IsChecked ?? false;
-            if (Step1RandomColorCheckBox != null) s.RandomColorOnCreate = Step1RandomColorCheckBox.IsChecked ?? false;
-            if (Step1RandomOpacityCheckBox != null) s.RandomOpacityOnCreate = Step1RandomOpacityCheckBox.IsChecked ?? false;
 
             s.PagingMode = _pagingMode;
             s.GridColumns = _gridColumns;
@@ -792,6 +812,7 @@ namespace Panak.Views {
                 if (!s.CustomPaletteColors.Contains(_selectedColor, StringComparer.OrdinalIgnoreCase)) {
                     s.CustomPaletteColors.Add(_selectedColor);
                     SettingsService.Instance.SaveSettings(s);
+                    RebuildStep1CustomSwatchesUI();
                     var anim = new DoubleAnimation(1.3, 1.0, TimeSpan.FromMilliseconds(200));
                     var scale = new ScaleTransform(1, 1);
                     Step1ColorIndicator.RenderTransformOrigin = new Point(0.5, 0.5);
@@ -802,19 +823,40 @@ namespace Panak.Views {
             }
         }
 
-        private void Step1DirectBlurSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (_isInitializing) return;
-            _folderBlurRadius = e.NewValue;
-            if (Step1DirectBlurValueText != null) {
-                Step1DirectBlurValueText.Text = $"{(int)e.NewValue}px";
+        private void RebuildStep1CustomSwatchesUI() {
+            if (Step1CustomSwatchesPanel == null) return;
+            Step1CustomSwatchesPanel.Children.Clear();
+            var s = SettingsService.Instance.Current;
+            if (s.CustomPaletteColors == null || s.CustomPaletteColors.Count == 0) return;
+
+            foreach (var hex in s.CustomPaletteColors) {
+                string colHex = hex;
+                var rb = new RadioButton {
+                    GroupName = "WizardColorGroup",
+                    Style = (Style)FindResource("ColorSwatchStyle"),
+                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colHex)),
+                    Tag = colHex,
+                    ToolTip = colHex,
+                    Margin = new Thickness(3, 0, 3, 0)
+                };
+                if (string.Equals(_selectedColor, colHex, StringComparison.OrdinalIgnoreCase)) {
+                    rb.IsChecked = true;
+                }
+                rb.Checked += (snd, ev) => {
+                    if (_isInitializing) return;
+                    _selectedColor = colHex;
+                    double hue = ShellHelper.GetHueFromHex(colHex);
+                    ApplyMaterialYouPalette(hue);
+                    _isInitializing = true;
+                    try {
+                        Step1HueSlider.Value = hue;
+                    } finally {
+                        _isInitializing = false;
+                    }
+                    UpdateLivePreview();
+                };
+                Step1CustomSwatchesPanel.Children.Add(rb);
             }
-            if (Step1BlurRadiusSlider != null && Math.Abs(Step1BlurRadiusSlider.Value - e.NewValue) > 0.5) {
-                Step1BlurRadiusSlider.Value = e.NewValue;
-            }
-            if (Step1RadiusValueText != null) {
-                Step1RadiusValueText.Text = $"{(int)e.NewValue} px";
-            }
-            UpdateLivePreview();
         }
 
         // Event Handlers for Step 1
@@ -860,22 +902,11 @@ namespace Panak.Views {
             if (!_isInitializing) UpdateLivePreview();
         }
 
-        private void Step1BlurCheckBox_Click(object sender, RoutedEventArgs e) {
-            _folderBlurEnabled = Step1BlurCheckBox.IsChecked ?? true;
-            Step1BlurRadiusContainer.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
-            UpdateLivePreview();
-        }
-
         private void Step1BlurRadiusSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
             _folderBlurRadius = e.NewValue;
+            _folderBlurEnabled = _folderBlurRadius > 0;
             if (Step1RadiusValueText != null) {
                 Step1RadiusValueText.Text = $"{(int)e.NewValue} px";
-            }
-            if (Step1DirectBlurSlider != null && Math.Abs(Step1DirectBlurSlider.Value - e.NewValue) > 0.5) {
-                Step1DirectBlurSlider.Value = e.NewValue;
-            }
-            if (Step1DirectBlurValueText != null) {
-                Step1DirectBlurValueText.Text = $"{(int)e.NewValue}px";
             }
             if (!_isInitializing) UpdateLivePreview();
         }

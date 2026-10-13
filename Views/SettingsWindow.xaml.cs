@@ -400,6 +400,8 @@ namespace Panak.Views {
             if (RandomOpacityCheckBox != null) RandomOpacityCheckBox.ToolTip = loc["RandomOpacity"] ?? "Random opacity";
             if (ExportSettingsBtn != null) ExportSettingsBtn.Content = loc["ExportSettings"] ?? "Export";
             if (ImportSettingsBtn != null) ImportSettingsBtn.Content = loc["ImportSettings"] ?? "Import";
+            if (ExportImportSectionTitle != null) ExportImportSectionTitle.Text = loc["BackupAndRestore"] ?? "Backup & Restore";
+            if (ExportImportSectionDesc != null) ExportImportSectionDesc.Text = loc["ExportImportDesc"] ?? "Export or import configuration via JSON file";
 
             bool registered = ContextMenuRegistry.IsRegistered();
             ContextMenuStatusText.Text = registered ? loc["ContextMenuInstalled"] : "Explorer context menu not registered";
@@ -842,9 +844,23 @@ namespace Panak.Views {
             Close();
         }
 
-        private void RandomShapeCheckBox_Click(object sender, RoutedEventArgs e) { }
-        private void RandomColorCheckBox_Click(object sender, RoutedEventArgs e) { }
-        private void RandomOpacityCheckBox_Click(object sender, RoutedEventArgs e) { }
+        private void RandomShapeCheckBox_Click(object sender, RoutedEventArgs e) {
+            var s = SettingsService.Instance.Current;
+            s.RandomShapeOnCreate = RandomShapeCheckBox.IsChecked ?? false;
+            SettingsService.Instance.SaveSettings(s);
+        }
+
+        private void RandomColorCheckBox_Click(object sender, RoutedEventArgs e) {
+            var s = SettingsService.Instance.Current;
+            s.RandomColorOnCreate = RandomColorCheckBox.IsChecked ?? false;
+            SettingsService.Instance.SaveSettings(s);
+        }
+
+        private void RandomOpacityCheckBox_Click(object sender, RoutedEventArgs e) {
+            var s = SettingsService.Instance.Current;
+            s.RandomOpacityOnCreate = RandomOpacityCheckBox.IsChecked ?? false;
+            SettingsService.Instance.SaveSettings(s);
+        }
 
         private void SettingsColorIndicator_MouseDown(object sender, MouseButtonEventArgs e) {
             if (e.LeftButton == MouseButtonState.Pressed) {
@@ -871,7 +887,7 @@ namespace Panak.Views {
                     Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colHex)),
                     Tag = colHex,
                     ToolTip = colHex,
-                    Margin = new Thickness(0, 0, 8, 4)
+                    Margin = new Thickness(3, 0, 3, 0)
                 };
                 if (string.Equals(_selectedColor, colHex, StringComparison.OrdinalIgnoreCase)) {
                     rb.IsChecked = true;

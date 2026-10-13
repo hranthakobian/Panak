@@ -10,11 +10,15 @@
         WindowStartupLocation="Manual"
         MinWidth="258"
         MinHeight="140"
-        MaxWidth="480"
-        MaxHeight="440"
+        MaxWidth="720"
+        MaxHeight="560"
         SizeToContent="WidthAndHeight"
         AllowDrop="True"
         ResizeMode="NoResize"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
         PreviewKeyDown="Window_PreviewKeyDown"
         SizeChanged="Window_SizeChanged">
 
@@ -688,7 +692,7 @@
         </Style>
 
         <DataTemplate x:Key="PanakItemDataTemplate">
-            <Border x:Name="ItemBorder" Width="68" Height="76" CornerRadius="12" Background="Transparent" Margin="1" Padding="2,4" Cursor="Hand"
+            <Border x:Name="ItemBorder" Width="68" Height="76" CornerRadius="12" Background="Transparent" Margin="5" Padding="2,4" Cursor="Hand"
                     MouseLeftButtonDown="Item_MouseLeftButtonDown"
                     MouseRightButtonDown="Item_MouseRightButtonDown"
                     MouseMove="Item_MouseMove">

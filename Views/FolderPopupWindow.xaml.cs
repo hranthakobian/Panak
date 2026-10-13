@@ -42,6 +42,9 @@ namespace Panak.Views {
         private Point _anchorScreenPoint = new Point(0, 0);
         private bool _isClosing = false;
         private bool _isOpening = false;
+        public const double ItemCellWidth = 78.0;
+        public const double ItemCellHeight = 86.0;
+
         private bool _isInitializing = false;
         private DateTime _openedTime = DateTime.MinValue;
         private int _animationSessionId = 0;
@@ -421,8 +424,8 @@ namespace Panak.Views {
                 ItemsScrollViewer.Visibility = Items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
                 FolderItemsControl.ItemsSource = Items;
 
-                double itemW = 70.0;
-                double itemH = 78.0;
+                double itemW = ItemCellWidth;
+                double itemH = ItemCellHeight;
                 FolderItemsControl.Width = columns * itemW;
                 ItemsScrollViewer.MaxHeight = maxRows * itemH + 8;
 
@@ -468,8 +471,8 @@ namespace Panak.Views {
                 _currentSliderPage = 0;
             }
 
-            double itemW = 70.0;
-            double itemH = 78.0;
+            double itemW = ItemCellWidth;
+            double itemH = ItemCellHeight;
             double pageW = cols * itemW;
             double pageH = rows * itemH;
 
@@ -1120,7 +1123,7 @@ namespace Panak.Views {
 
                 // Remember natural width before expanding
                 if (_normalPopupWidth <= 0) {
-                    _normalPopupWidth = ActualWidth > 0 ? ActualWidth : (GetConfiguredColumns() * 70 + 24);
+                    _normalPopupWidth = ActualWidth > 0 ? ActualWidth : (GetConfiguredColumns() * ItemCellWidth + 24);
                 }
 
                 // Target width: EditPanel.Width (234) + 24px margins = 258px
@@ -1164,7 +1167,7 @@ namespace Panak.Views {
             } else {
                 double startHeight = EditPanelContainer.ActualHeight;
                 double startWidth = ActualWidth;
-                double returnWidth = _normalPopupWidth > 0 ? _normalPopupWidth : (GetConfiguredColumns() * 70 + 24);
+                double returnWidth = _normalPopupWidth > 0 ? _normalPopupWidth : (GetConfiguredColumns() * ItemCellWidth + 24);
 
                 if (startHeight <= 0) {
                     CloseEditPanelImmediate();
