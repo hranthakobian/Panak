@@ -19,7 +19,6 @@ namespace Panak.Views {
             IntPtr hwnd = new WindowInteropHelper(this).Handle;
             IntPtr exStyle = ShellHelper.GetWindowLong(hwnd, ShellHelper.GWL_EXSTYLE);
             ShellHelper.SetWindowLong(hwnd, ShellHelper.GWL_EXSTYLE, (IntPtr)(exStyle.ToInt64() | ShellHelper.WS_EX_NOACTIVATE));
-            ShellHelper.EnableWindowBlur(hwnd, 0x40000000);
         }
 
         public void ShowBackdrop(Rect screenBounds, double targetDimmingOpacity = 0.40, bool blurEnabled = true, double blurRadius = 28.0) {
@@ -28,34 +27,34 @@ namespace Panak.Views {
             Width = screenBounds.Width;
             Height = screenBounds.Height;
 
-            if (blurEnabled && blurRadius > 0) {
-                BackdropBlurEffect.Radius = Math.Clamp(blurRadius, 1.0, 100.0);
+            try {
+                double dpi = 1.0;
                 try {
-                    double dpi = 1.0;
-                    try {
-                        dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
-                    } catch { }
-                    if (dpi <= 0) dpi = 1.0;
+                    dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
+                } catch { }
+                if (dpi <= 0) dpi = 1.0;
 
-                    var screenBmp = ShellHelper.CaptureScreenArea(
-                        (int)screenBounds.Left,
-                        (int)screenBounds.Top,
-                        (int)screenBounds.Width,
-                        (int)screenBounds.Height,
-                        dpi);
+                var screenBmp = ShellHelper.CaptureScreenArea(
+                    (int)screenBounds.Left,
+                    (int)screenBounds.Top,
+                    (int)screenBounds.Width,
+                    (int)screenBounds.Height,
+                    dpi);
 
-                    if (screenBmp != null) {
-                        BlurImage.Source = screenBmp;
-                        BlurImage.Visibility = Visibility.Visible;
+                if (screenBmp != null) {
+                    BlurImage.Source = screenBmp;
+                    BlurImage.Visibility = Visibility.Visible;
+                    if (blurEnabled && blurRadius > 0) {
+                        BackdropBlurEffect.Radius = Math.Clamp(blurRadius, 1.0, 100.0);
+                        BlurImage.Effect = BackdropBlurEffect;
                     } else {
-                        BlurImage.Source = null;
-                        BlurImage.Visibility = Visibility.Collapsed;
+                        BlurImage.Effect = null;
                     }
-                } catch {
+                } else {
                     BlurImage.Source = null;
                     BlurImage.Visibility = Visibility.Collapsed;
                 }
-            } else {
+            } catch {
                 BlurImage.Source = null;
                 BlurImage.Visibility = Visibility.Collapsed;
             }
@@ -82,6 +81,7 @@ namespace Panak.Views {
             fadeOut.Completed += (s, e) => {
                 Hide();
                 BlurImage.Source = null;
+                BlurImage.Effect = null;
                 onCompleted?.Invoke();
             };
             BackdropGrid.BeginAnimation(OpacityProperty, fadeOut);

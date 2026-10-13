@@ -160,6 +160,12 @@ namespace Panak {
             _trayManager.Initialize();
 
             // 4. Start GitHub Real-time Updater
+            GitHubUpdateService.Instance.UpdateAvailableEvent += (ver, notes) => {
+                Dispatcher.BeginInvoke(() => {
+                    var loc = LocalizationService.Instance;
+                    _trayManager?.ShowBalloon(loc["UpdateAvailable"], $"{loc["LatestVersion"]}: v{ver}");
+                });
+            };
             GitHubUpdateService.Instance.Start();
         }
 

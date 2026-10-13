@@ -31,6 +31,7 @@ namespace Panak.Services {
 
         private const int WM_LBUTTONUP = 0x0202;
         private const int WM_RBUTTONUP = 0x0205;
+        private const int NIN_BALLOONUSERCLICK = 0x0405;
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct NOTIFYICONDATA {
@@ -194,7 +195,7 @@ namespace Panak.Services {
 
             if (msg == WM_TRAYICON) {
                 int mouseMsg = lParam.ToInt32();
-                if (mouseMsg == WM_LBUTTONUP) {
+                if (mouseMsg == WM_LBUTTONUP || mouseMsg == NIN_BALLOONUSERCLICK) {
                     Application.Current.Dispatcher.Invoke(() => {
                         SettingsRequested?.Invoke();
                     });

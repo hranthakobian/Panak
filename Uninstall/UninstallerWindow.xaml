@@ -575,7 +575,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Text="Panak v1.7.4" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="Panak v1.8.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button x:Name="CancelBtn" Style="{StaticResource SecondaryButtonStyle}" Content="Չեղարկել" Margin="0,0,10,0" Click="CancelBtn_Click"/>
