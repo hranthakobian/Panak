@@ -867,7 +867,7 @@
                                 <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="☕" FontSize="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                        <TextBlock x:Name="SupportTitleText" Text="Աջակցել նախագծին (Ko-fi)" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="SupportTitleText" Text="Աջակցել նախագծին" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <TextBlock x:Name="SupportDescText" Text="Աջակցեք Panak-ի զարգացմանը Ko-fi-ի միջոցով" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
@@ -935,20 +935,23 @@
                                 <TextBlock x:Name="IconShapeLabel" Text="Default Icon Shape" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                                 <TextBlock Text="Adaptive Icon Shape" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <Border Grid.Column="1" Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="20" Padding="6,4" VerticalAlignment="Center" BorderThickness="0" SnapsToDevicePixels="True">
-                                <StackPanel x:Name="SettingsShapeSelectorPanel" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <RadioButton x:Name="SettingsShapeCircle" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
-                                                 Tag="{StaticResource GeomCircle}" ToolTip="Circle" Click="SettingsShape_Click"/>
-                                    <RadioButton x:Name="SettingsShapeSquircle" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
-                                                 Tag="{StaticResource GeomSquircle}" ToolTip="Squircle" Click="SettingsShape_Click"/>
-                                    <RadioButton x:Name="SettingsShapeClover" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
-                                                 Tag="{StaticResource GeomClover}" ToolTip="Clover" Click="SettingsShape_Click"/>
-                                    <RadioButton x:Name="SettingsShapeScallop" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
-                                                 Tag="{StaticResource GeomScallop}" ToolTip="Scallop" Click="SettingsShape_Click"/>
-                                    <RadioButton x:Name="SettingsShapeArch" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
-                                                 Tag="{StaticResource GeomArch}" ToolTip="Arch" Click="SettingsShape_Click"/>
-                                </StackPanel>
-                            </Border>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <CheckBox x:Name="RandomShapeCheckBox" Style="{StaticResource MaterialSwitchStyle}" Margin="0,0,10,0" VerticalAlignment="Center" ToolTip="Random shape for new folders" Click="RandomShapeCheckBox_Click"/>
+                                <Border Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="20" Padding="6,4" VerticalAlignment="Center" BorderThickness="0" SnapsToDevicePixels="True">
+                                    <StackPanel x:Name="SettingsShapeSelectorPanel" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <RadioButton x:Name="SettingsShapeCircle" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                     Tag="{StaticResource GeomCircle}" ToolTip="Circle" Click="SettingsShape_Click"/>
+                                        <RadioButton x:Name="SettingsShapeSquircle" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                     Tag="{StaticResource GeomSquircle}" ToolTip="Squircle" Click="SettingsShape_Click"/>
+                                        <RadioButton x:Name="SettingsShapeClover" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                     Tag="{StaticResource GeomClover}" ToolTip="Clover" Click="SettingsShape_Click"/>
+                                        <RadioButton x:Name="SettingsShapeScallop" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                     Tag="{StaticResource GeomScallop}" ToolTip="Scallop" Click="SettingsShape_Click"/>
+                                        <RadioButton x:Name="SettingsShapeArch" GroupName="SettingsShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
+                                                     Tag="{StaticResource GeomArch}" ToolTip="Arch" Click="SettingsShape_Click"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
                         </Grid>
                     </Border>
 
@@ -979,11 +982,14 @@
                                     <TextBlock x:Name="DefaultColorLabel" Text="Default Folder Color" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                                     <TextBlock Text="Material You Real-time Dynamic Palette" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
                                 </StackPanel>
-                                <Border x:Name="SettingsColorIndicator" Grid.Column="1" Width="26" Height="26" CornerRadius="13" Background="{DynamicResource M3SurfaceContainerBrush}" BorderThickness="0" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <CheckBox x:Name="RandomColorCheckBox" Style="{StaticResource MaterialSwitchStyle}" Margin="0,0,10,0" VerticalAlignment="Center" ToolTip="Random color for new folders" Click="RandomColorCheckBox_Click"/>
+                                    <Border x:Name="SettingsColorIndicator" Width="26" Height="26" CornerRadius="13" Background="{DynamicResource M3SurfaceContainerBrush}" BorderThickness="0" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="SettingsColorIndicator_MouseDown" ToolTip="Click to add custom swatch"/>
+                                </StackPanel>
                             </Grid>
 
                             <!-- Preset Pastel Swatches: Now with 8 colors -->
-                            <StackPanel x:Name="SettingsColorSwatchesPanel" Orientation="Horizontal" Margin="0,0,0,12">
+                            <StackPanel x:Name="SettingsColorSwatchesPanel" Orientation="Horizontal" Margin="0,0,0,6">
                                 <RadioButton x:Name="SettingsAccentSwatch" GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCDDC5" Tag="#FCDDC5" ToolTip="Peach / Default" Checked="SettingsColorSwatch_Checked"/>
                                 <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#C5FCC5" Tag="#C5FCC5" ToolTip="Mint" Checked="SettingsColorSwatch_Checked"/>
                                 <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#C5FCFC" Tag="#C5FCFC" ToolTip="Cyan" Checked="SettingsColorSwatch_Checked"/>
@@ -993,6 +999,9 @@
                                 <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCC5DD" Tag="#FCC5DD" ToolTip="Rose" Checked="SettingsColorSwatch_Checked"/>
                                 <RadioButton GroupName="SettingsColorGroup" Style="{StaticResource ColorSwatchStyle}" Background="#FCFCC5" Tag="#FCFCC5" ToolTip="Butter Yellow" Checked="SettingsColorSwatch_Checked"/>
                             </StackPanel>
+
+                            <!-- Dynamic Custom Saved Swatches -->
+                            <WrapPanel x:Name="CustomSwatchesWrapPanel" Margin="0,0,0,8" VerticalAlignment="Center"/>
 
                             <!-- Pastel Hue Slider: Panel updates in real time (Stretched full width) -->
                             <Slider x:Name="SettingsHueSlider"
@@ -1017,7 +1026,10 @@
                                     <TextBlock x:Name="GeneralFolderOpacityLabel" Text="General Folder Opacity" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                                     <TextBlock x:Name="GeneralFolderOpacityDescText" Text="Overall background opacity for all folders" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,2,0,0"/>
                                 </StackPanel>
-                                <TextBlock x:Name="GeneralFolderOpacityValueText" Grid.Column="1" Text="85%" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <CheckBox x:Name="RandomOpacityCheckBox" Style="{StaticResource MaterialSwitchStyle}" Margin="0,0,10,0" VerticalAlignment="Center" ToolTip="Random opacity for new folders" Click="RandomOpacityCheckBox_Click"/>
+                                    <TextBlock x:Name="GeneralFolderOpacityValueText" Text="85%" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </Grid>
                             <Slider x:Name="GeneralFolderOpacitySlider" Minimum="20" Maximum="100" Value="85" SmallChange="1" LargeChange="5" Style="{StaticResource MaterialSliderStyle}" ValueChanged="GeneralFolderOpacitySlider_ValueChanged"/>
                         </StackPanel>
@@ -1221,7 +1233,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
-                                    <TextBlock x:Name="SpaceQuickLookLabel" Text="Quick Look (Space key)" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="SpaceQuickLookLabel" Text="Արագ դիտում" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                                     <TextBlock x:Name="SpaceQuickLookDescText" Text="Press Space in Explorer to quickly view folder" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <CheckBox x:Name="SpaceQuickLookCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
@@ -1251,7 +1263,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
-                                    <TextBlock x:Name="QuickLookKeyRowLabel" Text="Արագ դիտում (Quick Look)" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="QuickLookKeyRowLabel" Text="Արագ դիտում" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                                     <TextBlock x:Name="QuickLookKeyRowDesc" Text="Explorer-ում ընտրված պանակի արագ բացում" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,1,0,0"/>
                                 </StackPanel>
                                 <StackPanel x:Name="QuickLookKeysContainer" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"/>
@@ -1266,7 +1278,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
-                                    <TextBlock x:Name="ClosePopupKeyRowLabel" Text="Փակել փոփափը (Close Popup)" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="ClosePopupKeyRowLabel" Text="Փակել փոփափը" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
                                     <TextBlock x:Name="ClosePopupKeyRowDesc" Text="Բացված պանակի փոփափը փակելու ստեղն" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,1,0,0"/>
                                 </StackPanel>
                                 <StackPanel x:Name="ClosePopupKeysContainer" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"/>
@@ -1407,7 +1419,11 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Panak v1.9.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Panak v1.9.0" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <Button x:Name="ExportSettingsBtn" Style="{StaticResource SecondaryButtonStyle}" Content="Export" Padding="10,4" Margin="0,0,6,0" FontSize="11" Click="ExportSettingsBtn_Click"/>
+                    <Button x:Name="ImportSettingsBtn" Style="{StaticResource SecondaryButtonStyle}" Content="Import" Padding="10,4" FontSize="11" Click="ImportSettingsBtn_Click"/>
+                </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button x:Name="CancelBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Cancel" Margin="0,0,10,0" Click="CancelBtn_Click"/>
                     <Button x:Name="ApplyBtn" x:FieldModifier="public" Style="{StaticResource SecondaryButtonStyle}" Content="Apply" Margin="0,0,10,0" Click="ApplyBtn_Click"/>

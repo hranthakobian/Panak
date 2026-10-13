@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Panak.Models;
 using Panak.Services;
@@ -1261,8 +1262,8 @@ namespace Panak.Tests {
                     Assert.IsNotNull(popup.CardClipGeometry, "CardClipGeometry must exist");
                     // Verify that CardBorder has no margins causing 20px clipping
                     Assert.AreEqual(new System.Windows.Thickness(0), popup.CardBorder.Margin, "CardBorder margin should be 0");
-                    Assert.AreEqual(24, popup.CardClipGeometry.RadiusX, "RadiusX should match corner radius");
-                    Assert.AreEqual(24, popup.CardClipGeometry.RadiusY, "RadiusY should match corner radius");
+                    Assert.AreEqual(28, popup.CardClipGeometry.RadiusX, "RadiusX should match corner radius");
+                    Assert.AreEqual(28, popup.CardClipGeometry.RadiusY, "RadiusY should match corner radius");
                 } catch (Exception ex) {
                     caughtEx = ex;
                 }
@@ -1534,9 +1535,20 @@ namespace Panak.Tests {
                 Assert.IsTrue(popup.IsPinned, "Window should be pinned after toggle");
                 Assert.IsTrue(popup.Topmost, "Window should be Topmost when pinned");
 
-                popup.TogglePin();
-                Assert.IsFalse(popup.IsPinned, "Window should be unpinned after toggle");
-                Assert.IsFalse(popup.Topmost, "Window should not be Topmost when unpinned");
+                bool origFocus = SettingsService.Instance.Current.FocusModeEnabled;
+                try {
+                    SettingsService.Instance.Current.FocusModeEnabled = false;
+                    popup.TogglePin();
+                    Assert.IsFalse(popup.IsPinned, "Window should be unpinned after toggle");
+                    Assert.IsFalse(popup.Topmost, "Window should not be Topmost when unpinned without focus mode");
+
+                    SettingsService.Instance.Current.FocusModeEnabled = true;
+                    popup.TogglePin(); // pin
+                    popup.TogglePin(); // unpin with focus mode enabled
+                    Assert.IsTrue(popup.Topmost, "Window must remain Topmost when unpinned with focus mode enabled to prevent dropping behind backdrop");
+                } finally {
+                    SettingsService.Instance.Current.FocusModeEnabled = origFocus;
+                }
             });
             thread.SetApartmentState(System.Threading.ApartmentState.STA);
             thread.Start();
@@ -1559,6 +1571,18 @@ namespace Panak.Tests {
 
                 Assert.IsTrue(hook.IsPopupPinnedFunc());
                 Assert.IsFalse(closeRequestedFired);
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+        }
+
+        [TestMethod]
+        public void TestDesktopWallpaperHelpers() {
+            var thread = new System.Threading.Thread(() => {
+                IntPtr workerW = ShellHelper.GetWallpaperWorkerW();
+                var bmp = ShellHelper.GetDesktopWallpaperBitmap();
+                Assert.IsNotNull(bmp, "GetDesktopWallpaperBitmap should return wallpaper");
             });
             thread.SetApartmentState(System.Threading.ApartmentState.STA);
             thread.Start();

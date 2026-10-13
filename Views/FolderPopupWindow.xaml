@@ -728,11 +728,11 @@
             </TransformGroup>
         </Grid.RenderTransform>
 
-        <!-- Main Card Surface with 2x Rounded Corners (24px) & Android Frosted Glass -->
-        <Border x:Name="CardBorder" CornerRadius="24" Background="#01000000" BorderThickness="0" BorderBrush="Transparent" Margin="0">
-            <Border x:Name="InnerClippingBorder" CornerRadius="24" SizeChanged="InnerClippingBorder_SizeChanged">
+        <!-- Main Card Surface with 2x Rounded Corners (28px) & Android Frosted Glass -->
+        <Border x:Name="CardBorder" CornerRadius="28" Background="#01000000" BorderThickness="0" BorderBrush="Transparent" Margin="0">
+            <Border x:Name="InnerClippingBorder" CornerRadius="28" SizeChanged="InnerClippingBorder_SizeChanged">
                 <Border.Clip>
-                    <RectangleGeometry x:Name="CardClipGeometry" RadiusX="24" RadiusY="24"/>
+                    <RectangleGeometry x:Name="CardClipGeometry" RadiusX="28" RadiusY="28"/>
                 </Border.Clip>
                 <Grid>
                     <!-- Background Canvas for Blurred Screen: Canvas has 0 DesiredSize so it NEVER inflates Window size -->
@@ -745,10 +745,10 @@
                     </Canvas>
 
                     <!-- Frosted Glass Dark Tint Overlay -->
-                    <Border x:Name="FrostedTintLayer" CornerRadius="24" Background="#C216161D"/>
+                    <Border x:Name="FrostedTintLayer" CornerRadius="28" Background="#C216161D"/>
 
                     <!-- Background Accent Tint -->
-                    <Border x:Name="TintLayer" CornerRadius="24" Background="#180078D4" Opacity="1.0"/>
+                    <Border x:Name="TintLayer" CornerRadius="28" Background="#180078D4" Opacity="1.0"/>
 
                     <Grid Margin="12,12,12,10">
                         <Grid.RowDefinitions>
@@ -805,7 +805,7 @@
                             <!-- Header Action Buttons -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                 <!-- Pin Button (Always on top) -->
-                                <Button x:Name="PinButton" Style="{StaticResource HeaderButtonStyle}" Margin="0,0,4,0" ToolTip="Ամրացնել (Always on top)" Click="PinButton_Click">
+                                <Button x:Name="PinButton" Style="{StaticResource HeaderButtonStyle}" Margin="0,0,4,0" ToolTip="Ամրացնել" Click="PinButton_Click">
                                     <Path x:Name="PinIconPath" Width="11" Height="11" Stretch="Uniform" Fill="{DynamicResource PopupHeaderBtnFg}"
                                           Data="M16,12V4H17V2H7V4H8V12L5,15V17H11V22L12,23L13,22V17H19V15L16,12Z"/>
                                 </Button>

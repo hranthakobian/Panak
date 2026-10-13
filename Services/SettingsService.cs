@@ -62,5 +62,33 @@ namespace Panak.Services {
         }
 
         public void Save(AppSettings? settings = null) => SaveSettings(settings);
+
+        public bool ExportSettings(string filePath) {
+            try {
+                string json = JsonSerializer.Serialize(Current, new JsonSerializerOptions { WriteIndented = true });
+                string? dir = Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) {
+                    Directory.CreateDirectory(dir);
+                }
+                File.WriteAllText(filePath, json);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        public bool ImportSettings(string filePath) {
+            try {
+                if (!File.Exists(filePath)) return false;
+                string json = File.ReadAllText(filePath);
+                var imported = JsonSerializer.Deserialize<AppSettings>(json);
+                if (imported == null) return false;
+                SaveSettings(imported);
+                PanakManager.Instance.UpdateOpenPopupSettings();
+                return true;
+            } catch {
+                return false;
+            }
+        }
     }
 }

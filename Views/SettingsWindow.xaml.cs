@@ -306,6 +306,12 @@ namespace Panak.Views {
             AutoStartCheckBox.IsChecked = InstallerService.IsAutoStartEnabled() || s.AutoStart;
             AutoCheckUpdatesCheckBox.IsChecked = s.AutoCheckUpdates;
 
+            if (RandomShapeCheckBox != null) RandomShapeCheckBox.IsChecked = s.RandomShapeOnCreate;
+            if (RandomColorCheckBox != null) RandomColorCheckBox.IsChecked = s.RandomColorOnCreate;
+            if (RandomOpacityCheckBox != null) RandomOpacityCheckBox.IsChecked = s.RandomOpacityOnCreate;
+
+            RebuildCustomSwatchesUI();
+
             // Context Menu status
             bool registered = ContextMenuRegistry.IsRegistered();
             var loc = LocalizationService.Instance;
@@ -388,6 +394,12 @@ namespace Panak.Views {
             CancelBtn.Content = loc["Cancel"];
             UninstallAppBtn.Content = loc["Uninstall"];
             InstallerSectionTitle.Text = loc["Uninstaller"];
+
+            if (RandomShapeCheckBox != null) RandomShapeCheckBox.ToolTip = loc["RandomShape"] ?? "Random shape";
+            if (RandomColorCheckBox != null) RandomColorCheckBox.ToolTip = loc["RandomColor"] ?? "Random color";
+            if (RandomOpacityCheckBox != null) RandomOpacityCheckBox.ToolTip = loc["RandomOpacity"] ?? "Random opacity";
+            if (ExportSettingsBtn != null) ExportSettingsBtn.Content = loc["ExportSettings"] ?? "Export";
+            if (ImportSettingsBtn != null) ImportSettingsBtn.Content = loc["ImportSettings"] ?? "Import";
 
             bool registered = ContextMenuRegistry.IsRegistered();
             ContextMenuStatusText.Text = registered ? loc["ContextMenuInstalled"] : "Explorer context menu not registered";
@@ -797,6 +809,10 @@ namespace Panak.Views {
             s.AutoCheckUpdates = AutoCheckUpdatesCheckBox.IsChecked ?? true;
             s.GitHubRepo = GitHubUpdateService.TargetRepository;
 
+            if (RandomShapeCheckBox != null) s.RandomShapeOnCreate = RandomShapeCheckBox.IsChecked ?? false;
+            if (RandomColorCheckBox != null) s.RandomColorOnCreate = RandomColorCheckBox.IsChecked ?? false;
+            if (RandomOpacityCheckBox != null) s.RandomOpacityOnCreate = RandomOpacityCheckBox.IsChecked ?? false;
+
             // Handle auto-start setting
             string exe = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
             InstallerService.SetAutoStart(exe, s.AutoStart);
@@ -824,6 +840,91 @@ namespace Panak.Views {
         private void SaveBtn_Click(object sender, RoutedEventArgs e) {
             ApplyCurrentSettings();
             Close();
+        }
+
+        private void RandomShapeCheckBox_Click(object sender, RoutedEventArgs e) { }
+        private void RandomColorCheckBox_Click(object sender, RoutedEventArgs e) { }
+        private void RandomOpacityCheckBox_Click(object sender, RoutedEventArgs e) { }
+
+        private void SettingsColorIndicator_MouseDown(object sender, MouseButtonEventArgs e) {
+            if (e.LeftButton == MouseButtonState.Pressed) {
+                var s = SettingsService.Instance.Current;
+                if (!s.CustomPaletteColors.Contains(_selectedColor, StringComparer.OrdinalIgnoreCase)) {
+                    s.CustomPaletteColors.Add(_selectedColor);
+                    SettingsService.Instance.SaveSettings(s);
+                    RebuildCustomSwatchesUI();
+                }
+            }
+        }
+
+        private void RebuildCustomSwatchesUI() {
+            if (CustomSwatchesWrapPanel == null) return;
+            CustomSwatchesWrapPanel.Children.Clear();
+            var s = SettingsService.Instance.Current;
+            if (s.CustomPaletteColors == null || s.CustomPaletteColors.Count == 0) return;
+
+            foreach (var hex in s.CustomPaletteColors) {
+                string colHex = hex;
+                var rb = new RadioButton {
+                    GroupName = "SettingsColorGroup",
+                    Style = (Style)FindResource("ColorSwatchStyle"),
+                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colHex)),
+                    Tag = colHex,
+                    ToolTip = colHex,
+                    Margin = new Thickness(0, 0, 8, 4)
+                };
+                if (string.Equals(_selectedColor, colHex, StringComparison.OrdinalIgnoreCase)) {
+                    rb.IsChecked = true;
+                }
+                rb.Checked += (snd, ev) => {
+                    if (_isInitializing) return;
+                    _selectedColor = colHex;
+                    double hue = ShellHelper.GetHueFromHex(colHex);
+                    ApplyMaterialYouPalette(hue);
+                    _isInitializing = true;
+                    try {
+                        SettingsHueSlider.Value = hue;
+                    } finally {
+                        _isInitializing = false;
+                    }
+                    if (PanakManager.Instance.IsPopupOpen) {
+                        PanakManager.Instance.UpdateOpenPopupThemeColor(_selectedColor);
+                    }
+                };
+                CustomSwatchesWrapPanel.Children.Add(rb);
+            }
+        }
+
+        private void ExportSettingsBtn_Click(object sender, RoutedEventArgs e) {
+            var loc = LocalizationService.Instance;
+            var dlg = new Microsoft.Win32.SaveFileDialog {
+                Filter = "JSON Files (*.json)|*.json|All Files (*.*)|*.*",
+                FileName = "panak_settings.json",
+                DefaultExt = ".json"
+            };
+            if (dlg.ShowDialog() == true) {
+                if (SettingsService.Instance.ExportSettings(dlg.FileName)) {
+                    MessageBox.Show(loc["SettingsExported"] ?? "Settings exported successfully.", "Panak", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+        }
+
+        private void ImportSettingsBtn_Click(object sender, RoutedEventArgs e) {
+            var loc = LocalizationService.Instance;
+            var dlg = new Microsoft.Win32.OpenFileDialog {
+                Filter = "JSON Files (*.json)|*.json|All Files (*.*)|*.*",
+                DefaultExt = ".json"
+            };
+            if (dlg.ShowDialog() == true) {
+                if (SettingsService.Instance.ImportSettings(dlg.FileName)) {
+                    MessageBox.Show(loc["SettingsImported"] ?? "Settings imported successfully.", "Panak", MessageBoxButton.OK, MessageBoxImage.Information);
+                    LoadCurrentSettings();
+                    ApplyLocalization();
+                    PanakManager.Instance.UpdateOpenPopupSettings();
+                } else {
+                    MessageBox.Show(loc["InvalidSettingsFile"] ?? "Invalid settings file.", "Panak", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
         private void UpdateUpdateUI() {

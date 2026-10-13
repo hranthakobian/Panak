@@ -118,17 +118,21 @@ namespace Panak.Services {
         [DllImport("user32.dll")]
         public static extern IntPtr GetShellWindow();
 
-        [DllImport("user32.dll", SetLastError = true)]
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern IntPtr FindWindow(string lpClassName, string? lpWindowName);
 
-        [DllImport("user32.dll", SetLastError = true)]
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string? lpszWindow);
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam, uint fuFlags, uint uTimeout, out IntPtr lpdwResult);
 
         [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
         [DllImport("user32.dll")]
@@ -1060,14 +1064,30 @@ namespace Panak.Services {
                 IntPtr progman = FindWindow("Progman", null);
                 if (progman != IntPtr.Zero) {
                     IntPtr res;
-                    SendMessageTimeout(progman, 0x052C, IntPtr.Zero, IntPtr.Zero, 0, 1000, out res);
+                    SendMessageTimeout(progman, 0x052C, new IntPtr(0xD), new IntPtr(0x1), 0, 1000, out res);
+                    IntPtr foundWorkerW = IntPtr.Zero;
                     EnumWindows((hWnd, lParam) => {
                         IntPtr shellView = FindWindowEx(hWnd, IntPtr.Zero, "SHELLDLL_DefView", null);
                         if (shellView != IntPtr.Zero) {
-                            _cachedWorkerW = FindWindowEx(IntPtr.Zero, hWnd, "WorkerW", null);
+                            foundWorkerW = FindWindowEx(IntPtr.Zero, hWnd, "WorkerW", null);
                         }
                         return true;
                     }, IntPtr.Zero);
+                    if (foundWorkerW != IntPtr.Zero) {
+                        _cachedWorkerW = foundWorkerW;
+                    }
+                }
+                if (_cachedWorkerW == IntPtr.Zero) {
+                    // Fallback: search for top-level WorkerW windows without SHELLDLL_DefView
+                    IntPtr w = FindWindowEx(IntPtr.Zero, IntPtr.Zero, "WorkerW", null);
+                    while (w != IntPtr.Zero) {
+                        IntPtr defView = FindWindowEx(w, IntPtr.Zero, "SHELLDLL_DefView", null);
+                        if (defView == IntPtr.Zero) {
+                            _cachedWorkerW = w;
+                            break;
+                        }
+                        w = FindWindowEx(IntPtr.Zero, w, "WorkerW", null);
+                    }
                 }
             } catch { }
             return _cachedWorkerW;

@@ -223,29 +223,79 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
                         <Grid Background="Transparent" VerticalAlignment="Center">
-                            <!-- Track: 48x28 Pill -->
-                            <Border x:Name="SwitchTrack" Width="48" Height="28" CornerRadius="14"
-                                    BorderThickness="2" BorderBrush="{DynamicResource M3OutlineBrush}" Background="{DynamicResource M3TrackInactiveBrush}">
-                                <Grid>
-                                    <!-- Thumb: morphs between 14px circle (off) and 20px circle (on) -->
+                            <!-- Switch Track (44x24 pill) -->
+                            <Border x:Name="SwitchTrack" Width="44" Height="24" CornerRadius="12"
+                                    BorderThickness="2" BorderBrush="{DynamicResource M3TrackInactiveBrush}" Background="{DynamicResource M3TrackInactiveBrush}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <!-- Switch Thumb Container -->
+                                <Canvas Width="40" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
+                                    <!-- Animated Thumb -->
                                     <Border x:Name="SwitchThumb" Width="14" Height="14" CornerRadius="7"
-                                            Background="{DynamicResource M3OnSurfaceVariantBrush}"
-                                            HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0"/>
-                                </Grid>
+                                            Background="{DynamicResource M3OnSurfaceVariantBrush}" Canvas.Left="2" Canvas.Top="3"/>
+                                    <!-- Checked Icon: subtle vector check inside thumb -->
+                                    <Path x:Name="CheckIcon" Data="M 1,4 L 3.5,6.5 L 7.5,1.5"
+                                          Stroke="{DynamicResource M3PrimaryBrush}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Canvas.Left="26" Canvas.Top="6" Opacity="0"/>
+                                </Canvas>
                             </Border>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Left)" To="21" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Width" To="18" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Height" To="18" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Top)" To="1" Duration="0:0:0.22"/>
+                                            <DoubleAnimation Storyboard.TargetName="CheckIcon" Storyboard.TargetProperty="Opacity" To="1.0" Duration="0:0:0.18"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Left)" To="2" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Width" To="14" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Height" To="14" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Top)" To="3" Duration="0:0:0.22"/>
+                                            <DoubleAnimation Storyboard.TargetName="CheckIcon" Storyboard.TargetProperty="Opacity" To="0.0" Duration="0:0:0.12"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                                 <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
                                 <Setter TargetName="SwitchTrack" Property="BorderBrush" Value="{DynamicResource M3PrimaryBrush}"/>
                                 <Setter TargetName="SwitchThumb" Property="Background" Value="{DynamicResource M3OnPrimaryBrush}"/>
-                                <Setter TargetName="SwitchThumb" Property="Width" Value="20"/>
-                                <Setter TargetName="SwitchThumb" Property="Height" Value="20"/>
-                                <Setter TargetName="SwitchThumb" Property="CornerRadius" Value="10"/>
-                                <Setter TargetName="SwitchThumb" Property="Margin" Value="21,0,0,0"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="SwitchTrack" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -281,10 +331,33 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="InnerDot" Storyboard.TargetProperty="Width" To="10" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="InnerDot" Storyboard.TargetProperty="Height" To="10" Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="InnerDot" Storyboard.TargetProperty="Opacity" To="1.0" Duration="0:0:0.18"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="InnerDot" Storyboard.TargetProperty="Width" To="0" Duration="0:0:0.15"/>
+                                            <DoubleAnimation Storyboard.TargetName="InnerDot" Storyboard.TargetProperty="Height" To="0" Duration="0:0:0.15"/>
+                                            <DoubleAnimation Storyboard.TargetName="InnerDot" Storyboard.TargetProperty="Opacity" To="0.0" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                                 <Setter TargetName="OuterRing" Property="BorderBrush" Value="{DynamicResource M3PrimaryBrush}"/>
-                                <Setter TargetName="InnerDot" Property="Opacity" Value="1"/>
-                                <Setter TargetName="InnerDot" Property="Width" Value="10"/>
-                                <Setter TargetName="InnerDot" Property="Height" Value="10"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="OuterRing" Property="Opacity" Value="0.85"/>
@@ -456,9 +529,11 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="Step1ShapeLabel" Text="Icon Shape" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <CheckBox x:Name="Step1RandomShapeCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" Margin="0,0,8,0" VerticalAlignment="Center" ToolTip="Random shape for new folders"/>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal">
                                     <RadioButton x:Name="ShapeCircleRadio" GroupName="WizardShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
                                                  Tag="{StaticResource GeomCircle}" ToolTip="Circle" Click="ShapeRadio_Click"/>
                                     <RadioButton x:Name="ShapeSquircleRadio" GroupName="WizardShapeGroup" Style="{StaticResource ShapeSelectorRadioStyle}"
@@ -480,9 +555,11 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="Step1ColorLabel" Text="Theme Color &amp; Hue" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                                    <Border x:Name="Step1ColorIndicator" Grid.Column="1" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource M3PrimaryBrush}"/>
+                                    <TextBlock x:Name="Step1ColorLabel" Text="Theme Color &amp; Hue" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                    <CheckBox x:Name="Step1RandomColorCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" Margin="0,0,8,0" VerticalAlignment="Center" ToolTip="Random color for new folders"/>
+                                    <Border x:Name="Step1ColorIndicator" Grid.Column="2" Width="20" Height="20" CornerRadius="10" Background="{DynamicResource M3PrimaryBrush}" Cursor="Hand" MouseDown="Step1ColorIndicator_MouseDown" ToolTip="Click to add to custom swatches"/>
                                 </Grid>
                                 <!-- Pastel Swatches -->
                                 <StackPanel x:Name="Step1SwatchesPanel" Orientation="Horizontal" Margin="0,0,0,5">
@@ -507,9 +584,11 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="Step1OpacityLabel" Text="Folder Opacity" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                                    <TextBlock x:Name="Step1OpacityValueText" Grid.Column="1" Text="85%" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                    <TextBlock x:Name="Step1OpacityLabel" Text="Folder Opacity" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                    <CheckBox x:Name="Step1RandomOpacityCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" Margin="0,0,8,0" VerticalAlignment="Center" ToolTip="Random opacity for new folders"/>
+                                    <TextBlock x:Name="Step1OpacityValueText" Grid.Column="2" Text="85%" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource M3PrimaryBrush}" VerticalAlignment="Center"/>
                                 </Grid>
                                 <Slider x:Name="Step1OpacitySlider" Minimum="20" Maximum="100" Value="85" Style="{StaticResource MaterialSliderStyle}" ValueChanged="Step1OpacitySlider_ValueChanged"/>
                             </StackPanel>
@@ -547,34 +626,60 @@
                             <!-- Real Windows / Wallpaper Engine Wallpaper Background -->
                             <Image x:Name="Step1WallpaperImage" Stretch="UniformToFill"/>
 
-                            <!-- Live Preview Badge (Clean pill without star) -->
-                            <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Background="#8A000000" CornerRadius="8" Padding="10,4">
-                                <TextBlock x:Name="Step1LivePreviewBadge" Text="Live Preview" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF"/>
-                            </Border>
+                            <!-- Top Preview Toolbar: Live Blur Slider & Badge -->
+                            <Grid VerticalAlignment="Top" Margin="10,8,10,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- Interactive Direct Blur Slider -->
+                                <Border HorizontalAlignment="Left" Background="#8A000000" CornerRadius="10" Padding="8,3">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="💧" FontSize="10" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                                        <Slider x:Name="Step1DirectBlurSlider" Width="70" Minimum="0" Maximum="60" Value="28" Style="{StaticResource MaterialSliderStyle}" Margin="4,0,5,0" ValueChanged="Step1DirectBlurSlider_ValueChanged"/>
+                                        <TextBlock x:Name="Step1DirectBlurValueText" Text="28px" FontSize="9.5" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <!-- Live Preview Badge -->
+                                <Border Grid.Column="1" HorizontalAlignment="Right" Background="#8A000000" CornerRadius="8" Padding="9,3.5">
+                                    <TextBlock x:Name="Step1LivePreviewBadge" Text="Live Preview" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF"/>
+                                </Border>
+                            </Grid>
 
-                            <!-- Desktop Folder Icon on Wallpaper -->
-                            <StackPanel x:Name="Step1DesktopIcon" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="20" Cursor="Hand" MouseDown="DesktopIcon_MouseDown" ToolTip="Click to open or close Panak">
-                                <Grid Width="48" Height="48" HorizontalAlignment="Center">
-                                    <Border x:Name="Step1DesktopIconPlate" Width="48" Height="48" CornerRadius="14" Background="{DynamicResource M3PrimaryBrush}">
-                                        <Path x:Name="Step1DesktopIconShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="24" Height="24" Fill="{DynamicResource M3OnPrimaryBrush}"/>
-                                    </Border>
-                                    <TextBlock Text="📂" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <!-- Desktop Folder Icon on Wallpaper (Matching media_1791914326888.png) -->
+                            <StackPanel x:Name="Step1DesktopIcon" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="18" Cursor="Hand" MouseDown="DesktopIcon_MouseDown" ToolTip="Click to open or close Panak">
+                                <Grid Width="50" Height="50" HorizontalAlignment="Center">
+                                    <Path x:Name="Step1DesktopIconShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="50" Height="50" Fill="{DynamicResource M3SurfaceContainerBrush}"/>
+                                    <UniformGrid Columns="2" Rows="2" Margin="8">
+                                        <Border CornerRadius="3" Background="#35FFFFFF" Margin="1.5">
+                                            <TextBlock Text="📄" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <Border CornerRadius="3" Background="#35FFFFFF" Margin="1.5">
+                                            <TextBlock Text="📊" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <Border CornerRadius="3" Background="#35FFFFFF" Margin="1.5">
+                                            <TextBlock Text="🖼️" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <Border CornerRadius="3" Background="#35FFFFFF" Margin="1.5">
+                                            <TextBlock Text="📦" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </UniformGrid>
                                 </Grid>
-                                <TextBlock x:Name="Step1DesktopIconLabel" Text="Panak" FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF" TextAlignment="Center" Margin="0,3,0,0">
+                                <TextBlock x:Name="Step1DesktopIconLabel" Text="Panak" FontSize="10.5" FontWeight="SemiBold" Foreground="#FFFFFF" TextAlignment="Center" Margin="0,3,0,0">
                                     <TextBlock.Effect>
                                         <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.9" Color="#000000"/>
                                     </TextBlock.Effect>
                                 </TextBlock>
                             </StackPanel>
 
-                            <!-- Folder Popup Card (Realistic interactive popup) -->
-                            <Grid x:Name="Step1PopupContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10" RenderTransformOrigin="0.5,0.5">
+                            <!-- Folder Popup Card (Authentic header matching media_1791914326899.png, CornerRadius 28) -->
+                            <Grid x:Name="Step1PopupContainer" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,26,12,6" RenderTransformOrigin="0.5,0.5">
                                 <Grid.RenderTransform>
                                     <ScaleTransform x:Name="Step1PopupScale" ScaleX="1" ScaleY="1"/>
                                 </Grid.RenderTransform>
 
-                                <!-- True Background Blur Layer: Wallpaper with BlurEffect clipped to Folder Shape -->
-                                <Border x:Name="Step1BlurUnderlay" Width="270" Height="260" CornerRadius="20" ClipToBounds="True">
+                                <!-- True Background Blur Layer: CornerRadius 28 -->
+                                <Border x:Name="Step1BlurUnderlay" Width="270" Height="260" CornerRadius="28" ClipToBounds="True">
                                     <Image x:Name="Step1BlurredWallpaperImage" Stretch="UniformToFill">
                                         <Image.Effect>
                                             <BlurEffect x:Name="Step1FolderBlurFx" Radius="28" RenderingBias="Performance"/>
@@ -582,8 +687,8 @@
                                     </Image>
                                 </Border>
 
-                                <!-- Folder Card Foreground Surface -->
-                                <Border x:Name="Step1FolderCardBorder" Width="270" Height="260" CornerRadius="20" Background="#C6FCDDC5" Padding="10">
+                                <!-- Folder Card Foreground Surface: CornerRadius 28 -->
+                                <Border x:Name="Step1FolderCardBorder" Width="270" Height="260" CornerRadius="28" Background="#C6FCDDC5" Padding="12">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/> <!-- Header -->
@@ -591,18 +696,29 @@
                                             <RowDefinition Height="Auto"/> <!-- Centered Pager Footer -->
                                         </Grid.RowDefinitions>
 
-                                        <!-- Header: Shape badge + title + close button -->
+                                        <!-- Header: Title + Items Count Badge + 4 Action Buttons -->
                                         <Grid Grid.Row="0" Margin="0,0,0,6">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <Border x:Name="Step1PreviewShapeBadge" Width="22" Height="22" CornerRadius="11" Background="{DynamicResource M3PrimaryBrush}">
-                                                <Path x:Name="Step1PreviewShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="12" Height="12" Fill="{DynamicResource M3OnPrimaryBrush}"/>
-                                            </Border>
-                                            <TextBlock x:Name="Step1PreviewFolderTitle" Text="Panak" Grid.Column="1" Margin="6,0,0,0" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
-                                            <Button x:Name="Step1PreviewCloseBtn" Grid.Column="2" Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Content="✕" FontSize="10" Click="PreviewCloseBtn_Click" ToolTip="Close"/>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Border x:Name="Step1PreviewShapeBadge" Width="20" Height="20" CornerRadius="10" Background="{DynamicResource M3PrimaryBrush}" Margin="0,0,6,0">
+                                                    <Path x:Name="Step1PreviewShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="10" Height="10" Fill="{DynamicResource M3OnPrimaryBrush}"/>
+                                                </Border>
+                                                <TextBlock x:Name="Step1PreviewFolderTitle" Text="Panak" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                                <Border x:Name="Step1PreviewCountBadge" Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="7" Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock x:Name="Step1PreviewCountText" Text="18 նիշք" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button x:Name="Step1PreviewPinBtn" Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Margin="0,0,2,0" ToolTip="Pin" Click="PreviewPinBtn_Click">
+                                                    <Path Width="10" Height="10" Stretch="Uniform" Fill="{DynamicResource M3OnSurfaceVariantBrush}" Data="M16,12V4H17V2H7V4H8V12L5,15V17H11V22L12,23L13,22V17H19V15L16,12Z"/>
+                                                </Button>
+                                                <Button x:Name="Step1PreviewEditBtn" Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Margin="0,0,2,0" Content="✏️" FontSize="10" ToolTip="Edit"/>
+                                                <Button x:Name="Step1PreviewExplorerBtn" Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Margin="0,0,2,0" Content="📁" FontSize="10" ToolTip="Explorer"/>
+                                                <Button x:Name="Step1PreviewCloseBtn" Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Content="✕" FontSize="10" Click="PreviewCloseBtn_Click" ToolTip="Close"/>
+                                            </StackPanel>
                                         </Grid>
 
                                         <!-- Items Viewport: Slider Pages vs Scrollbar -->
@@ -663,7 +779,7 @@
                             <!-- Live Focus & Slider Card -->
                             <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10">
                                 <!-- True Background Blur Underlay -->
-                                <Border x:Name="Step2BlurUnderlay" Width="270" Height="260" CornerRadius="20" ClipToBounds="True">
+                                <Border x:Name="Step2BlurUnderlay" Width="270" Height="260" CornerRadius="28" ClipToBounds="True">
                                     <Image x:Name="Step2BlurredWallpaperImage" Stretch="UniformToFill">
                                         <Image.Effect>
                                             <BlurEffect x:Name="Step2FolderBlurFx" Radius="28" RenderingBias="Performance"/>
@@ -671,7 +787,7 @@
                                     </Image>
                                 </Border>
 
-                                <Border x:Name="Step2FolderCardBorder" Width="270" Height="260" CornerRadius="20" Background="#C6FCDDC5" Padding="10">
+                                <Border x:Name="Step2FolderCardBorder" Width="270" Height="260" CornerRadius="28" Background="#C6FCDDC5" Padding="12">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
@@ -679,16 +795,29 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
-                                        <!-- Header -->
+                                        <!-- Header: Title + Items Count Badge + 4 Action Buttons -->
                                         <Grid Grid.Row="0" Margin="0,0,0,6">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <Border x:Name="Step2PreviewShapeBadge" Width="20" Height="20" CornerRadius="10" Background="{DynamicResource M3PrimaryBrush}">
-                                                <Path x:Name="Step2PreviewShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="10" Height="10" Fill="{DynamicResource M3OnPrimaryBrush}"/>
-                                            </Border>
-                                            <TextBlock Text="Work Projects" Grid.Column="1" Margin="6,0,0,0" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Border x:Name="Step2PreviewShapeBadge" Width="20" Height="20" CornerRadius="10" Background="{DynamicResource M3PrimaryBrush}" Margin="0,0,6,0">
+                                                    <Path x:Name="Step2PreviewShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="10" Height="10" Fill="{DynamicResource M3OnPrimaryBrush}"/>
+                                                </Border>
+                                                <TextBlock x:Name="Step2PreviewFolderTitle" Text="Work Projects" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                                <Border Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="7" Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="18 նիշք" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Margin="0,0,2,0" ToolTip="Pin">
+                                                    <Path Width="10" Height="10" Stretch="Uniform" Fill="{DynamicResource M3OnSurfaceVariantBrush}" Data="M16,12V4H17V2H7V4H8V12L5,15V17H11V22L12,23L13,22V17H19V15L16,12Z"/>
+                                                </Button>
+                                                <Button Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Margin="0,0,2,0" Content="✏️" FontSize="10" ToolTip="Edit"/>
+                                                <Button Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Margin="0,0,2,0" Content="📁" FontSize="10" ToolTip="Explorer"/>
+                                                <Button Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Content="✕" FontSize="10" ToolTip="Close"/>
+                                            </StackPanel>
                                         </Grid>
 
                                         <!-- Items Viewport -->
@@ -828,7 +957,7 @@
                             <Image x:Name="Step3WallpaperImage" Stretch="UniformToFill"/>
 
                             <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10">
-                                <Border x:Name="Step3BlurUnderlay" Width="270" Height="260" CornerRadius="20" ClipToBounds="True">
+                                <Border x:Name="Step3BlurUnderlay" Width="270" Height="260" CornerRadius="28" ClipToBounds="True">
                                     <Image x:Name="Step3BlurredWallpaperImage" Stretch="UniformToFill">
                                         <Image.Effect>
                                             <BlurEffect x:Name="Step3FolderBlurFx" Radius="28" RenderingBias="Performance"/>
@@ -836,22 +965,36 @@
                                     </Image>
                                 </Border>
 
-                                <Border x:Name="Step3FolderCardBorder" Width="270" Height="260" CornerRadius="20" Background="#C6FCDDC5" Padding="12">
+                                <Border x:Name="Step3FolderCardBorder" Width="270" Height="260" CornerRadius="28" Background="#C6FCDDC5" Padding="12">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="*"/>
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
-                                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                                        <!-- Header: Title + Items Count Badge + 4 Action Buttons -->
+                                        <Grid Grid.Row="0" Margin="0,0,0,6">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <Border x:Name="Step3PreviewShapeBadge" Width="22" Height="22" CornerRadius="11" Background="{DynamicResource M3PrimaryBrush}">
-                                                <Path x:Name="Step3PreviewShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="11" Height="11" Fill="{DynamicResource M3OnPrimaryBrush}"/>
-                                            </Border>
-                                            <TextBlock Text="My Panak" Grid.Column="1" Margin="8,0,0,0" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Border x:Name="Step3PreviewShapeBadge" Width="20" Height="20" CornerRadius="10" Background="{DynamicResource M3PrimaryBrush}" Margin="0,0,6,0">
+                                                    <Path x:Name="Step3PreviewShapePath" Data="{StaticResource GeomSquircle}" Stretch="Uniform" Width="10" Height="10" Fill="{DynamicResource M3OnPrimaryBrush}"/>
+                                                </Border>
+                                                <TextBlock Text="My Panak" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource M3OnSurfaceBrush}" VerticalAlignment="Center"/>
+                                                <Border Background="{DynamicResource M3SurfaceContainerBrush}" CornerRadius="7" Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="6 նիշք" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Margin="0,0,2,0" ToolTip="Pin">
+                                                    <Path Width="10" Height="10" Stretch="Uniform" Fill="{DynamicResource M3OnSurfaceVariantBrush}" Data="M16,12V4H17V2H7V4H8V12L5,15V17H11V22L12,23L13,22V17H19V15L16,12Z"/>
+                                                </Button>
+                                                <Button Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Margin="0,0,2,0" Content="✏️" FontSize="10" ToolTip="Edit"/>
+                                                <Button Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Margin="0,0,2,0" Content="📁" FontSize="10" ToolTip="Explorer"/>
+                                                <Button Width="20" Height="20" Style="{StaticResource CloseIconButtonStyle}" Content="✕" FontSize="10" ToolTip="Close"/>
+                                            </StackPanel>
                                         </Grid>
 
                                         <!-- Sample Grid -->

@@ -119,21 +119,61 @@
                                     <!-- Checked Icon: subtle vector check inside thumb -->
                                     <Path x:Name="CheckIcon" Data="M 1,4 L 3.5,6.5 L 7.5,1.5"
                                           Stroke="{DynamicResource M3PrimaryBrush}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          Canvas.Left="26" Canvas.Top="6" Visibility="Collapsed"/>
+                                          Canvas.Left="26" Canvas.Top="6" Opacity="0"/>
                                 </Canvas>
                             </Border>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Left)" To="21" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Width" To="18" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Height" To="18" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Top)" To="1" Duration="0:0:0.22"/>
+                                            <DoubleAnimation Storyboard.TargetName="CheckIcon" Storyboard.TargetProperty="Opacity" To="1.0" Duration="0:0:0.18"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Left)" To="2" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Width" To="14" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="Height" To="14" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SwitchThumb" Storyboard.TargetProperty="(Canvas.Top)" To="3" Duration="0:0:0.22"/>
+                                            <DoubleAnimation Storyboard.TargetName="CheckIcon" Storyboard.TargetProperty="Opacity" To="0.0" Duration="0:0:0.12"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                                 <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource M3PrimaryBrush}"/>
                                 <Setter TargetName="SwitchTrack" Property="BorderBrush" Value="{DynamicResource M3PrimaryBrush}"/>
-                                <Setter TargetName="SwitchThumb" Property="Canvas.Left" Value="21"/>
-                                <Setter TargetName="SwitchThumb" Property="Width" Value="18"/>
-                                <Setter TargetName="SwitchThumb" Property="Height" Value="18"/>
-                                <Setter TargetName="SwitchThumb" Property="CornerRadius" Value="9"/>
-                                <Setter TargetName="SwitchThumb" Property="Canvas.Top" Value="1"/>
                                 <Setter TargetName="SwitchThumb" Property="Background" Value="{DynamicResource M3OnPrimaryBrush}"/>
-                                <Setter TargetName="CheckIcon" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="SwitchTrack" Property="Opacity" Value="0.9"/>

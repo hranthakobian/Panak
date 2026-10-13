@@ -3,48 +3,48 @@
 ## 🌟 Highlights & Major Features
 
 ### 1. 🖼️ Real-Time Wallpaper Engine & Desktop Background in Preview
-* **Live Wallpaper Capture**: The Setup Wizard now captures the live Windows desktop background in real time. If **Wallpaper Engine** or any interactive live wallpaper is running, Panak captures frames directly from `WorkerW` to display live, moving wallpaper inside the preview cards.
+* **Live Wallpaper Capture**: The Setup Wizard and Welcome experience capture the live Windows desktop background in real time. If **Wallpaper Engine** or interactive live wallpapers are active, Panak captures frames directly from `WorkerW` to display live, moving wallpaper inside the preview cards.
+* **Direct Blur Slider**: An interactive blur slider is integrated directly into the live preview toolbar, offering instantaneous feedback on the wallpaper underlay.
 * **Fallback High-Res Wallpaper**: When static wallpapers are active, Panak reads the exact full-resolution Windows wallpaper (`TranscodedWallpaper` / registry).
 
 ---
 
-### 2. 🌫️ True Folder Background Blur (Behind Popup)
-* **Real Wallpaper Blur Effect**: Folder blur is now applied directly to the desktop backdrop behind the popup using hardware-accelerated shaders and customizable `FolderBlurRadius` (2px to 60px).
-* **Blur Toggle & Opacity Slider**: Full control to enable or disable background blur and set folder surface opacity with instant visual feedback.
-* **Fixed Screen Blackout**: Fixed the critical bug where backdrop blur caused the entire screen to turn black.
+### 2. 🌫️ True Folder Background Blur & Material 3 Rounded Corners
+* **Rounded Corners (28px)**: Standardized `CornerRadius="28"` across all folder popup cards, frosted glass underlays, and preview surfaces for authentic Material 3 Expressive aesthetics.
+* **Real Wallpaper Blur Effect**: Folder blur is applied directly to the desktop backdrop behind the popup using hardware-accelerated shaders and customizable `FolderBlurRadius` (2px to 60px).
+* **Focus Mode Unpin Fix**: Resolved the z-order drop/flicker where unpinned popups could briefly fall behind the dimmed backdrop window.
 
 ---
 
-### 3. 📂 Desktop Icon Preview & Realistic Open/Close Toggle
-* **Interactive Desktop Folder Icon**: The preview showcases an authentic desktop icon on the wallpaper with the chosen Material 3 shape plate and folder title.
-* **Open & Close Popup Animation**: Clicking the desktop icon or popup close button (`✕`) triggers realistic cubic-ease scale and fade animations to open or dismiss the folder widget.
+### 3. 📂 Authentic Desktop Folder Icon Preview & Origin Animation
+* **Authentic 2x2 Desktop Icon Plate**: Preview renders an authentic folder icon featuring the selected Expressive shape plate (Circle, Squircle, Clover, Scallop, Arch), a 2x2 miniature icon grid (`media_1791914326888.png`), and a shadowed label.
+* **Origin-Based Opening Motion**: When `OpenInCenterOnly` is disabled, the folder expands and morphs directly from the desktop icon; when enabled, it scales smoothly from the screen center.
+* **Interactive Open/Close Toggle**: Clicking the desktop icon or preview close button (`✕`) triggers realistic cubic-ease scale and fade animations.
 
 ---
 
-### 4. 📄 Slider Page Navigation & Mouse Wheel Support
-* **Horizontal Paging Mode**: In addition to standard vertical scrollbar, folders support smooth horizontal paged slider navigation.
-* **Mouse Wheel Page Flipping**: Scroll the mouse wheel forward or backward to flip through pages naturally.
-* **Swipe & Drag Gestures**: Mouse drag / touch swipe across pages with configurable toggle in settings.
-* **Centered Pager Controls**: Centered navigation arrows (`‹` / `›`) and pagination dots with an elongated active pill dot.
+### 4. 🗂️ Authentic Folder Header & Dynamic Dynamic Sizing
+* **Authentic Header**: Features the folder title, an items count badge (e.g., "18 նիշք" / "18 items"), and four interactive action buttons (Pin, Edit, Explorer, Close) matching `media_1791914326899.png`.
+* **Dynamic Sizing**: Rows and columns represent maximum boundaries. When a folder has fewer items, the popup dimensions conform tightly to the exact count without vacant space.
+* **Dynamic Slider Pages**: Pages are calculated dynamically without empty trailing slides. Pager controls and dots are automatically hidden when there is only a single page. Active dots feature an elongated pill indicator (18x6), and any dot can be clicked to jump between pages.
 
 ---
 
-### 5. 📐 Dynamic Grid Wrapping (Max Columns & Rows)
-* **Adaptive Dimensions**: Configured grid rows and columns now act as **maximums**. If a folder has fewer items (e.g. 2 items), the popup automatically sizes to the exact rows and columns present rather than leaving empty space.
-* **Consistent Item Width**: Items maintain fixed, proportional sizing (~68–70px) and never stretch or warp when configuring column counts.
+### 5. 🎛️ Smooth Animated Toggles across All Windows
+* **Fluid Storyboard Animations**: Standardized Material 3 Expressive switch toggles across `WelcomeWindow`, `SettingsWindow`, `SetupWindow`, and `UninstallerWindow` with smooth sliding animations (`Canvas.Left` 2 to 21 with `CubicEase` over 0.22s).
 
 ---
 
-### 6. 🎨 Material 3 Expressive Controls & Horizontal Slide Transitions
-* **M3 Expressive Controls**: Toggle switches feature 48x28 pills with morphing thumbs, and radio buttons feature 20px rings with inner bloom dots.
-* **Horizontal Glide Transition**: Wizard step changes glide horizontally from left to right (or right to left) with smooth cubic easing.
-* **Clean Badges & Centered Footer**: Fully centered step pagination dots across all resolutions, and clean badges without extraneous star characters.
+### 6. 🎲 Random Folder Attributes & Custom Color Swatches
+* **Random Attributes on Folder Creation**: Added toggles for Random Shape, Random Color, and Random Opacity in both Settings and Welcome Wizard, dynamically applied when new Panak folders are created.
+* **Custom Hue Swatches**: Clicking the Hue color indicator circle immediately adds the current tint to custom palette colors (`CustomPaletteColors`), persisting it and rendering accessible swatches in Settings.
+* **JSON Settings Export & Import**: Convenient Export and Import buttons in the Settings footer allow backing up and restoring complete configurations via `.json`.
 
 ---
 
 ### 7. 🌐 Comprehensive Multi-Language Localization
-* **Localized "Step" & "Live Preview"**: Added and translated "Step" (Քայլ, Шаг, Étape, Paso, 步骤, خطوة) and "Live Preview" (Ուղիղ նախադիտում, Живой просмотр, etc.) across all 7 supported languages.
-* **Settings Clean-Up**: Removed redundant parenthetical English labels across Armenian, Russian, French, Spanish, Chinese, and Arabic.
+* **Cleaned Parenthetical English**: Removed extraneous parenthetical English labels across all 7 supported languages (`hy`, `en`, `ru`, `fr`, `es`, `zh`, `ar`).
+* **Fully Localized Controls**: Complete localization for all new keys, including "Step", "Live Preview", "Random", "Export/Import Settings", and count badges.
 
 ---
 

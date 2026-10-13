@@ -1277,7 +1277,8 @@ namespace Panak.Views {
         }
 
         private void UpdatePinVisual() {
-            Topmost = _isPinned;
+            // Keep topmost if pinned OR if FocusMode is active so the popup never drops behind the backdrop
+            Topmost = _isPinned || SettingsService.Instance.Current.FocusModeEnabled;
             var loc = LocalizationService.Instance;
             PinButton.ToolTip = _isPinned ? loc["Unpin"] : loc["Pin"];
             if (_isPinned) {

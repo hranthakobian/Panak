@@ -653,6 +653,7 @@ namespace Panak.Services {
                     SettingsService.Instance.Current.FocusModeEnabled) {
                     if (_backdropWindow != null) {
                         _backdropWindow.Visibility = Visibility.Visible;
+                        _popupWindow.Topmost = true;
                         IntPtr popupHwnd = new System.Windows.Interop.WindowInteropHelper(_popupWindow).Handle;
                         IntPtr backdropHwnd = new System.Windows.Interop.WindowInteropHelper(_backdropWindow).Handle;
                         if (popupHwnd != IntPtr.Zero && backdropHwnd != IntPtr.Zero) {
@@ -920,11 +921,30 @@ namespace Panak.Services {
 
                 var settings = SettingsService.Instance.Current;
 
+                string initialShape = settings.IconShape;
+                if (settings.RandomShapeOnCreate) {
+                    string[] shapes = { "Squircle", "Circle", "Clover", "Scallop", "Arch" };
+                    initialShape = shapes[Random.Shared.Next(shapes.Length)];
+                }
+
+                string initialColor = settings.ThemeColor;
+                if (settings.RandomColorOnCreate) {
+                    int randomHue = Random.Shared.Next(0, 360);
+                    var (_, _, c) = ShellHelper.GetMaterialYouTonalPalette(randomHue);
+                    initialColor = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+                }
+
+                double initialOpacity = settings.FolderOpacity;
+                if (settings.RandomOpacityOnCreate) {
+                    initialOpacity = Math.Round(0.40 + Random.Shared.NextDouble() * 0.55, 2);
+                }
+
                 // Immediately create panak.json metadata
                 var data = new PanakFolderData {
                     Title = Path.GetFileName(targetPath),
-                    Color = settings.ThemeColor,
-                    IconShape = settings.IconShape,
+                    Color = initialColor,
+                    IconShape = initialShape,
+                    BackgroundOpacity = initialOpacity,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };

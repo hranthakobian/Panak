@@ -28,5 +28,9 @@ namespace Panak.Models {
         public bool SliderDragEnabled { get; set; } = true;
         public string GitHubRepo { get; set; } = "hranthakobian/Panak";
         public DateTime? LastUpdateCheck { get; set; }
+        public bool RandomShapeOnCreate { get; set; } = false;
+        public bool RandomColorOnCreate { get; set; } = false;
+        public bool RandomOpacityOnCreate { get; set; } = false;
+        public System.Collections.Generic.List<string> CustomPaletteColors { get; set; } = new();
     }
 }
