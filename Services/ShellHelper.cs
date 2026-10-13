@@ -125,6 +125,39 @@ namespace Panak.Services {
         public static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string? lpszWindow);
 
         [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam, uint fuFlags, uint uTimeout, out IntPtr lpdwResult);
+
+        [DllImport("user32.dll")]
+        public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetDC(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+        [DllImport("gdi32.dll")]
+        public static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight, IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
+
+        [DllImport("user32.dll")]
+        public static extern bool IsWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
         public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
         [DllImport("user32.dll")]
@@ -228,13 +261,6 @@ namespace Panak.Services {
             public int Y;
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RECT {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-        }
 
         [DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
@@ -509,6 +535,122 @@ namespace Panak.Services {
             } catch {
                 // Ignore notification failure
             }
+        }
+
+        [ComImport]
+        [Guid("00021401-0000-0000-C000-000000000046")]
+        private class ShellLinkClass { }
+
+        [ComImport]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        [Guid("000214F9-0000-0000-C000-000000000046")]
+        private interface IShellLinkW {
+            void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszFile, int cchMaxPath, IntPtr pfd, uint fFlags);
+            void GetIDList(out IntPtr ppidl);
+            void SetIDList(IntPtr pidl);
+            void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszName, int cchMaxName);
+            void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string pszName);
+            void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszDir, int cchMaxPath);
+            void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string pszDir);
+            void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszArgs, int cchMaxPath);
+            void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string pszArgs);
+            void GetHotkey(out short pwHotkey);
+            void SetHotkey(short wHotkey);
+            void GetShowCmd(out int piShowCmd);
+            void SetShowCmd(int iShowCmd);
+            void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszIconPath, int cchIconPath, out int piIcon);
+            void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string pszIconPath, int iIcon);
+            void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string pszPathRel, uint dwReserved);
+            void Resolve(IntPtr hwnd, uint fFlags);
+            void SetPath([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
+        }
+
+        [ComImport]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        [Guid("0000010b-0000-0000-C000-000000000046")]
+        private interface IPersistFile {
+            void GetClassID(out Guid pClassID);
+            [PreserveSig]
+            int IsDirty();
+            void Load([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, uint dwMode);
+            void Save([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, [MarshalAs(UnmanagedType.Bool)] bool fRemember);
+            void SaveCompleted([MarshalAs(UnmanagedType.LPWStr)] string pszFileName);
+            void GetCurFile([Out, MarshalAs(UnmanagedType.LPWStr)] string ppszFileName);
+        }
+
+        public static readonly HashSet<string> ImageExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+            ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".ico", ".tif", ".tiff"
+        };
+
+        public static string? ResolveShortcut(string lnkPath) {
+            try {
+                if (!File.Exists(lnkPath)) return null;
+                var link = (IShellLinkW)new ShellLinkClass();
+                var file = (IPersistFile)link;
+                file.Load(lnkPath, 0);
+                var sb = new System.Text.StringBuilder(1024);
+                link.GetPath(sb, sb.Capacity, IntPtr.Zero, 0);
+                string target = sb.ToString();
+                if (!string.IsNullOrEmpty(target) && (File.Exists(target) || Directory.Exists(target))) {
+                    return target;
+                }
+            } catch { }
+            return null;
+        }
+
+        public static BitmapSource? GetFileThumbnailSource(string filePath, bool isLarge = true) {
+            try {
+                string resolvedPath = filePath;
+                if (filePath.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)) {
+                    string? target = ResolveShortcut(filePath);
+                    if (!string.IsNullOrEmpty(target) && (File.Exists(target) || Directory.Exists(target))) {
+                        resolvedPath = target;
+                    }
+                }
+
+                string ext = Path.GetExtension(resolvedPath);
+                if (ImageExtensions.Contains(ext) && File.Exists(resolvedPath)) {
+                    try {
+                        var bmp = new BitmapImage();
+                        bmp.BeginInit();
+                        bmp.UriSource = new Uri(resolvedPath);
+                        bmp.DecodePixelWidth = 96;
+                        bmp.CacheOption = BitmapCacheOption.OnLoad;
+                        bmp.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                        bmp.EndInit();
+                        bmp.Freeze();
+                        return bmp;
+                    } catch {
+                        // Fallback to file icon
+                    }
+                }
+            } catch { }
+
+            return GetFileIconSource(filePath, isLarge);
+        }
+
+        public static Bitmap? GetFileThumbnailBitmap(string filePath, bool isLarge = true) {
+            try {
+                string resolvedPath = filePath;
+                if (filePath.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)) {
+                    string? target = ResolveShortcut(filePath);
+                    if (!string.IsNullOrEmpty(target) && (File.Exists(target) || Directory.Exists(target))) {
+                        resolvedPath = target;
+                    }
+                }
+
+                string ext = Path.GetExtension(resolvedPath);
+                if (ImageExtensions.Contains(ext) && File.Exists(resolvedPath)) {
+                    try {
+                        using var fs = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                        using var orig = new Bitmap(fs);
+                        int targetDim = isLarge ? 64 : 32;
+                        return new Bitmap(orig, new System.Drawing.Size(targetDim, targetDim));
+                    } catch { }
+                }
+            } catch { }
+
+            return GetFileIconBitmap(filePath, isLarge);
         }
 
         public static BitmapSource? GetFileIconSource(string filePath, bool isLarge = true) {
@@ -902,6 +1044,125 @@ namespace Panak.Services {
             } catch {
                 return null;
             }
+        }
+
+        private static IntPtr _cachedWorkerW = IntPtr.Zero;
+        private static DateTime _lastWorkerWSearch = DateTime.MinValue;
+
+        public static IntPtr GetWallpaperWorkerW() {
+            if (_cachedWorkerW != IntPtr.Zero && (DateTime.UtcNow - _lastWorkerWSearch).TotalSeconds < 10) {
+                if (IsWindow(_cachedWorkerW)) return _cachedWorkerW;
+            }
+            _lastWorkerWSearch = DateTime.UtcNow;
+            _cachedWorkerW = IntPtr.Zero;
+
+            try {
+                IntPtr progman = FindWindow("Progman", null);
+                if (progman != IntPtr.Zero) {
+                    IntPtr res;
+                    SendMessageTimeout(progman, 0x052C, IntPtr.Zero, IntPtr.Zero, 0, 1000, out res);
+                    EnumWindows((hWnd, lParam) => {
+                        IntPtr shellView = FindWindowEx(hWnd, IntPtr.Zero, "SHELLDLL_DefView", null);
+                        if (shellView != IntPtr.Zero) {
+                            _cachedWorkerW = FindWindowEx(IntPtr.Zero, hWnd, "WorkerW", null);
+                        }
+                        return true;
+                    }, IntPtr.Zero);
+                }
+            } catch { }
+            return _cachedWorkerW;
+        }
+
+        public static bool IsLiveWallpaperEngineRunning() {
+            try {
+                return System.Diagnostics.Process.GetProcessesByName("wallpaper64").Length > 0
+                    || System.Diagnostics.Process.GetProcessesByName("wallpaper32").Length > 0
+                    || System.Diagnostics.Process.GetProcessesByName("Lively").Length > 0;
+            } catch {
+                return false;
+            }
+        }
+
+        public static BitmapSource? CaptureLiveWallpaper() {
+            try {
+                IntPtr workerW = GetWallpaperWorkerW();
+                if (workerW != IntPtr.Zero) {
+                    RECT rect;
+                    GetWindowRect(workerW, out rect);
+                    int w = rect.Right - rect.Left;
+                    int h = rect.Bottom - rect.Top;
+                    if (w > 100 && h > 100) {
+                        using var bmp = new System.Drawing.Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                        using (var g = System.Drawing.Graphics.FromImage(bmp)) {
+                            IntPtr hdc = g.GetHdc();
+                            try {
+                                bool success = PrintWindow(workerW, hdc, 0x2); // PW_RENDERFULLCONTENT
+                                if (!success) {
+                                    IntPtr srcDc = GetDC(workerW);
+                                    if (srcDc != IntPtr.Zero) {
+                                        BitBlt(hdc, 0, 0, w, h, srcDc, 0, 0, 0x00CC0020);
+                                        ReleaseDC(workerW, srcDc);
+                                        success = true;
+                                    }
+                                }
+                            } finally {
+                                g.ReleaseHdc(hdc);
+                            }
+                        }
+                        IntPtr hBitmap = bmp.GetHbitmap();
+                        try {
+                            var wpfBmp = Imaging.CreateBitmapSourceFromHBitmap(
+                                hBitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                            wpfBmp.Freeze();
+                            return wpfBmp;
+                        } finally {
+                            DeleteObject(hBitmap);
+                        }
+                    }
+                }
+            } catch { }
+            return null;
+        }
+
+        public static BitmapSource? GetDesktopWallpaperBitmap() {
+            // 1. Try Live Wallpaper capture if active
+            if (IsLiveWallpaperEngineRunning()) {
+                var live = CaptureLiveWallpaper();
+                if (live != null) return live;
+            }
+
+            // 2. Try Windows TranscodedWallpaper file (current active desktop wallpaper image)
+            try {
+                string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                string transcoded = Path.Combine(appData, @"Microsoft\Windows\Themes\TranscodedWallpaper");
+                if (File.Exists(transcoded) && new FileInfo(transcoded).Length > 0) {
+                    var bi = new BitmapImage();
+                    bi.BeginInit();
+                    bi.CacheOption = BitmapCacheOption.OnLoad;
+                    bi.UriSource = new Uri(transcoded, UriKind.Absolute);
+                    bi.EndInit();
+                    bi.Freeze();
+                    return bi;
+                }
+            } catch { }
+
+            // 3. Try Registry Wallpaper path
+            try {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop");
+                string? wpPath = key?.GetValue("Wallpaper") as string;
+                if (!string.IsNullOrEmpty(wpPath) && File.Exists(wpPath)) {
+                    var bi = new BitmapImage();
+                    bi.BeginInit();
+                    bi.CacheOption = BitmapCacheOption.OnLoad;
+                    bi.UriSource = new Uri(wpPath, UriKind.Absolute);
+                    bi.EndInit();
+                    bi.Freeze();
+                    return bi;
+                }
+            } catch { }
+
+            // 4. Try Live Wallpaper capture fallback
+            return CaptureLiveWallpaper();
         }
 
         public static void EnableWindowBlur(IntPtr hwnd, uint tintColor = 0x66000000) {

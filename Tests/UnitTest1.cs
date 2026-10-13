@@ -24,7 +24,7 @@ namespace Panak.Tests {
                 "LanguageAiNote", "CenterPopupOnly", "CenterPopupOnlyDesc", "Support", "SupportDesc", "DonateOnKofi",
                 "DotNetRuntime", "DotNetRuntimeDesc", "DotNetAlreadyInstalled", "DotNetNotInstalled", "DotNetDownloading", "DotNetInstalling",
                 "FolderBlur", "FolderBlurDesc", "FolderBlurRadius", "PagingMode", "PagingModeDesc", "PagingModeSlider", "PagingModeScrollbar",
-                "GridRows", "SliderArrows", "SliderDrag", "Step1Title", "Step1Subtitle", "Step2Title", "Step2Subtitle", "Step3Title", "Step3Subtitle", "Skip", "Next", "Back", "Preview"
+                "GridRows", "SliderArrows", "SliderDrag", "Step1Title", "Step1Subtitle", "Step2Title", "Step2Subtitle", "Step3Title", "Step3Subtitle", "Skip", "Next", "Back", "Preview", "Step", "LivePreview"
             };
 
             foreach (var lang in new[] { "hy", "en", "ru", "fr", "es", "zh", "ar" }) {
@@ -34,6 +34,16 @@ namespace Panak.Tests {
                     Assert.IsFalse(string.IsNullOrWhiteSpace(val), $"Key '{key}' should not be empty in language '{lang}'");
                 }
             }
+        }
+
+        [TestMethod]
+        public void TestDesktopWallpaperDetection() {
+            bool isWpRunning = ShellHelper.IsLiveWallpaperEngineRunning();
+            Console.WriteLine($"IsLiveWallpaperEngineRunning: {isWpRunning}");
+
+            // Verify wallpaper discovery does not crash and returns valid source or null gracefully
+            var wp = ShellHelper.GetDesktopWallpaperBitmap();
+            Console.WriteLine($"GetDesktopWallpaperBitmap result: {(wp != null ? $"{wp.PixelWidth}x{wp.PixelHeight}" : "null")}");
         }
 
         [TestMethod]
@@ -1460,6 +1470,95 @@ namespace Panak.Tests {
 
                 bar.Value = 50.0;
                 Assert.AreEqual(50.0, bar.Value, 0.01);
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+        }
+
+        [TestMethod]
+        public void TestPinAndUnpinLocalizationKeysExistInAllLanguages() {
+            var loc = LocalizationService.Instance;
+            foreach (var lang in new[] { "hy", "en", "ru", "fr", "es", "zh", "ar" }) {
+                loc.CurrentLanguage = lang;
+                string pin = loc["Pin"];
+                string unpin = loc["Unpin"];
+                Assert.IsFalse(string.IsNullOrWhiteSpace(pin), $"Pin should not be empty in {lang}");
+                Assert.IsFalse(string.IsNullOrWhiteSpace(unpin), $"Unpin should not be empty in {lang}");
+            }
+        }
+
+        [TestMethod]
+        public void TestLnkExtensionStripping() {
+            string testFile1 = "document.pdf.lnk";
+            string testFile2 = "photo.jpg";
+            string testFile3 = "Photoshop.lnk";
+
+            string name1 = Path.GetFileNameWithoutExtension(testFile1);
+            string name2 = Path.GetFileNameWithoutExtension(testFile2);
+
+            Assert.AreEqual("document.pdf", name1);
+            Assert.AreEqual("photo", name2);
+            Assert.AreEqual("Photoshop", Path.GetFileNameWithoutExtension(testFile3));
+        }
+
+        [TestMethod]
+        public void TestImageExtensionsInShellHelper() {
+            Assert.IsTrue(ShellHelper.ImageExtensions.Contains(".jpg"));
+            Assert.IsTrue(ShellHelper.ImageExtensions.Contains(".jpeg"));
+            Assert.IsTrue(ShellHelper.ImageExtensions.Contains(".png"));
+            Assert.IsTrue(ShellHelper.ImageExtensions.Contains(".bmp"));
+            Assert.IsTrue(ShellHelper.ImageExtensions.Contains(".webp"));
+            Assert.IsTrue(ShellHelper.ImageExtensions.Contains(".gif"));
+            Assert.IsFalse(ShellHelper.ImageExtensions.Contains(".txt"));
+            Assert.IsFalse(ShellHelper.ImageExtensions.Contains(".exe"));
+        }
+
+        [TestMethod]
+        public void TestResolveShortcutHandlesInvalidPath() {
+            string? target = ShellHelper.ResolveShortcut("C:\\non_existent_folder_xyz\\file.lnk");
+            Assert.IsNull(target);
+        }
+
+        [TestMethod]
+        public void TestFolderPopupWindowPinAndMarqueeControls() {
+            var thread = new System.Threading.Thread(() => {
+                var popup = new FolderPopupWindow();
+                Assert.IsNotNull(popup.PinButton, "PinButton should exist");
+                Assert.IsNotNull(popup.TitleMarqueeCanvas, "TitleMarqueeCanvas should exist");
+                Assert.IsNotNull(popup.TitleMarqueeTransform, "TitleMarqueeTransform should exist");
+                Assert.IsNotNull(popup.FolderTitleDuplicateText, "FolderTitleDuplicateText should exist");
+                Assert.IsFalse(popup.IsPinned, "Window should start unpinned");
+
+                popup.TogglePin();
+                Assert.IsTrue(popup.IsPinned, "Window should be pinned after toggle");
+                Assert.IsTrue(popup.Topmost, "Window should be Topmost when pinned");
+
+                popup.TogglePin();
+                Assert.IsFalse(popup.IsPinned, "Window should be unpinned after toggle");
+                Assert.IsFalse(popup.Topmost, "Window should not be Topmost when unpinned");
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+        }
+
+        [TestMethod]
+        public void TestPinnedPopupDoesNotCloseOnClickOutsideOrClosePopup() {
+            var thread = new System.Threading.Thread(() => {
+                var popup = new FolderPopupWindow();
+                popup.TogglePin();
+                Assert.IsTrue(popup.IsPinned);
+
+                var hook = new HookService();
+                hook.IsPopupOpenFunc = () => true;
+                hook.IsPopupPinnedFunc = () => popup.IsPinned;
+
+                bool closeRequestedFired = false;
+                hook.CloseRequested += () => { closeRequestedFired = true; };
+
+                Assert.IsTrue(hook.IsPopupPinnedFunc());
+                Assert.IsFalse(closeRequestedFired);
             });
             thread.SetApartmentState(System.Threading.ApartmentState.STA);
             thread.Start();

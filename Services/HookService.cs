@@ -95,6 +95,7 @@ namespace Panak.Services {
 
         public Func<bool>? IsPopupOpenFunc { get; set; }
         public Func<bool>? IsPopupWithinGracePeriodFunc { get; set; }
+        public Func<bool>? IsPopupPinnedFunc { get; set; }
         public Func<IntPtr>? GetPopupHwndFunc { get; set; }
 
         public HookService() {
@@ -131,18 +132,20 @@ namespace Panak.Services {
                 // Detect click outside active folder popup
                 if (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN) {
                     if (IsPopupOpenFunc?.Invoke() == true) {
-                        if (IsPopupWithinGracePeriodFunc?.Invoke() != true) {
-                            IntPtr popupHwnd = GetPopupHwndFunc?.Invoke() ?? IntPtr.Zero;
-                            if (popupHwnd != IntPtr.Zero) {
-                                MSLLHOOKSTRUCT hs = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
-                                ShellHelper.POINT pt = new ShellHelper.POINT { X = hs.pt.x, Y = hs.pt.y };
-                                IntPtr clickedHwnd = ShellHelper.WindowFromPoint(pt);
-                                IntPtr clickedRoot = ShellHelper.GetAncestor(clickedHwnd, ShellHelper.GA_ROOT);
+                        if (IsPopupPinnedFunc?.Invoke() != true) {
+                            if (IsPopupWithinGracePeriodFunc?.Invoke() != true) {
+                                IntPtr popupHwnd = GetPopupHwndFunc?.Invoke() ?? IntPtr.Zero;
+                                if (popupHwnd != IntPtr.Zero) {
+                                    MSLLHOOKSTRUCT hs = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+                                    ShellHelper.POINT pt = new ShellHelper.POINT { X = hs.pt.x, Y = hs.pt.y };
+                                    IntPtr clickedHwnd = ShellHelper.WindowFromPoint(pt);
+                                    IntPtr clickedRoot = ShellHelper.GetAncestor(clickedHwnd, ShellHelper.GA_ROOT);
 
-                                if (clickedHwnd != popupHwnd && clickedRoot != popupHwnd) {
-                                    Application.Current.Dispatcher.BeginInvoke(() => {
-                                        CloseRequested?.Invoke();
-                                    });
+                                    if (clickedHwnd != popupHwnd && clickedRoot != popupHwnd) {
+                                        Application.Current.Dispatcher.BeginInvoke(() => {
+                                            CloseRequested?.Invoke();
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -348,23 +351,28 @@ namespace Panak.Services {
                     KBDLLHOOKSTRUCT hookStruct = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
 
                     bool isPopupOpen = IsPopupOpenFunc?.Invoke() ?? false;
+                    bool isPopupPinned = IsPopupPinnedFunc?.Invoke() ?? false;
 
                     string closeHotkey = SettingsService.Instance.Current.ClosePopupHotkey ?? "Escape";
                     string quickLookHotkey = SettingsService.Instance.Current.QuickLookHotkey ?? "Space";
 
                     if (isPopupOpen && MatchesHotkey(closeHotkey, hookStruct.vkCode)) {
-                        Application.Current.Dispatcher.Invoke(() => {
-                            CloseRequested?.Invoke();
-                        });
-                        return (IntPtr)1;
-                    }
-
-                    if (MatchesHotkey(quickLookHotkey, hookStruct.vkCode)) {
-                        if (isPopupOpen) {
+                        if (!isPopupPinned) {
                             Application.Current.Dispatcher.Invoke(() => {
                                 CloseRequested?.Invoke();
                             });
                             return (IntPtr)1;
+                        }
+                    }
+
+                    if (MatchesHotkey(quickLookHotkey, hookStruct.vkCode)) {
+                        if (isPopupOpen) {
+                            if (!isPopupPinned) {
+                                Application.Current.Dispatcher.Invoke(() => {
+                                    CloseRequested?.Invoke();
+                                });
+                                return (IntPtr)1;
+                            }
                         }
 
                         if (SettingsService.Instance.Current.SpaceQuickLookEnabled) {

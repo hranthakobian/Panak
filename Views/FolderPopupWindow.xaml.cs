@@ -47,6 +47,10 @@ namespace Panak.Views {
         private int _animationSessionId = 0;
         private UniformGrid? _itemsUniformGrid;
         private bool _isCurrentThemeDark = true;
+        private bool _isPinned = false;
+        private bool _isCustomPositioned = false;
+
+        public bool IsPinned => _isPinned;
 
         public bool IsWithinOpenGracePeriod() {
             return _isOpening || (DateTime.UtcNow - _openedTime).TotalMilliseconds < 750;
@@ -113,43 +117,45 @@ namespace Panak.Views {
 
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) {
             if (msg == WM_WINDOWPOSCHANGING && !_isOpening && !_isClosing) {
-                var pos = Marshal.PtrToStructure<WINDOWPOS>(lParam);
-                if ((pos.flags & SWP_NOSIZE) == 0 && pos.cx > 0 && pos.cy > 0) {
-                    var dpi = VisualTreeHelper.GetDpi(this);
-                    double dpiX = dpi.DpiScaleX;
-                    double dpiY = dpi.DpiScaleY;
+                if (!_isCustomPositioned) {
+                    var pos = Marshal.PtrToStructure<WINDOWPOS>(lParam);
+                    if ((pos.flags & SWP_NOSIZE) == 0 && pos.cx > 0 && pos.cy > 0) {
+                        var dpi = VisualTreeHelper.GetDpi(this);
+                        double dpiX = dpi.DpiScaleX;
+                        double dpiY = dpi.DpiScaleY;
 
-                    var workArea = SystemParameters.WorkArea;
-                    int screenLeft = (int)Math.Round(workArea.Left * dpiX);
-                    int screenTop = (int)Math.Round(workArea.Top * dpiY);
-                    int screenRight = (int)Math.Round(workArea.Right * dpiX);
-                    int screenBottom = (int)Math.Round(workArea.Bottom * dpiY);
+                        var workArea = SystemParameters.WorkArea;
+                        int screenLeft = (int)Math.Round(workArea.Left * dpiX);
+                        int screenTop = (int)Math.Round(workArea.Top * dpiY);
+                        int screenRight = (int)Math.Round(workArea.Right * dpiX);
+                        int screenBottom = (int)Math.Round(workArea.Bottom * dpiY);
 
-                    int targetX;
-                    int targetY;
+                        int targetX;
+                        int targetY;
 
-                    if (SettingsService.Instance.Current.OpenInCenterOnly) {
-                        targetX = screenLeft + (screenRight - screenLeft - pos.cx) / 2;
-                        targetY = screenTop + (screenBottom - screenTop - pos.cy) / 2;
-                    } else {
-                        int anchorX = (int)Math.Round(_anchorScreenPoint.X * dpiX);
-                        int anchorY = (int)Math.Round(_anchorScreenPoint.Y * dpiY);
+                        if (SettingsService.Instance.Current.OpenInCenterOnly) {
+                            targetX = screenLeft + (screenRight - screenLeft - pos.cx) / 2;
+                            targetY = screenTop + (screenBottom - screenTop - pos.cy) / 2;
+                        } else {
+                            int anchorX = (int)Math.Round(_anchorScreenPoint.X * dpiX);
+                            int anchorY = (int)Math.Round(_anchorScreenPoint.Y * dpiY);
 
-                        targetX = (_transformOrigin.X > 0.5) ? (anchorX - pos.cx) : anchorX;
-                        targetY = (_transformOrigin.Y > 0.5) ? (anchorY - pos.cy) : anchorY;
+                            targetX = (_transformOrigin.X > 0.5) ? (anchorX - pos.cx) : anchorX;
+                            targetY = (_transformOrigin.Y > 0.5) ? (anchorY - pos.cy) : anchorY;
 
-                        int margin = (int)Math.Round(8 * dpiX);
-                        if (targetX < screenLeft + margin) targetX = screenLeft + margin;
-                        if (targetX + pos.cx > screenRight - margin) targetX = screenRight - pos.cx - margin;
-                        if (targetY < screenTop + margin) targetY = screenTop + margin;
-                        if (targetY + pos.cy > screenBottom - margin) targetY = screenBottom - pos.cy - margin;
+                            int margin = (int)Math.Round(8 * dpiX);
+                            if (targetX < screenLeft + margin) targetX = screenLeft + margin;
+                            if (targetX + pos.cx > screenRight - margin) targetX = screenRight - pos.cx - margin;
+                            if (targetY < screenTop + margin) targetY = screenTop + margin;
+                            if (targetY + pos.cy > screenBottom - margin) targetY = screenBottom - pos.cy - margin;
+                        }
+
+                        pos.x = targetX;
+                        pos.y = targetY;
+                        pos.flags &= ~SWP_NOMOVE;
+
+                        Marshal.StructureToPtr(pos, lParam, false);
                     }
-
-                    pos.x = targetX;
-                    pos.y = targetY;
-                    pos.flags &= ~SWP_NOMOVE;
-
-                    Marshal.StructureToPtr(pos, lParam, false);
                 }
             }
             return IntPtr.Zero;
@@ -177,6 +183,9 @@ namespace Panak.Views {
 
         protected override void OnDeactivated(EventArgs e) {
             base.OnDeactivated(e);
+            if (_isPinned) {
+                return;
+            }
             if (IsWithinOpenGracePeriod()) {
                 return;
             }
@@ -201,6 +210,7 @@ namespace Panak.Views {
             EditButton.ToolTip = loc["Rename"];
             ExplorerButton.ToolTip = loc["OpenInExplorer"];
             CloseButton.ToolTip = loc["Cancel"];
+            PinButton.ToolTip = _isPinned ? loc["Unpin"] : loc["Pin"];
         }
 
         public void LoadFolder(string folderPath, Rect iconBounds) {
@@ -232,11 +242,13 @@ namespace Panak.Views {
             _isInitializing = true;
             try {
                 // Set Title & Count
-                FolderTitleText.Text = _folderData.Title;
+                UpdateTitleMarquee(_folderData.Title);
                 FolderTitleText.Visibility = Visibility.Visible;
+                TitleMarqueeCanvas.Visibility = Visibility.Visible;
                 InlineNameEditBox.Visibility = Visibility.Collapsed;
                 UpdateItemCountText();
                 UpdateBreadcrumbs();
+                UpdatePinVisual();
 
                 // Apply Theme Color
                 ApplyThemeColor(_folderData.Color);
@@ -391,7 +403,12 @@ namespace Panak.Views {
         private double _dragStartTranslateX = 0;
 
         private void ApplySettings() {
-            int columns = GetConfiguredColumns();
+            int maxCols = SettingsService.Instance.Current.GridColumns;
+            if (maxCols < 3) maxCols = 3;
+            if (maxCols > 8) maxCols = 8;
+            int maxRows = Math.Clamp(SettingsService.Instance.Current.GridRows, 1, 5);
+
+            int columns = (Items.Count > 0 && Items.Count < maxCols) ? Math.Max(1, Items.Count) : maxCols;
             bool isSlider = string.Equals(SettingsService.Instance.Current.PagingMode, "Slider", StringComparison.OrdinalIgnoreCase);
 
             if (isSlider) {
@@ -403,6 +420,11 @@ namespace Panak.Views {
                 FooterPagerGrid.Visibility = Visibility.Collapsed;
                 ItemsScrollViewer.Visibility = Items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
                 FolderItemsControl.ItemsSource = Items;
+
+                double itemW = 70.0;
+                double itemH = 78.0;
+                FolderItemsControl.Width = columns * itemW;
+                ItemsScrollViewer.MaxHeight = maxRows * itemH + 8;
 
                 if (_itemsUniformGrid != null) {
                     _itemsUniformGrid.Columns = columns;
@@ -429,8 +451,13 @@ namespace Panak.Views {
                 return;
             }
 
-            int cols = GetConfiguredColumns();
-            int rows = Math.Clamp(SettingsService.Instance.Current.GridRows, 1, 5);
+            int maxCols = SettingsService.Instance.Current.GridColumns;
+            if (maxCols < 3) maxCols = 3;
+            if (maxCols > 8) maxCols = 8;
+            int maxRows = Math.Clamp(SettingsService.Instance.Current.GridRows, 1, 5);
+
+            int cols = (Items.Count > 0 && Items.Count < maxCols) ? Math.Max(1, Items.Count) : maxCols;
+            int rows = Math.Min(maxRows, Math.Max(1, (int)Math.Ceiling((double)Items.Count / cols)));
             int itemsPerPage = Math.Max(1, cols * rows);
 
             _totalSliderPages = Math.Max(1, (int)Math.Ceiling((double)Items.Count / itemsPerPage));
@@ -442,8 +469,12 @@ namespace Panak.Views {
             }
 
             double itemW = 70.0;
-            double pageW = Math.Max(cols * itemW, SliderPagesViewport.ActualWidth > 0 ? SliderPagesViewport.ActualWidth : cols * itemW);
+            double itemH = 78.0;
+            double pageW = cols * itemW;
+            double pageH = rows * itemH;
 
+            SliderPagesViewport.Width = pageW;
+            SliderPagesViewport.Height = pageH;
             SliderPagesPanel.Children.Clear();
             var itemTemplate = (DataTemplate)Resources["PanakItemDataTemplate"];
 
@@ -453,13 +484,17 @@ namespace Panak.Views {
                 var factory = new FrameworkElementFactory(typeof(UniformGrid));
                 factory.SetValue(UniformGrid.ColumnsProperty, cols);
                 factory.SetValue(UniformGrid.RowsProperty, rows);
+                factory.SetValue(FrameworkElement.WidthProperty, pageW);
+                factory.SetValue(FrameworkElement.HeightProperty, pageH);
 
                 var itemsCtrl = new ItemsControl {
                     ItemsSource = pageItems,
                     ItemTemplate = itemTemplate,
                     ItemsPanel = new ItemsPanelTemplate(factory),
                     Width = pageW,
-                    HorizontalAlignment = HorizontalAlignment.Center
+                    Height = pageH,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
                 };
 
                 SliderPagesPanel.Children.Add(itemsCtrl);
@@ -501,7 +536,6 @@ namespace Panak.Views {
             SliderNextButton.Opacity = _currentSliderPage < _totalSliderPages - 1 ? 1.0 : 0.35;
 
             FooterPagerGrid.Visibility = (_totalSliderPages > 1) ? Visibility.Visible : Visibility.Collapsed;
-            FooterItemCountText.Text = $"{Items.Count} {LocalizationService.Instance["FilesCount"]}";
         }
 
         private void NavigateToSliderPage(int targetPage) {
@@ -509,9 +543,9 @@ namespace Panak.Views {
             targetPage = Math.Clamp(targetPage, 0, _totalSliderPages - 1);
             _currentSliderPage = targetPage;
 
-            double pageWidth = SliderPagesViewport.ActualWidth > 0
-                ? SliderPagesViewport.ActualWidth
-                : (GetConfiguredColumns() * 70.0);
+            double pageWidth = SliderPagesViewport.Width > 0
+                ? SliderPagesViewport.Width
+                : (SliderPagesViewport.ActualWidth > 0 ? SliderPagesViewport.ActualWidth : 280);
 
             double targetX = -targetPage * pageWidth;
 
@@ -542,6 +576,23 @@ namespace Panak.Views {
             SliderNextButton.IsEnabled = _currentSliderPage < _totalSliderPages - 1;
             SliderPrevButton.Opacity = _currentSliderPage > 0 ? 1.0 : 0.35;
             SliderNextButton.Opacity = _currentSliderPage < _totalSliderPages - 1 ? 1.0 : 0.35;
+        }
+
+        private void SliderViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            if (!string.Equals(SettingsService.Instance.Current.PagingMode, "Slider", StringComparison.OrdinalIgnoreCase) || _totalSliderPages <= 1) {
+                return;
+            }
+            if (e.Delta < 0) {
+                if (_currentSliderPage < _totalSliderPages - 1) {
+                    NavigateToSliderPage(_currentSliderPage + 1);
+                    e.Handled = true;
+                }
+            } else if (e.Delta > 0) {
+                if (_currentSliderPage > 0) {
+                    NavigateToSliderPage(_currentSliderPage - 1);
+                    e.Handled = true;
+                }
+            }
         }
 
         private void SliderViewport_PreviewMouseDown(object sender, MouseButtonEventArgs e) {
@@ -643,13 +694,17 @@ namespace Panak.Views {
                 foreach (var entry in entries) {
                     bool isDir = entry.Attributes.HasFlag(FileAttributes.Directory);
                     string sizeText = isDir ? "Folder" : FormatFileSize(((FileInfo)entry).Length);
+                    string displayName = entry.Name;
+                    if (!isDir && string.Equals(entry.Extension, ".lnk", StringComparison.OrdinalIgnoreCase)) {
+                        displayName = Path.GetFileNameWithoutExtension(entry.Name);
+                    }
 
                     var item = new PanakItem {
                         FullPath = entry.FullName,
-                        DisplayName = entry.Name,
+                        DisplayName = displayName,
                         Extension = entry.Extension,
                         IsDirectory = isDir,
-                        IconSource = ShellHelper.GetFileIconSource(entry.FullName, isLarge: true),
+                        IconSource = ShellHelper.GetFileThumbnailSource(entry.FullName, isLarge: true),
                         SizeDisplay = sizeText,
                         LastModified = entry.LastWriteTime
                     };
@@ -965,41 +1020,43 @@ namespace Panak.Views {
                 return;
             }
 
-            double screenLeft = SystemParameters.WorkArea.Left;
-            double screenTop = SystemParameters.WorkArea.Top;
-            double screenRight = SystemParameters.WorkArea.Right;
-            double screenBottom = SystemParameters.WorkArea.Bottom;
+            if (!_isCustomPositioned) {
+                double screenLeft = SystemParameters.WorkArea.Left;
+                double screenTop = SystemParameters.WorkArea.Top;
+                double screenRight = SystemParameters.WorkArea.Right;
+                double screenBottom = SystemParameters.WorkArea.Bottom;
 
-            double newLeft;
-            double newTop;
+                double newLeft;
+                double newTop;
 
-            if (SettingsService.Instance.Current.OpenInCenterOnly) {
-                newLeft = screenLeft + (screenRight - screenLeft - newW) / 2.0;
-                newTop = screenTop + (screenBottom - screenTop - newH) / 2.0;
-            } else {
-                newLeft = (_transformOrigin.X > 0.5) ? (_anchorScreenPoint.X - newW) : _anchorScreenPoint.X;
-                newTop = (_transformOrigin.Y > 0.5) ? (_anchorScreenPoint.Y - newH) : _anchorScreenPoint.Y;
+                if (SettingsService.Instance.Current.OpenInCenterOnly) {
+                    newLeft = screenLeft + (screenRight - screenLeft - newW) / 2.0;
+                    newTop = screenTop + (screenBottom - screenTop - newH) / 2.0;
+                } else {
+                    newLeft = (_transformOrigin.X > 0.5) ? (_anchorScreenPoint.X - newW) : _anchorScreenPoint.X;
+                    newTop = (_transformOrigin.Y > 0.5) ? (_anchorScreenPoint.Y - newH) : _anchorScreenPoint.Y;
 
-                // Clamp strictly within work area
-                if (newLeft < screenLeft + 8) {
-                    newLeft = screenLeft + 8;
+                    // Clamp strictly within work area
+                    if (newLeft < screenLeft + 8) {
+                        newLeft = screenLeft + 8;
+                    }
+                    if (newLeft + newW > screenRight - 8) {
+                        newLeft = screenRight - newW - 8;
+                    }
+                    if (newTop < screenTop + 8) {
+                        newTop = screenTop + 8;
+                    }
+                    if (newTop + newH > screenBottom - 8) {
+                        newTop = screenBottom - newH - 8;
+                    }
                 }
-                if (newLeft + newW > screenRight - 8) {
-                    newLeft = screenRight - newW - 8;
-                }
-                if (newTop < screenTop + 8) {
-                    newTop = screenTop + 8;
-                }
-                if (newTop + newH > screenBottom - 8) {
-                    newTop = screenBottom - newH - 8;
-                }
-            }
 
-            if (Math.Abs(Left - newLeft) > 0.1) {
-                Left = newLeft;
-            }
-            if (Math.Abs(Top - newTop) > 0.1) {
-                Top = newTop;
+                if (Math.Abs(Left - newLeft) > 0.1) {
+                    Left = newLeft;
+                }
+                if (Math.Abs(Top - newTop) > 0.1) {
+                    Top = newTop;
+                }
             }
 
             double cardW = Math.Max(10, newW);
@@ -1011,6 +1068,8 @@ namespace Panak.Views {
                 PopupBlurImage.Width = cardW + blurMargin * 2;
                 PopupBlurImage.Height = cardH + blurMargin * 2;
             }
+
+            UpdateTitleMarquee(_folderData.Title);
         }
 
         private void InnerClippingBorder_SizeChanged(object sender, SizeChangedEventArgs e) {
@@ -1183,6 +1242,91 @@ namespace Panak.Views {
         }
 
         // Header Actions
+        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+            if (e.ClickCount == 1 && e.LeftButton == MouseButtonState.Pressed) {
+                if (FindVisualParent<Button>(e.OriginalSource as DependencyObject) == null &&
+                    FindVisualParent<TextBox>(e.OriginalSource as DependencyObject) == null) {
+                    _isCustomPositioned = true;
+                    try {
+                        DragMove();
+                    } catch { }
+                }
+            }
+        }
+
+        private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject {
+            while (child != null) {
+                if (child is T parent) return parent;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
+        }
+
+        private void PinButton_Click(object sender, RoutedEventArgs e) {
+            TogglePin();
+        }
+
+        public void TogglePin() {
+            _isPinned = !_isPinned;
+            UpdatePinVisual();
+            if (_isPinned) {
+                PanakManager.Instance.TemporarilyHideBackdropForDrag();
+            } else {
+                PanakManager.Instance.RestoreBackdropAfterDrag();
+            }
+        }
+
+        private void UpdatePinVisual() {
+            Topmost = _isPinned;
+            var loc = LocalizationService.Instance;
+            PinButton.ToolTip = _isPinned ? loc["Unpin"] : loc["Pin"];
+            if (_isPinned) {
+                PinButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, 255, 255, 255));
+                PinIconPath.Fill = (Brush)FindResource("M3PrimaryBrush");
+            } else {
+                PinButton.ClearValue(Button.BackgroundProperty);
+                PinIconPath.Fill = (Brush)FindResource("PopupHeaderBtnFg");
+            }
+        }
+
+        private void UpdateTitleMarquee(string title) {
+            FolderTitleText.Text = title;
+            FolderTitleDuplicateText.Text = title;
+
+            FolderTitleText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double textWidth = FolderTitleText.DesiredSize.Width;
+
+            double maxTitleWidth = 110;
+            if (ActualWidth > 0) {
+                maxTitleWidth = Math.Max(100, Math.Min(180, ActualWidth - 140));
+            }
+            TitleContainer.MaxWidth = maxTitleWidth;
+
+            double displayWidth = Math.Min(textWidth, maxTitleWidth);
+            if (displayWidth < 10) displayWidth = 10;
+            TitleContainer.Width = displayWidth;
+            TitleMarqueeCanvas.Width = displayWidth;
+
+            if (textWidth > maxTitleWidth + 2) {
+                FolderTitleDuplicateText.Visibility = Visibility.Visible;
+                double gap = 28.0;
+                double totalDistance = textWidth + gap;
+                double durationSeconds = Math.Max(3.0, totalDistance / 35.0);
+
+                var anim = new DoubleAnimationUsingKeyFrames();
+                anim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+                anim.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(1.5))));
+                anim.KeyFrames.Add(new LinearDoubleKeyFrame(-totalDistance, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(1.5 + durationSeconds))));
+                anim.RepeatBehavior = RepeatBehavior.Forever;
+
+                TitleMarqueeTransform.BeginAnimation(TranslateTransform.XProperty, anim);
+            } else {
+                FolderTitleDuplicateText.Visibility = Visibility.Collapsed;
+                TitleMarqueeTransform.BeginAnimation(TranslateTransform.XProperty, null);
+                TitleMarqueeTransform.X = 0;
+            }
+        }
+
         private void EditButton_Click(object sender, RoutedEventArgs e) {
             ToggleEditPanel();
         }
@@ -1224,7 +1368,12 @@ namespace Panak.Views {
         }
 
         private void StartInlineRename() {
-            InlineNameEditBox.Text = FolderTitleText.Text;
+            TitleMarqueeTransform.BeginAnimation(TranslateTransform.XProperty, null);
+            TitleMarqueeTransform.X = 0;
+            FolderTitleDuplicateText.Visibility = Visibility.Collapsed;
+            TitleMarqueeCanvas.Visibility = Visibility.Collapsed;
+            TitleContainer.Width = double.NaN;
+            InlineNameEditBox.Text = _folderData.Title;
             FolderTitleText.Visibility = Visibility.Collapsed;
             InlineNameEditBox.Visibility = Visibility.Visible;
             InlineNameEditBox.Focus();
@@ -1265,7 +1414,7 @@ namespace Panak.Views {
                 _folderData.Title = newName;
                 _folderData.Save(newPath);
 
-                FolderTitleText.Text = newName;
+                UpdateTitleMarquee(newName);
                 NameEditBox.Text = newName;
                 InlineNameEditBox.Text = newName;
 
@@ -1329,7 +1478,7 @@ namespace Panak.Views {
             _folderData.Title = newName;
             _folderData.Save(newPath);
 
-            FolderTitleText.Text = newName;
+            UpdateTitleMarquee(newName);
             NameEditBox.Text = newName;
             InlineNameEditBox.Text = newName;
 
@@ -1343,10 +1492,13 @@ namespace Panak.Views {
             }
             string newName = InlineNameEditBox.Text.Trim();
             InlineNameEditBox.Visibility = Visibility.Collapsed;
+            TitleMarqueeCanvas.Visibility = Visibility.Visible;
             FolderTitleText.Visibility = Visibility.Visible;
 
             if (!string.IsNullOrEmpty(newName) && !newName.Equals(_folderData.Title)) {
                 RenameFolder(newName);
+            } else {
+                UpdateTitleMarquee(_folderData.Title);
             }
         }
 
@@ -1356,7 +1508,9 @@ namespace Panak.Views {
                 e.Handled = true;
             } else if (e.Key == Key.Escape) {
                 InlineNameEditBox.Visibility = Visibility.Collapsed;
+                TitleMarqueeCanvas.Visibility = Visibility.Visible;
                 FolderTitleText.Visibility = Visibility.Visible;
+                UpdateTitleMarquee(_folderData.Title);
                 e.Handled = true;
             }
         }
@@ -1605,6 +1759,9 @@ namespace Panak.Views {
                     Resources["PopupItemBadgeFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
                     Resources["PopupItemHoverBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 0, 0, 0));
                 }
+
+                FolderTitleDuplicateText.Foreground = FolderTitleText.Foreground;
+                UpdatePinVisual();
             } catch {
                 // Ignore theme application errors
             }
@@ -1662,13 +1819,23 @@ namespace Panak.Views {
                 if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
                     Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance) {
                     if (sender is FrameworkElement elem && elem.DataContext is PanakItem item) {
-                        string[] files = new[] { item.FullPath };
+                        string resolvedPath = item.FullPath;
+                        if (string.Equals(item.Extension, ".lnk", StringComparison.OrdinalIgnoreCase)) {
+                            string? target = ShellHelper.ResolveShortcut(item.FullPath);
+                            if (!string.IsNullOrEmpty(target) && (File.Exists(target) || Directory.Exists(target))) {
+                                resolvedPath = target;
+                            }
+                        }
+
+                        string[] files = new[] { resolvedPath };
                         DataObject data = new DataObject(DataFormats.FileDrop, files);
                         PanakManager.Instance.TemporarilyHideBackdropForDrag();
                         try {
-                            DragDropEffects effect = DragDrop.DoDragDrop(elem, data, DragDropEffects.Copy | DragDropEffects.Move);
+                            DragDropEffects effect = DragDrop.DoDragDrop(elem, data, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link);
                         } finally {
-                            PanakManager.Instance.RestoreBackdropAfterDrag();
+                            if (!_isPinned) {
+                                PanakManager.Instance.RestoreBackdropAfterDrag();
+                            }
                         }
 
                         // If files were moved or deleted out of the folder, immediately check dissolution or refresh
@@ -1813,7 +1980,8 @@ namespace Panak.Views {
             if (sender is MenuItem mi && mi.DataContext is PanakItem item) {
                 try {
                     string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                    string target = Path.Combine(desktop, item.DisplayName);
+                    string fileName = Path.GetFileName(item.FullPath);
+                    string target = Path.Combine(desktop, fileName);
                     if (File.Exists(item.FullPath)) {
                         File.Move(item.FullPath, target, true);
                     } else if (Directory.Exists(item.FullPath)) {
@@ -1878,7 +2046,9 @@ namespace Panak.Views {
             if (e.Key == Key.Escape) {
                 if (InlineNameEditBox.Visibility == Visibility.Visible) {
                     InlineNameEditBox.Visibility = Visibility.Collapsed;
+                    TitleMarqueeCanvas.Visibility = Visibility.Visible;
                     FolderTitleText.Visibility = Visibility.Visible;
+                    UpdateTitleMarquee(_folderData.Title);
                     e.Handled = true;
                     return;
                 }

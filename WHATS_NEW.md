@@ -2,52 +2,53 @@
 
 ## 🌟 Highlights & Major Features
 
-### 1. 🚀 Interactive 3-Step Setup Wizard & Onboarding
-* **Guided Initial Setup**: First-time users are greeted with a modernized 3-step configuration wizard designed to personalize Panak in seconds before launching.
-  * **Step 1 — Appearance & Styling**: Customize folder color, border corner radius, opacity, and blur effect in real time with an instant interactive preview card.
-  * **Step 2 — Interaction & Focus**: Configure focus mode (desktop dimming & backdrop blur) and paging controls with live visual feedback.
-  * **Step 3 — Ready & Welcome**: A seamless transition into the Welcome card, detailing essential shortcuts, features, and direct access to Settings or community links.
-* **Morphing Step Indicator**: Fluid pagination indicators with an animated elongated pill for the active step.
-* **Easy Navigation**: Full support for `Next`, `Back`, and `Skip` actions at any stage.
+### 1. 🖼️ Real-Time Wallpaper Engine & Desktop Background in Preview
+* **Live Wallpaper Capture**: The Setup Wizard now captures the live Windows desktop background in real time. If **Wallpaper Engine** or any interactive live wallpaper is running, Panak captures frames directly from `WorkerW` to display live, moving wallpaper inside the preview cards.
+* **Fallback High-Res Wallpaper**: When static wallpapers are active, Panak reads the exact full-resolution Windows wallpaper (`TranscodedWallpaper` / registry).
 
 ---
 
-### 2. 📄 Horizontal Paging Slider Navigation
-* **Slider Page Mode**: Folders now support a horizontal slider view in addition to the standard vertical scrollbar.
-* **Navigation Controls**:
-  * **Arrow Controls**: Intuitive `<` and `>` navigation buttons on the left and right to paginate smoothly across screens.
-  * **Swipe & Drag Gestures**: Mouse click-and-drag / touch-swipe to fling or smoothly navigate between pages.
-  * **Page Indicator Dots**: Interactive round dots with an elongated active pill dot showing the current page; clicking any dot navigates directly to that page.
-* **Configurable in Settings**:
-  * Toggle between **Slider** and **Scrollbar** paging modes.
-  * Customize grid rows (2 to 5 rows).
-  * Toggle slider navigation arrows on/off.
-  * Toggle swipe/drag mouse gesture on/off.
+### 2. 🌫️ True Folder Background Blur (Behind Popup)
+* **Real Wallpaper Blur Effect**: Folder blur is now applied directly to the desktop backdrop behind the popup using hardware-accelerated shaders and customizable `FolderBlurRadius` (2px to 60px).
+* **Blur Toggle & Opacity Slider**: Full control to enable or disable background blur and set folder surface opacity with instant visual feedback.
+* **Fixed Screen Blackout**: Fixed the critical bug where backdrop blur caused the entire screen to turn black.
 
 ---
 
-### 3. 🌫️ Folder Blur Control & Backdrop Fixes
-* **Folder Blur Setting**: Added independent control over folder popup blur background (`Enable Blur` toggle and configurable blur radius slider from 5 to 60).
-* **Backdrop Blur Fix**: Resolved the critical bug where enabling the backdrop blur effect caused the entire screen to turn black. The screen is now captured cleanly with GPU-accelerated Gaussian blur and dimming overlay.
+### 3. 📂 Desktop Icon Preview & Realistic Open/Close Toggle
+* **Interactive Desktop Folder Icon**: The preview showcases an authentic desktop icon on the wallpaper with the chosen Material 3 shape plate and folder title.
+* **Open & Close Popup Animation**: Clicking the desktop icon or popup close button (`✕`) triggers realistic cubic-ease scale and fade animations to open or dismiss the folder widget.
 
 ---
 
-### 4. 🌊 Material Design 3 Expressive Wavy Progress Bar
-* **Sinusoidal Wave Motion**: Upgraded linear progress bars in the installer and setup dialogs to the Material Design 3 Expressive wavy progress bar.
-* **Smooth Amplitude Modulation**: Features Hann window envelope tapering at both ends, a 4dp clean gap between active wave and remaining track, and eliminates track overlap.
+### 4. 📄 Slider Page Navigation & Mouse Wheel Support
+* **Horizontal Paging Mode**: In addition to standard vertical scrollbar, folders support smooth horizontal paged slider navigation.
+* **Mouse Wheel Page Flipping**: Scroll the mouse wheel forward or backward to flip through pages naturally.
+* **Swipe & Drag Gestures**: Mouse drag / touch swipe across pages with configurable toggle in settings.
+* **Centered Pager Controls**: Centered navigation arrows (`‹` / `›`) and pagination dots with an elongated active pill dot.
 
 ---
 
-### 5. 🌐 Settings Clean-Up & Multi-Language Enhancements
-* **Cleaned Parenthetical English Labels**: Removed repetitive English hints in parentheses across all supported languages (Armenian, English, Russian, French, Spanish, Chinese, Arabic) for a clean, unified, and native appearance.
-* **New Localized Strings**: Complete translations for all new paging, blur, and wizard features across 7 languages.
+### 5. 📐 Dynamic Grid Wrapping (Max Columns & Rows)
+* **Adaptive Dimensions**: Configured grid rows and columns now act as **maximums**. If a folder has fewer items (e.g. 2 items), the popup automatically sizes to the exact rows and columns present rather than leaving empty space.
+* **Consistent Item Width**: Items maintain fixed, proportional sizing (~68–70px) and never stretch or warp when configuring column counts.
+
+---
+
+### 6. 🎨 Material 3 Expressive Controls & Horizontal Slide Transitions
+* **M3 Expressive Controls**: Toggle switches feature 48x28 pills with morphing thumbs, and radio buttons feature 20px rings with inner bloom dots.
+* **Horizontal Glide Transition**: Wizard step changes glide horizontally from left to right (or right to left) with smooth cubic easing.
+* **Clean Badges & Centered Footer**: Fully centered step pagination dots across all resolutions, and clean badges without extraneous star characters.
+
+---
+
+### 7. 🌐 Comprehensive Multi-Language Localization
+* **Localized "Step" & "Live Preview"**: Added and translated "Step" (Քայլ, Шаг, Étape, Paso, 步骤, خطوة) and "Live Preview" (Ուղիղ նախադիտում, Живой просмотр, etc.) across all 7 supported languages.
+* **Settings Clean-Up**: Removed redundant parenthetical English labels across Armenian, Russian, French, Spanish, Chinese, and Arabic.
 
 ---
 
 ## 📦 Distribution & Packaging
-* Bumped version to **v1.9.0** across all binaries:
-  * `Panak.exe`
-  * `Panak.ShellExt.dll`
-  * `Setup.exe` (Self-contained standalone single-file installer)
-  * `Uninstall.exe`
-* Updated installer bundle: `Panak-Installer-v1.9.0.zip` ready for release distribution.
+* **Version**: `v1.9.0`
+* **Standalone Installer**: `publish\Setup.exe` (Single-file self-contained installer with embedded payload).
+* **Installer Package**: `Panak-Installer-v1.9.0.zip` ready for distribution.

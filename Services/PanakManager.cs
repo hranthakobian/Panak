@@ -28,6 +28,7 @@ namespace Panak.Services {
 
         public bool IsPopupOpen => _isOpen;
         public bool IsPopupWithinGracePeriod => _popupWindow != null && _popupWindow.IsWithinOpenGracePeriod();
+        public bool IsPopupPinned => _popupWindow != null && _popupWindow.IsPinned;
 
         public IntPtr GetPopupHwnd() {
             if (_popupWindow != null && _popupWindow.IsVisible) {
@@ -343,7 +344,7 @@ namespace Panak.Services {
                 // Close popup window if currently open for this folder
                 Application.Current?.Dispatcher.Invoke(() => {
                     if (_isOpen && string.Equals(_currentOpenPath, folderPath, StringComparison.OrdinalIgnoreCase)) {
-                        ClosePopup();
+                        ClosePopup(force: true);
                     }
                 });
 
@@ -580,7 +581,7 @@ namespace Panak.Services {
                 }
 
                 if (_isOpen) {
-                    ClosePopup();
+                    ClosePopup(force: true);
                 }
 
                 _isOpen = true;
@@ -648,7 +649,7 @@ namespace Panak.Services {
 
         public void RestoreBackdropAfterDrag() {
             Application.Current?.Dispatcher.Invoke(() => {
-                if (_isOpen && _popupWindow != null && _popupWindow.IsVisible &&
+                if (_isOpen && _popupWindow != null && _popupWindow.IsVisible && !_popupWindow.IsPinned &&
                     SettingsService.Instance.Current.FocusModeEnabled) {
                     if (_backdropWindow != null) {
                         _backdropWindow.Visibility = Visibility.Visible;
@@ -721,9 +722,13 @@ namespace Panak.Services {
             });
         }
 
-        public void ClosePopup() {
+        public void ClosePopup(bool force = false) {
             Application.Current.Dispatcher.Invoke(() => {
                 if (!_isOpen) {
+                    return;
+                }
+
+                if (!force && _popupWindow != null && _popupWindow.IsPinned) {
                     return;
                 }
 
@@ -825,7 +830,7 @@ namespace Panak.Services {
         }
 
         private void OnBackdropClicked() {
-            if (IsPopupWithinGracePeriod) {
+            if (IsPopupWithinGracePeriod || IsPopupPinned) {
                 return;
             }
             ClosePopup();

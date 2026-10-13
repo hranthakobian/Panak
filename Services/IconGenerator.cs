@@ -38,7 +38,7 @@ namespace Panak.Services {
 
                 List<Bitmap> miniIcons = new List<Bitmap>();
                 foreach (var item in items) {
-                    Bitmap? bmp = ShellHelper.GetFileIconBitmap(item.FullName, isLarge: true);
+                    Bitmap? bmp = ShellHelper.GetFileThumbnailBitmap(item.FullName, isLarge: true);
                     if (bmp != null) {
                         miniIcons.Add(bmp);
                     }

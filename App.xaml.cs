@@ -121,6 +121,7 @@ namespace Panak {
             _hookService = new HookService();
             _hookService.IsPopupOpenFunc = () => PanakManager.Instance.IsPopupOpen;
             _hookService.IsPopupWithinGracePeriodFunc = () => PanakManager.Instance.IsPopupWithinGracePeriod;
+            _hookService.IsPopupPinnedFunc = () => PanakManager.Instance.IsPopupPinned;
             _hookService.GetPopupHwndFunc = () => PanakManager.Instance.GetPopupHwnd();
             _hookService.CloseRequested += () => PanakManager.Instance.ClosePopup();
 
