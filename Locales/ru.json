@@ -214,5 +214,7 @@
   "LockSettingsDesc": "Требовать пароль/PIN/графический ключ/биометрию для открытия или изменения настроек",
   "ConfigureLock": "Настроить блокировку",
   "HidePreview": "Скрыть",
-  "ShowPreview": "Предпросмотр"
+  "ShowPreview": "Предпросмотр",
+  "CrowdinProject": "🌐 Crowdin",
+  "TranslateOnCrowdin": "Перевести на Crowdin"
 }
