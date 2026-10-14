@@ -1,10 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using Panak.Models;
 using Panak.Services;
@@ -21,17 +25,31 @@ namespace Panak.Views {
         private string _currentClosePopupHotkey = "Escape";
         private string? _recordingTarget = null;
         private bool _isAppliedOrSaved = false;
+        private RadioButton? SettingsAccentSwatch = null;
+        private static readonly (string Hex, string Name)[] DefaultPresetColors = new[] {
+            (ShellHelper.DefaultPastelColorHex, "Peach / Default"),
+            ("#C5FCC5", "Mint"),
+            ("#C5FCFC", "Cyan"),
+            ("#C5DDFC", "Sky Blue"),
+            ("#DDC5FC", "Lavender"),
+            ("#FCC5FC", "Lilac"),
+            ("#FCC5DD", "Rose"),
+            ("#FCFCC5", "Butter Yellow")
+        };
 
         public SettingsWindow() {
             InitializeComponent();
             LoadLogoAndIcon();
             LoadCurrentSettings();
             ApplyLocalization();
+            StartWallpaperCapture();
+            UpdateLivePreview();
+            CheckSettingsLockState();
             _isInitializing = false;
 
-            FocusModeCheckBox.Click += (s, e) => UpdateFocusModeControlsEnabled(animate: true);
-            FocusBlurCheckBox.Click += (s, e) => UpdateFocusModeControlsEnabled(animate: true);
-            FolderBlurCheckBox.Click += (s, e) => UpdateFolderBlurControlsEnabled(animate: true);
+            FocusModeCheckBox.Click += (s, e) => { UpdateFocusModeControlsEnabled(animate: true); UpdateLivePreview(); };
+            FocusBlurCheckBox.Click += (s, e) => { UpdateFocusModeControlsEnabled(animate: true); UpdateLivePreview(); };
+            FolderBlurCheckBox.Click += (s, e) => { UpdateFolderBlurControlsEnabled(animate: true); UpdateLivePreview(); };
 
             GitHubUpdateService.Instance.StatusChanged += OnUpdateStatusChanged;
             GitHubUpdateService.Instance.DownloadProgressChanged += OnDownloadProgressChanged;
@@ -229,16 +247,12 @@ namespace Panak.Views {
             }
 
             // Pastel Theme Color Setup
-            string defaultPastel = ShellHelper.DefaultPastelColorHex;
-            SettingsAccentSwatch.Tag = defaultPastel;
-            try {
-                var c = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(defaultPastel);
-                SettingsAccentSwatch.Background = new System.Windows.Media.SolidColorBrush(c);
-            } catch { }
+            RebuildPresetSwatchesUI();
+            RebuildCustomSwatchesUI();
 
             bool foundColorSwatch = false;
-            foreach (var child in SettingsColorSwatchesPanel.Children) {
-                if (child is RadioButton rb && rb.Tag is string tag) {
+            foreach (var rb in GetAllColorSwatchRadioButtons()) {
+                if (rb.Tag is string tag) {
                     bool isMatch = string.Equals(tag, _selectedColor, StringComparison.OrdinalIgnoreCase);
                     rb.IsChecked = isMatch;
                     if (isMatch) foundColorSwatch = true;
@@ -246,8 +260,8 @@ namespace Panak.Views {
             }
             if (!foundColorSwatch) {
                 double selHue = ShellHelper.GetHueFromHex(_selectedColor);
-                foreach (var child in SettingsColorSwatchesPanel.Children) {
-                    if (child is RadioButton rb && rb.Tag is string tag) {
+                foreach (var rb in GetAllColorSwatchRadioButtons()) {
+                    if (rb.Tag is string tag) {
                         double swHue = ShellHelper.GetHueFromHex(tag);
                         double diff = Math.Abs(swHue - selHue);
                         if (diff > 180) diff = 360 - diff;
@@ -322,6 +336,7 @@ namespace Panak.Views {
             UpdateKeyBadgesUI();
 
             UpdateUpdateUI();
+            UpdateSettingsLockUI();
         }
 
         public void ApplyLocalization() {
@@ -331,6 +346,7 @@ namespace Panak.Views {
             SupportTitleText.Text = loc["Support"];
             SupportDescText.Text = loc["SupportDesc"];
             KofiButton.Content = loc["DonateOnKofi"];
+            if (CrowdinButton != null) CrowdinButton.ToolTip = loc["TranslateOnCrowdin"];
             LanguageLabel.Text = loc["Language"];
             LanguageAiBadge.Text = loc["LanguageAiNote"];
             IconShapeLabel.Text = loc["IconShape"];
@@ -348,6 +364,7 @@ namespace Panak.Views {
             GeneralFolderOpacityLabel.Text = loc["GeneralFolderOpacity"];
             GeneralFolderOpacityDescText.Text = loc["GeneralFolderOpacityDesc"];
             FolderBlurLabel.Text = loc["FolderBlur"];
+            if (FolderBlurWarningBadge != null) FolderBlurWarningBadge.Text = loc["SlowsDownSystemWarning"];
             FolderBlurDescText.Text = loc["FolderBlurDesc"];
             FolderBlurRadiusLabel.Text = loc["FolderBlurRadius"];
             PagingModeLabel.Text = loc["PagingMode"];
@@ -362,6 +379,7 @@ namespace Panak.Views {
             FocusModeDescText.Text = loc["FocusModeDesc"];
             FocusDimmingLabel.Text = loc["FocusDimming"];
             FocusBlurLabel.Text = loc["FocusBlur"];
+            if (FocusBlurWarningBadge != null) FocusBlurWarningBadge.Text = loc["SlowsDownSystemWarning"];
             FocusBlurDescText.Text = loc["FocusBlurDesc"];
             FocusBlurRadiusLabel.Text = loc["FocusBlurRadius"];
             CenterPopupLabel.Text = loc["CenterPopupOnly"];
@@ -398,6 +416,10 @@ namespace Panak.Views {
             if (RandomShapeCheckBox != null) RandomShapeCheckBox.ToolTip = loc["RandomShape"] ?? "Random shape";
             if (RandomColorCheckBox != null) RandomColorCheckBox.ToolTip = loc["RandomColor"] ?? "Random color";
             if (RandomOpacityCheckBox != null) RandomOpacityCheckBox.ToolTip = loc["RandomOpacity"] ?? "Random opacity";
+            if (RandomShapeLabel != null) RandomShapeLabel.Text = loc["RandomByChance"] ?? "Պատահականությամբ";
+            if (RandomColorLabel != null) RandomColorLabel.Text = loc["RandomByChance"] ?? "Պատահականությամբ";
+            if (RandomOpacityLabel != null) RandomOpacityLabel.Text = loc["RandomByChance"] ?? "Պատահականությամբ";
+            if (RestorePresetsMenuItem != null) RestorePresetsMenuItem.Header = loc["RestoreDefaultColors"] ?? "Վերականգնել լռելյայն գույները";
             if (ExportSettingsBtn != null) ExportSettingsBtn.Content = loc["ExportSettings"] ?? "Export";
             if (ImportSettingsBtn != null) ImportSettingsBtn.Content = loc["ImportSettings"] ?? "Import";
             if (ExportImportSectionTitle != null) ExportImportSectionTitle.Text = loc["BackupAndRestore"] ?? "Backup & Restore";
@@ -405,7 +427,23 @@ namespace Panak.Views {
 
             bool registered = ContextMenuRegistry.IsRegistered();
             ContextMenuStatusText.Text = registered ? loc["ContextMenuInstalled"] : "Explorer context menu not registered";
+            if (NavTabAppearance != null) NavTabAppearance.Content = loc["AppearanceTab"] ?? "🎨 Արտաքին";
+            if (NavTabLayout != null) NavTabLayout.Content = loc["LayoutTab"] ?? "📐 Դիրք";
+            if (NavTabSecurity != null) NavTabSecurity.Content = loc["SecurityTab"] ?? "🔒 Անվտանգություն";
+            if (NavTabSystem != null) NavTabSystem.Content = loc["SystemTab"] ?? "⚙️ Համակարգ";
+            if (LockSettingsLabel != null) LockSettingsLabel.Text = loc["LockSettings"] ?? "Կողպել Կայանքները";
+            if (LockSettingsDescText != null) LockSettingsDescText.Text = loc["LockSettingsDesc"] ?? "Պահանջել գաղտնաբառ/PIN/նախշ/կենսաչափություն կայանքները բացելու կամ փոփոխելու համար";
+            if (ConfigureSettingsLockBtn != null) ConfigureSettingsLockBtn.Content = loc["ConfigureLock"] ?? "Կարգավորել կողպումը";
+            if (TogglePreviewBtnText != null) TogglePreviewBtnText.Text = (_isPreviewVisible ? (loc["HidePreview"] ?? "Նախադիտում") : (loc["ShowPreview"] ?? "Նախադիտում"));
+            if (PreviewLiveBadgeText != null) PreviewLiveBadgeText.Text = loc["LivePreview"] ?? "Live Preview";
+            if (PreviewEditNameLabel != null) PreviewEditNameLabel.Text = loc["FolderTitle"] ?? "Անուն";
+            if (PreviewColorThemeLabel != null) PreviewColorThemeLabel.Text = loc["ColorTheme"] ?? "Գույն և ձև";
+            if (PreviewFolderLockHeaderLabel != null) PreviewFolderLockHeaderLabel.Text = loc["LockFolder"] ?? "Կողպել պանակը";
+            if (PreviewFolderLockBtnText != null) PreviewFolderLockBtnText.Text = loc["ConfigureLock"] ?? "Կարգավորել կողպումը";
+            if (PreviewAlwaysPanakCheckBox != null) PreviewAlwaysPanakCheckBox.Content = loc["AlwaysOpenWithPanak"] ?? "Միշտ բացել որպես Panak";
+            if (PreviewUnpackFolderBtnText != null) PreviewUnpackFolderBtnText.Text = loc["UnpackPanakFolder"] ?? "Ապահավաքել Panak-ը";
             UpdateUpdateUI();
+            PopulatePreviewItems();
         }
 
         private void SettingsColorSwatch_Checked(object sender, RoutedEventArgs e) {
@@ -424,6 +462,7 @@ namespace Panak.Views {
                 if (PanakManager.Instance.IsPopupOpen) {
                     PanakManager.Instance.UpdateOpenPopupThemeColor(_selectedColor);
                 }
+                UpdateLivePreview();
             }
         }
 
@@ -436,10 +475,11 @@ namespace Panak.Views {
             if (PanakManager.Instance.IsPopupOpen) {
                 PanakManager.Instance.UpdateOpenPopupThemeColor(_selectedColor);
             }
+            UpdateLivePreview();
 
             bool matched = false;
-            foreach (var child in SettingsColorSwatchesPanel.Children) {
-                if (child is RadioButton rb && rb.Tag is string tag) {
+            foreach (var rb in GetAllColorSwatchRadioButtons()) {
+                if (rb.Tag is string tag) {
                     double swatchHue = ShellHelper.GetHueFromHex(tag);
                     double diff = Math.Abs(swatchHue - e.NewValue);
                     if (diff > 180) diff = 360 - diff;
@@ -451,8 +491,8 @@ namespace Panak.Views {
                 }
             }
             if (!matched) {
-                foreach (var child in SettingsColorSwatchesPanel.Children) {
-                    if (child is RadioButton rb && rb.IsChecked == true) {
+                foreach (var rb in GetAllColorSwatchRadioButtons()) {
+                    if (rb.IsChecked == true) {
                         rb.IsChecked = false;
                     }
                 }
@@ -468,6 +508,7 @@ namespace Panak.Views {
             else if (sender == SettingsShapeClover) _selectedShape = "Clover";
             else if (sender == SettingsShapeScallop) _selectedShape = "Scallop";
             else if (sender == SettingsShapeArch) _selectedShape = "Arch";
+            UpdateLivePreview();
         }
 
         private void SettingsTheme_Click(object sender, RoutedEventArgs e) {
@@ -482,6 +523,7 @@ namespace Panak.Views {
                 if (PanakManager.Instance.IsPopupOpen) {
                     PanakManager.Instance.UpdateOpenPopupThemeMode(_selectedThemeMode);
                 }
+                UpdateLivePreview();
             }
         }
 
@@ -510,6 +552,7 @@ namespace Panak.Views {
             if (GridColumnsValueText != null) {
                 GridColumnsValueText.Text = ((int)e.NewValue).ToString();
             }
+            UpdateLivePreview();
         }
 
         private void FocusDimmingSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
@@ -642,16 +685,19 @@ namespace Panak.Views {
             if (FolderBlurValueText != null) {
                 FolderBlurValueText.Text = $"{(int)e.NewValue} px";
             }
+            UpdateLivePreview();
         }
 
         private void GridRowsSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
             if (GridRowsValueText != null) {
                 GridRowsValueText.Text = ((int)e.NewValue).ToString();
             }
+            UpdateLivePreview();
         }
 
         private void PagingModeRadio_Checked(object sender, RoutedEventArgs e) {
             UpdatePagingControlsVisibility();
+            UpdateLivePreview();
         }
 
         private void UpdatePagingControlsVisibility() {
@@ -775,6 +821,7 @@ namespace Panak.Views {
             if (!_isInitializing && PanakManager.Instance.IsPopupOpen) {
                 PanakManager.Instance.UpdateOpenPopupOpacity(e.NewValue / 100.0);
             }
+            UpdateLivePreview();
         }
 
         public void ApplyCurrentSettings() {
@@ -862,6 +909,27 @@ namespace Panak.Views {
             SettingsService.Instance.SaveSettings(s);
         }
 
+        private void RandomShapeLabel_MouseDown(object sender, MouseButtonEventArgs e) {
+            if (e.LeftButton == MouseButtonState.Pressed) {
+                RandomShapeCheckBox.IsChecked = !(RandomShapeCheckBox.IsChecked ?? false);
+                RandomShapeCheckBox_Click(RandomShapeCheckBox, new RoutedEventArgs());
+            }
+        }
+
+        private void RandomColorLabel_MouseDown(object sender, MouseButtonEventArgs e) {
+            if (e.LeftButton == MouseButtonState.Pressed) {
+                RandomColorCheckBox.IsChecked = !(RandomColorCheckBox.IsChecked ?? false);
+                RandomColorCheckBox_Click(RandomColorCheckBox, new RoutedEventArgs());
+            }
+        }
+
+        private void RandomOpacityLabel_MouseDown(object sender, MouseButtonEventArgs e) {
+            if (e.LeftButton == MouseButtonState.Pressed) {
+                RandomOpacityCheckBox.IsChecked = !(RandomOpacityCheckBox.IsChecked ?? false);
+                RandomOpacityCheckBox_Click(RandomOpacityCheckBox, new RoutedEventArgs());
+            }
+        }
+
         private void SettingsColorIndicator_MouseDown(object sender, MouseButtonEventArgs e) {
             if (e.LeftButton == MouseButtonState.Pressed) {
                 var s = SettingsService.Instance.Current;
@@ -873,6 +941,28 @@ namespace Panak.Views {
             }
         }
 
+        private void RebuildPresetSwatchesUI() {
+            if (PresetSwatchesWrapPanel == null) return;
+            PresetSwatchesWrapPanel.Children.Clear();
+            var s = SettingsService.Instance.Current;
+            string defaultPastel = ShellHelper.DefaultPastelColorHex;
+
+            for (int i = 0; i < DefaultPresetColors.Length; i++) {
+                var (hex, name) = DefaultPresetColors[i];
+                if (i == 0) hex = defaultPastel;
+
+                if (s.HiddenPresetColors != null && s.HiddenPresetColors.Contains(hex, StringComparer.OrdinalIgnoreCase)) {
+                    continue;
+                }
+
+                var container = CreateSwatchContainer(hex, name, isCustom: false);
+                if (i == 0 && container.Children.Count > 0 && container.Children[0] is RadioButton rb) {
+                    SettingsAccentSwatch = rb;
+                }
+                PresetSwatchesWrapPanel.Children.Add(container);
+            }
+        }
+
         private void RebuildCustomSwatchesUI() {
             if (CustomSwatchesWrapPanel == null) return;
             CustomSwatchesWrapPanel.Children.Clear();
@@ -881,21 +971,111 @@ namespace Panak.Views {
 
             foreach (var hex in s.CustomPaletteColors) {
                 string colHex = hex;
-                var rb = new RadioButton {
-                    GroupName = "SettingsColorGroup",
-                    Style = (Style)FindResource("ColorSwatchStyle"),
-                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colHex)),
-                    Tag = colHex,
-                    ToolTip = colHex,
-                    Margin = new Thickness(3, 0, 3, 0)
-                };
-                if (string.Equals(_selectedColor, colHex, StringComparison.OrdinalIgnoreCase)) {
-                    rb.IsChecked = true;
+                var container = CreateSwatchContainer(colHex, colHex, isCustom: true);
+                CustomSwatchesWrapPanel.Children.Add(container);
+            }
+        }
+
+        private Grid CreateSwatchContainer(string colHex, string tooltip, bool isCustom) {
+            var grid = new Grid {
+                Width = 28,
+                Height = 28,
+                Margin = new Thickness(3, 0, 3, 0),
+                Background = Brushes.Transparent,
+                Cursor = Cursors.Hand
+            };
+
+            var rb = new RadioButton {
+                GroupName = "SettingsColorGroup",
+                Style = (Style)FindResource("ColorSwatchStyle"),
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colHex)),
+                Tag = colHex,
+                ToolTip = tooltip,
+                Margin = new Thickness(0),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            if (string.Equals(_selectedColor, colHex, StringComparison.OrdinalIgnoreCase)) {
+                rb.IsChecked = true;
+            }
+
+            rb.Checked += (snd, ev) => {
+                if (_isInitializing) return;
+                _selectedColor = colHex;
+                double hue = ShellHelper.GetHueFromHex(colHex);
+                ApplyMaterialYouPalette(hue);
+                _isInitializing = true;
+                try {
+                    SettingsHueSlider.Value = hue;
+                } finally {
+                    _isInitializing = false;
                 }
-                rb.Checked += (snd, ev) => {
-                    if (_isInitializing) return;
-                    _selectedColor = colHex;
-                    double hue = ShellHelper.GetHueFromHex(colHex);
+                if (PanakManager.Instance.IsPopupOpen) {
+                    PanakManager.Instance.UpdateOpenPopupThemeColor(_selectedColor);
+                }
+            };
+
+            grid.Children.Add(rb);
+
+            // Delete badge in top-right corner
+            var deleteBadge = new Border {
+                Width = 12,
+                Height = 12,
+                CornerRadius = new CornerRadius(6),
+                Background = new SolidColorBrush(Color.FromArgb(210, 30, 30, 30)),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 0, 0, 0),
+                Visibility = Visibility.Collapsed,
+                Cursor = Cursors.Hand,
+                ToolTip = LocalizationService.Instance["Delete"] ?? "Delete"
+            };
+
+            var crossPath = new System.Windows.Shapes.Path {
+                Data = Geometry.Parse("M 3,3 L 9,9 M 9,3 L 3,9"),
+                Stroke = Brushes.White,
+                StrokeThickness = 1.5,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            deleteBadge.Child = crossPath;
+
+            grid.MouseEnter += (s, e) => {
+                deleteBadge.Visibility = Visibility.Visible;
+            };
+            grid.MouseLeave += (s, e) => {
+                deleteBadge.Visibility = Visibility.Collapsed;
+            };
+
+            deleteBadge.MouseEnter += (s, e) => {
+                deleteBadge.Background = new SolidColorBrush(Color.FromRgb(229, 57, 53));
+            };
+            deleteBadge.MouseLeave += (s, e) => {
+                deleteBadge.Background = new SolidColorBrush(Color.FromArgb(210, 30, 30, 30));
+            };
+
+            deleteBadge.PreviewMouseLeftButtonDown += (s, e) => {
+                e.Handled = true; // Prevent checking the radio button
+                var curSettings = SettingsService.Instance.Current;
+                if (isCustom) {
+                    curSettings.CustomPaletteColors.Remove(colHex);
+                    SettingsService.Instance.SaveSettings(curSettings);
+                    RebuildCustomSwatchesUI();
+                } else {
+                    if (!curSettings.HiddenPresetColors.Contains(colHex, StringComparer.OrdinalIgnoreCase)) {
+                        curSettings.HiddenPresetColors.Add(colHex);
+                        SettingsService.Instance.SaveSettings(curSettings);
+                    }
+                    grid.Visibility = Visibility.Collapsed;
+                }
+
+                if (string.Equals(_selectedColor, colHex, StringComparison.OrdinalIgnoreCase)) {
+                    string defaultPastel = ShellHelper.DefaultPastelColorHex;
+                    _selectedColor = defaultPastel;
+                    double hue = ShellHelper.GetHueFromHex(defaultPastel);
                     ApplyMaterialYouPalette(hue);
                     _isInitializing = true;
                     try {
@@ -906,8 +1086,36 @@ namespace Panak.Views {
                     if (PanakManager.Instance.IsPopupOpen) {
                         PanakManager.Instance.UpdateOpenPopupThemeColor(_selectedColor);
                     }
-                };
-                CustomSwatchesWrapPanel.Children.Add(rb);
+                    var firstVisible = GetAllColorSwatchRadioButtons().FirstOrDefault();
+                    if (firstVisible != null) firstVisible.IsChecked = true;
+                }
+            };
+
+            grid.Children.Add(deleteBadge);
+            return grid;
+        }
+
+        private void RestorePresetsMenuItem_Click(object sender, RoutedEventArgs e) {
+            var s = SettingsService.Instance.Current;
+            s.HiddenPresetColors.Clear();
+            SettingsService.Instance.SaveSettings(s);
+            RebuildPresetSwatchesUI();
+        }
+
+        private IEnumerable<RadioButton> GetAllColorSwatchRadioButtons() {
+            if (SettingsColorSwatchesPanel == null) yield break;
+            foreach (var child in SettingsColorSwatchesPanel.Children) {
+                if (child is RadioButton rb) {
+                    yield return rb;
+                } else if (child is Panel p) {
+                    foreach (var pChild in p.Children) {
+                        if (pChild is RadioButton prb) {
+                            yield return prb;
+                        } else if (pChild is Grid pg && pg.Children.Count > 0 && pg.Children[0] is RadioButton pgrb) {
+                            if (pg.Visibility == Visibility.Visible) yield return pgrb;
+                        }
+                    }
+                }
             }
         }
 
@@ -1067,6 +1275,18 @@ namespace Panak.Views {
         private void KofiButton_Click(object sender, RoutedEventArgs e) {
             try {
                 Process.Start(new ProcessStartInfo("https://ko-fi.com/hranthakobian/") { UseShellExecute = true });
+            } catch { }
+        }
+
+        private void CrowdinButton_Click(object sender, RoutedEventArgs e) {
+            try {
+                Process.Start(new ProcessStartInfo("https://crowdin.com/project/panak") { UseShellExecute = true });
+            } catch { }
+        }
+
+        private void CrowdinLink_MouseDown(object sender, MouseButtonEventArgs e) {
+            try {
+                Process.Start(new ProcessStartInfo("https://crowdin.com/project/panak") { UseShellExecute = true });
             } catch { }
         }
 
@@ -1287,6 +1507,925 @@ namespace Panak.Views {
                     UpdateKeyBadgesUI();
                 }
             }
+        }
+
+        // --- Navigation Tabs & Smooth Scrolling ---
+        private bool _isProgrammaticScrolling = false;
+
+        private void NavTab_Click(object sender, RoutedEventArgs e) {
+            if (sender is RadioButton tab) {
+                FrameworkElement? target = tab.Name switch {
+                    "NavTabAppearance" => SectionAppearance,
+                    "NavTabLayout" => SectionLayout,
+                    "NavTabSecurity" => SectionSecurity,
+                    "NavTabSystem" => SectionSystem,
+                    _ => null
+                };
+                if (target != null && SettingsScrollViewer != null) {
+                    try {
+                        if (tab.Name == "NavTabAppearance") {
+                            AnimateScrollViewer(0);
+                            return;
+                        }
+                        var transform = target.TransformToVisual(SettingsScrollViewer);
+                        var position = transform.Transform(new Point(0, 0));
+                        double targetOffset = SettingsScrollViewer.VerticalOffset + position.Y - 10;
+                        if (targetOffset < 0) targetOffset = 0;
+                        if (targetOffset > SettingsScrollViewer.ScrollableHeight) targetOffset = SettingsScrollViewer.ScrollableHeight;
+                        AnimateScrollViewer(targetOffset);
+                    } catch { }
+                }
+            }
+        }
+
+        private void AnimateScrollViewer(double toOffset) {
+            if (SettingsScrollViewer == null) return;
+            _isProgrammaticScrolling = true;
+            double fromOffset = SettingsScrollViewer.VerticalOffset;
+            int steps = 15;
+            int currentStep = 0;
+            var timer = new System.Windows.Threading.DispatcherTimer {
+                Interval = TimeSpan.FromMilliseconds(16)
+            };
+            timer.Tick += (s, e) => {
+                currentStep++;
+                double progress = (double)currentStep / steps;
+                double eased = 1.0 - Math.Pow(1.0 - progress, 3);
+                double newOffset = fromOffset + (toOffset - fromOffset) * eased;
+                SettingsScrollViewer.ScrollToVerticalOffset(newOffset);
+                if (currentStep >= steps) {
+                    SettingsScrollViewer.ScrollToVerticalOffset(toOffset);
+                    timer.Stop();
+                    _isProgrammaticScrolling = false;
+                }
+            };
+            timer.Start();
+        }
+
+        private void SettingsScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e) {
+            if (_isProgrammaticScrolling || SettingsScrollViewer == null) return;
+
+            try {
+                // Calculate relative positions of each section header to determine active tab
+                double viewTop = 60.0; // trigger line below header
+                FrameworkElement[] sections = { SectionSystem, SectionSecurity, SectionLayout, SectionAppearance };
+                RadioButton[] tabs = { NavTabSystem, NavTabSecurity, NavTabLayout, NavTabAppearance };
+
+                for (int i = 0; i < sections.Length; i++) {
+                    var sec = sections[i];
+                    var tab = tabs[i];
+                    if (sec != null && tab != null) {
+                        var transform = sec.TransformToVisual(SettingsScrollViewer);
+                        var pos = transform.Transform(new Point(0, 0));
+                        if (pos.Y <= viewTop) {
+                            if (tab.IsChecked != true) {
+                                tab.IsChecked = true;
+                            }
+                            break;
+                        }
+                    }
+                }
+            } catch { }
+        }
+
+        // --- Preview Toggle & Resize ---
+        private bool _isPreviewVisible = true;
+
+        private void TogglePreviewBtn_Click(object sender, RoutedEventArgs e) {
+            _isPreviewVisible = !_isPreviewVisible;
+            var loc = LocalizationService.Instance;
+            if (_isPreviewVisible) {
+                if (PreviewColumn != null) PreviewColumn.Width = new GridLength(340);
+                if (TogglePreviewBtnText != null) TogglePreviewBtnText.Text = loc["HidePreview"] ?? "Նախադիտում";
+                AnimateWindowWidth(880);
+            } else {
+                if (PreviewColumn != null) PreviewColumn.Width = new GridLength(0);
+                if (TogglePreviewBtnText != null) TogglePreviewBtnText.Text = loc["ShowPreview"] ?? "Նախադիտում";
+                AnimateWindowWidth(520);
+            }
+        }
+
+        private void AnimateWindowWidth(double toWidth) {
+            try {
+                var anim = new System.Windows.Media.Animation.DoubleAnimation {
+                    To = toWidth,
+                    Duration = TimeSpan.FromMilliseconds(220),
+                    EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+                };
+                BeginAnimation(WidthProperty, anim);
+            } catch {
+                Width = toWidth;
+            }
+        }
+
+        private int _previewCurrentPage = 0;
+        private int _previewTotalPages = 1;
+        private double _previewPageWidth = 234.0;
+        private bool _isPreviewPinned = false;
+        private bool _isPreviewEditOpen = false;
+        private bool _isPreviewPopupOpen = true;
+        private bool _isDraggingPreviewSlider = false;
+        private Point _previewDragStartPos;
+
+        private void PreviewCardBorder_SizeChanged(object sender, SizeChangedEventArgs e) {
+            if (PreviewClipRect != null) {
+                PreviewClipRect.Rect = new Rect(0, 0, e.NewSize.Width, e.NewSize.Height);
+            }
+            int cols = GridColumnsSlider != null ? (int)Math.Clamp(GridColumnsSlider.Value, 3, 8) : 3;
+            int rows = GridRowsSlider != null ? (int)Math.Clamp(GridRowsSlider.Value, 1, 5) : 3;
+            bool isSlider = PagingSliderRadio?.IsChecked ?? true;
+            UpdatePreviewCardDimensions(cols, rows, isSlider);
+        }
+
+        // --- Live Desktop Preview System ---
+        private void StartWallpaperCapture() {
+            try {
+                var bmp = ShellHelper.GetDesktopWallpaperBitmap();
+                if (bmp != null) {
+                    if (PreviewWallpaperImage != null) PreviewWallpaperImage.Source = bmp;
+                    if (PreviewPopupBlurImage != null) PreviewPopupBlurImage.Source = bmp;
+                }
+            } catch { }
+        }
+
+        private static ImageSource? _cachedFolderMockIcon = null;
+        private static readonly Dictionary<string, ImageSource> _cachedMockIconSources = new(StringComparer.OrdinalIgnoreCase);
+
+        private static ImageSource? GetPreviewMockIcon(bool isFolder, string ext) {
+            try {
+                if (isFolder) {
+                    if (_cachedFolderMockIcon != null) return _cachedFolderMockIcon;
+                    _cachedFolderMockIcon = ShellHelper.GetFolderIconSource(isLarge: true);
+                    return _cachedFolderMockIcon;
+                }
+                if (!string.IsNullOrEmpty(ext)) {
+                    if (_cachedMockIconSources.TryGetValue(ext, out var cached)) return cached;
+                    var src = ShellHelper.GetFileIconSource("test" + ext, isLarge: true);
+                    if (src != null) {
+                        _cachedMockIconSources[ext] = src;
+                        return src;
+                    }
+                }
+            } catch { }
+            return null;
+        }
+
+        // Realistic localized sample items matching real desktop folders (Image 1 parity)
+        private static readonly (string Name, string Ext, bool IsFolder)[] SamplePreviewItemsArm = new[] {
+            ("data", "", true),
+            ("dist", "", true),
+            ("node_modules", "", true),
+            ("public", "", true),
+            ("src", "", true),
+            ("stitch_modern", "", true),
+            ("test", "", true),
+            ("views", "", true),
+            (".env", ".env", false),
+            ("Զեկույց.pdf", ".pdf", false),
+            ("Աղյուսակ.xlsx", ".xlsx", false),
+            ("Սլայդներ.pptx", ".pptx", false),
+            ("Լոգո.png", ".png", false)
+        };
+
+        private static readonly (string Name, string Ext, bool IsFolder)[] SamplePreviewItemsEn = new[] {
+            ("data", "", true),
+            ("dist", "", true),
+            ("node_modules", "", true),
+            ("public", "", true),
+            ("src", "", true),
+            ("stitch_modern", "", true),
+            ("test", "", true),
+            ("views", "", true),
+            (".env", ".env", false),
+            ("Report.pdf", ".pdf", false),
+            ("Spreadsheet.xlsx", ".xlsx", false),
+            ("Slides.pptx", ".pptx", false),
+            ("Logo.png", ".png", false)
+        };
+
+        private static readonly (string Name, string Ext, bool IsFolder)[] SamplePreviewItemsRu = new[] {
+            ("data", "", true),
+            ("dist", "", true),
+            ("node_modules", "", true),
+            ("public", "", true),
+            ("src", "", true),
+            ("stitch_modern", "", true),
+            ("test", "", true),
+            ("views", "", true),
+            (".env", ".env", false),
+            ("Отчет.pdf", ".pdf", false),
+            ("Таблица.xlsx", ".xlsx", false),
+            ("Презентация.pptx", ".pptx", false),
+            ("Логотип.png", ".png", false)
+        };
+
+        private (string Name, string Ext, bool IsFolder)[] GetCurrentSampleItems() {
+            string lang = LocalizationService.Instance.CurrentLanguage;
+            if (string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase)) return SamplePreviewItemsEn;
+            if (string.Equals(lang, "ru", StringComparison.OrdinalIgnoreCase)) return SamplePreviewItemsRu;
+            return SamplePreviewItemsArm;
+        }
+
+        private void UpdateLivePreview() {
+            try {
+                bool isDark = _selectedThemeMode == "Dark" || (_selectedThemeMode == "Auto" && ShellHelper.IsWindowsDarkTheme());
+
+                var textColor = isDark ? System.Windows.Media.Color.FromRgb(255, 255, 255) : System.Windows.Media.Color.FromRgb(0, 0, 0);
+                var subtextColor = isDark ? System.Windows.Media.Color.FromRgb(255, 255, 255) : System.Windows.Media.Color.FromRgb(0, 0, 0);
+
+                Resources["PopupTextBrush"] = new SolidColorBrush(textColor);
+                Resources["PopupSubtextBrush"] = new SolidColorBrush(subtextColor);
+
+                if (isDark) {
+                    if (PreviewCardBorderInner != null) {
+                        PreviewCardBorderInner.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(56, 255, 255, 255));
+                        PreviewCardBorderInner.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0));
+                    }
+                    if (PreviewFolderTitleText != null) PreviewFolderTitleText.Foreground = Brushes.White;
+                    if (PreviewEditNameLabel != null) PreviewEditNameLabel.Foreground = Brushes.White;
+                    if (PreviewColorThemeLabel != null) PreviewColorThemeLabel.Foreground = Brushes.White;
+                    if (PreviewFolderLockHeaderLabel != null) PreviewFolderLockHeaderLabel.Foreground = Brushes.White;
+                    if (PreviewAlwaysPanakCheckBox != null) PreviewAlwaysPanakCheckBox.Foreground = Brushes.White;
+
+                    Resources["PopupHeaderBtnBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(37, 255, 255, 255));
+                    Resources["PopupHeaderBtnFg"] = Brushes.White;
+                    Resources["PopupItemBadgeBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(37, 255, 255, 255));
+                    Resources["PopupItemBadgeFg"] = Brushes.White;
+                    Resources["PopupItemHoverBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(45, 255, 255, 255));
+                } else {
+                    if (PreviewCardBorderInner != null) {
+                        PreviewCardBorderInner.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
+                        PreviewCardBorderInner.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 255, 255, 255));
+                    }
+                    if (PreviewFolderTitleText != null) PreviewFolderTitleText.Foreground = Brushes.Black;
+                    if (PreviewEditNameLabel != null) PreviewEditNameLabel.Foreground = Brushes.Black;
+                    if (PreviewColorThemeLabel != null) PreviewColorThemeLabel.Foreground = Brushes.Black;
+                    if (PreviewFolderLockHeaderLabel != null) PreviewFolderLockHeaderLabel.Foreground = Brushes.Black;
+                    if (PreviewAlwaysPanakCheckBox != null) PreviewAlwaysPanakCheckBox.Foreground = Brushes.Black;
+
+                    Resources["PopupHeaderBtnBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(25, 0, 0, 0));
+                    Resources["PopupHeaderBtnFg"] = Brushes.Black;
+                    Resources["PopupItemBadgeBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 0, 0, 0));
+                    Resources["PopupItemBadgeFg"] = Brushes.Black;
+                    Resources["PopupItemHoverBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 0, 0, 0));
+                }
+
+                // Frosted Tint Layer (dark/light)
+                bool hasBlur = FolderBlurCheckBox?.IsChecked ?? true;
+                if (PreviewFrostedTintLayer != null) {
+                    if (isDark) {
+                        PreviewFrostedTintLayer.Background = new SolidColorBrush(hasBlur
+                            ? System.Windows.Media.Color.FromArgb(194, 22, 22, 29)
+                            : System.Windows.Media.Color.FromArgb(235, 24, 24, 30));
+                    } else {
+                        PreviewFrostedTintLayer.Background = new SolidColorBrush(hasBlur
+                            ? System.Windows.Media.Color.FromArgb(220, 248, 249, 250)
+                            : System.Windows.Media.Color.FromArgb(245, 248, 249, 250));
+                    }
+                }
+
+                // Accent Tint Layer
+                System.Windows.Media.Color baseCol;
+                try {
+                    baseCol = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_selectedColor);
+                } catch {
+                    baseCol = System.Windows.Media.Color.FromRgb(252, 221, 197);
+                }
+
+                if (PreviewTintLayer != null) {
+                    PreviewTintLayer.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(95, baseCol.R, baseCol.G, baseCol.B));
+                }
+
+                // Opacity syncing
+                double opacityVal = GeneralFolderOpacitySlider != null ? GeneralFolderOpacitySlider.Value : 85.0;
+                double normOpacity = Math.Clamp(opacityVal / 100.0, 0.20, 1.0);
+                if (PreviewFrostedTintLayer != null) PreviewFrostedTintLayer.Opacity = normOpacity;
+                if (PreviewTintLayer != null) PreviewTintLayer.Opacity = Math.Min(1.0, normOpacity * 1.1);
+
+                // Blur effect
+                if (PreviewPopupBlurEffect != null && FolderBlurSlider != null) {
+                    PreviewPopupBlurEffect.Radius = Math.Max(2, FolderBlurSlider.Value);
+                }
+                if (PreviewPopupBlurImage != null) {
+                    PreviewPopupBlurImage.Visibility = hasBlur ? Visibility.Visible : Visibility.Collapsed;
+                }
+
+                // Scrollbar thumb dynamic theme color
+                var thumbColor = System.Windows.Media.Color.FromArgb(150, baseCol.R, baseCol.G, baseCol.B);
+                var hoverColor = System.Windows.Media.Color.FromArgb(220, baseCol.R, baseCol.G, baseCol.B);
+                Resources["PanakScrollBarThumbBrush"] = new SolidColorBrush(thumbColor);
+                Resources["PanakScrollBarThumbHoverBrush"] = new SolidColorBrush(hoverColor);
+
+                // Material 3 Dynamic shape capsule styling
+                double hue = ShellHelper.GetHueFromHex(_selectedColor);
+                var (surfaceHex, containerHex, primaryHex) = ShellHelper.GetMaterialYouTonalPaletteHex(hue);
+                var primaryColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(primaryHex);
+                var containerColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(containerHex);
+
+                var capsuleBg = System.Windows.Media.Color.FromArgb(45, primaryColor.R, primaryColor.G, primaryColor.B);
+                var unselectedBg = System.Windows.Media.Color.FromArgb(50, containerColor.R, containerColor.G, containerColor.B);
+                Resources["ShapeCapsuleBgBrush"] = new SolidColorBrush(capsuleBg);
+                Resources["ShapeUnselectedBgBrush"] = new SolidColorBrush(unselectedBg);
+                Resources["ShapeSelectedBgBrush"] = new SolidColorBrush(primaryColor);
+                Resources["ShapeUnselectedPathBrush"] = isDark ? Brushes.White : Brushes.Black;
+                Resources["ShapeSelectedPathBrush"] = Brushes.White;
+                Resources["CurrentHueThumbBrush"] = new SolidColorBrush(baseCol);
+
+                if (PreviewHueSlider != null && Math.Abs(PreviewHueSlider.Value - hue) > 1.0) {
+                    PreviewHueSlider.Value = hue;
+                }
+                if (PreviewOpacitySlider != null && Math.Abs(PreviewOpacitySlider.Value - normOpacity) > 0.02) {
+                    PreviewOpacitySlider.Value = normOpacity;
+                }
+
+                // Desktop folder icon at bottom left
+                if (PreviewDesktopIconShapePath != null) {
+                    Geometry? geom = _selectedShape switch {
+                        "Circle" => FindResource("GeomCircle") as Geometry,
+                        "Clover" => FindResource("GeomClover") as Geometry,
+                        "Scallop" => FindResource("GeomScallop") as Geometry,
+                        "Arch" => FindResource("GeomArch") as Geometry,
+                        _ => FindResource("GeomSquircle") as Geometry
+                    };
+                    if (geom != null) PreviewDesktopIconShapePath.Data = geom;
+                    PreviewDesktopIconShapePath.Fill = (Brush)FindResource("M3SurfaceContainerBrush");
+                }
+
+                UpdatePreviewPinVisual();
+                PopulatePreviewDesktopIcon();
+                PopulatePreviewItems();
+            } catch { }
+        }
+
+        private void PopulatePreviewDesktopIcon() {
+            if (PreviewDesktopIconMiniGrid == null) return;
+            if (PreviewDesktopIconMiniGrid.Children.Count == 0) {
+                var samples = GetCurrentSampleItems();
+                for (int i = 0; i < 4; i++) {
+                    var item = samples[i % samples.Length];
+                    var iconSrc = GetPreviewMockIcon(item.IsFolder, item.Ext);
+                    var img = new Image {
+                        Source = iconSrc,
+                        Width = 12,
+                        Height = 12,
+                        Margin = new Thickness(1)
+                    };
+                    RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                    PreviewDesktopIconMiniGrid.Children.Add(img);
+                }
+            }
+        }
+
+        private Border CreatePreviewItemView((string Name, string Ext, bool IsFolder) sample) {
+            var itemBorder = new Border {
+                Width = 68,
+                Height = 76,
+                CornerRadius = new CornerRadius(12),
+                Background = Brushes.Transparent,
+                Margin = new Thickness(5),
+                Padding = new Thickness(2, 4, 2, 4),
+                Cursor = Cursors.Hand
+            };
+
+            itemBorder.MouseEnter += (s, e) => {
+                itemBorder.Background = TryFindResource("PopupItemHoverBrush") as Brush ?? new SolidColorBrush(System.Windows.Media.Color.FromArgb(45, 255, 255, 255));
+            };
+            itemBorder.MouseLeave += (s, e) => {
+                itemBorder.Background = Brushes.Transparent;
+            };
+
+            var stack = new StackPanel {
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Width = 66
+            };
+
+            var iconGrid = new Grid {
+                Width = 47,
+                Height = 47,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            var iconSrc = GetPreviewMockIcon(sample.IsFolder, sample.Ext);
+            var img = new Image {
+                Source = iconSrc,
+                Width = 43,
+                Height = 43,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+            iconGrid.Children.Add(img);
+            stack.Children.Add(iconGrid);
+
+            var txt = new TextBlock {
+                Text = sample.Name,
+                FontSize = 11,
+                Foreground = TryFindResource("PopupTextBrush") as Brush ?? Brushes.White,
+                TextAlignment = TextAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                TextWrapping = TextWrapping.Wrap,
+                MaxHeight = 26,
+                Margin = new Thickness(0, 4, 0, 0),
+                ToolTip = sample.Name
+            };
+            stack.Children.Add(txt);
+            itemBorder.Child = stack;
+            return itemBorder;
+        }
+
+        private void PopulatePreviewItems() {
+            var samples = GetCurrentSampleItems();
+            int cols = GridColumnsSlider != null ? (int)Math.Clamp(GridColumnsSlider.Value, 3, 8) : 3;
+            int rows = GridRowsSlider != null ? (int)Math.Clamp(GridRowsSlider.Value, 1, 5) : 3;
+            bool isSlider = PagingSliderRadio?.IsChecked ?? true;
+
+            double itemW = 78.0;
+            double itemH = 86.0;
+            double pageW = cols * itemW;
+            double pageH = rows * itemH;
+            _previewPageWidth = pageW;
+
+            int itemsPerPage = Math.Max(1, cols * rows);
+            _previewTotalPages = (int)Math.Ceiling((double)samples.Length / itemsPerPage);
+            if (_previewTotalPages < 1) _previewTotalPages = 1;
+            if (_previewCurrentPage >= _previewTotalPages) _previewCurrentPage = _previewTotalPages - 1;
+            if (_previewCurrentPage < 0) _previewCurrentPage = 0;
+
+            // 1. Slider pages setup
+            if (PreviewSliderPagesViewport != null && PreviewSliderPagesPanel != null) {
+                PreviewSliderPagesViewport.Width = pageW;
+                PreviewSliderPagesViewport.Height = pageH;
+                PreviewSliderPagesPanel.Width = _previewTotalPages * pageW;
+                PreviewSliderPagesPanel.Height = pageH;
+                PreviewSliderPagesPanel.Children.Clear();
+
+                for (int p = 0; p < _previewTotalPages; p++) {
+                    var pageGrid = new UniformGrid {
+                        Columns = cols,
+                        Rows = rows,
+                        Width = pageW,
+                        Height = pageH,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    var pageItems = samples.Skip(p * itemsPerPage).Take(itemsPerPage);
+                    foreach (var item in pageItems) {
+                        pageGrid.Children.Add(CreatePreviewItemView(item));
+                    }
+                    PreviewSliderPagesPanel.Children.Add(pageGrid);
+                }
+
+                AnimatePreviewSliderPage(immediate: true);
+            }
+
+            // 2. ScrollViewer setup
+            if (PreviewScrollGrid != null) {
+                PreviewScrollGrid.Columns = cols;
+                PreviewScrollGrid.Width = pageW;
+                PreviewScrollGrid.Children.Clear();
+                foreach (var item in samples) {
+                    PreviewScrollGrid.Children.Add(CreatePreviewItemView(item));
+                }
+            }
+
+            if (PreviewItemsScrollViewer != null) {
+                PreviewItemsScrollViewer.MaxHeight = Math.Min(rows, 3) * itemH + 8;
+            }
+
+            // 3. Switch between Slider and Scrollbar mode
+            if (PreviewSliderPagesViewport != null && PreviewItemsScrollViewer != null && PreviewFooterPagerGrid != null) {
+                if (isSlider) {
+                    PreviewSliderPagesViewport.Visibility = Visibility.Visible;
+                    PreviewItemsScrollViewer.Visibility = Visibility.Collapsed;
+                    PreviewFooterPagerGrid.Visibility = (_previewTotalPages > 1) ? Visibility.Visible : Visibility.Collapsed;
+                    UpdatePreviewDots();
+                } else {
+                    PreviewSliderPagesViewport.Visibility = Visibility.Collapsed;
+                    PreviewItemsScrollViewer.Visibility = Visibility.Visible;
+                    PreviewFooterPagerGrid.Visibility = Visibility.Collapsed;
+                }
+            }
+
+            // 4. Update count badge
+            if (PreviewItemCountBadge != null) {
+                string countFormatted = $"{samples.Length} {LocalizationService.Instance["FilesCount"]}";
+                PreviewItemCountBadge.Text = countFormatted;
+            }
+
+            // 5. Update layout sizing and scaling
+            UpdatePreviewCardDimensions(cols, rows, isSlider);
+        }
+
+        private void UpdatePreviewCardDimensions(int cols, int rows, bool isSlider) {
+            if (PreviewCardBorderInner == null || PreviewInnerClippingBorder == null || PreviewCardClipGeometry == null) return;
+
+            double naturalW = cols * 78.0 + 24.0;
+            double naturalH = (rows * 86.0) + 36.0 /* header */ + (isSlider && _previewTotalPages > 1 ? 30.0 : 0.0) /* footer */ + 22.0 /* inner padding */;
+            if (_isPreviewEditOpen && PreviewEditPanelContainer != null) {
+                double editH = PreviewEditPanelContainer.ActualHeight > 0 ? PreviewEditPanelContainer.ActualHeight : 240.0;
+                naturalH += editH;
+            }
+
+            PreviewCardBorderInner.Width = naturalW;
+            PreviewCardBorderInner.Height = naturalH;
+            PreviewInnerClippingBorder.Width = naturalW;
+            PreviewInnerClippingBorder.Height = naturalH;
+            PreviewCardClipGeometry.Rect = new Rect(0, 0, naturalW, naturalH);
+
+            double availW = Math.Max(240, PreviewCardBorder.ActualWidth > 0 ? PreviewCardBorder.ActualWidth - 28.0 : 312.0);
+            double availH = Math.Max(300, PreviewCardBorder.ActualHeight > 0 ? PreviewCardBorder.ActualHeight - 85.0 : 445.0);
+
+            double scale = 1.0;
+            if (naturalW > availW || naturalH > availH) {
+                scale = Math.Min(availW / naturalW, availH / naturalH);
+            }
+            if (scale > 1.0) scale = 1.0;
+
+            if (PreviewPopupScale != null) {
+                PreviewPopupScale.ScaleX = scale;
+                PreviewPopupScale.ScaleY = scale;
+            }
+        }
+
+        private void UpdatePreviewDots() {
+            if (PreviewSliderDotsPanel == null) return;
+            PreviewSliderDotsPanel.Children.Clear();
+            if (_previewTotalPages <= 1) return;
+
+            var textBrush = TryFindResource("PopupTextBrush") as Brush ?? Brushes.White;
+            var subtextBrush = TryFindResource("PopupSubtextBrush") as Brush ?? Brushes.Gray;
+
+            for (int i = 0; i < _previewTotalPages; i++) {
+                int pageIndex = i;
+                bool isActive = (i == _previewCurrentPage);
+                var dot = new Border {
+                    Width = isActive ? 20.0 : 7.0,
+                    Height = 7.0,
+                    CornerRadius = new CornerRadius(3.5),
+                    Margin = new Thickness(2.5, 0, 2.5, 0),
+                    Background = isActive ? textBrush : subtextBrush,
+                    Opacity = isActive ? 0.95 : 0.45,
+                    Cursor = Cursors.Hand,
+                    Tag = pageIndex
+                };
+                dot.MouseLeftButtonDown += (s, e) => {
+                    _previewCurrentPage = pageIndex;
+                    AnimatePreviewSliderPage(immediate: false);
+                    UpdatePreviewDots();
+                };
+                PreviewSliderDotsPanel.Children.Add(dot);
+            }
+
+            bool arrowsEnabled = SliderArrowsCheckBox?.IsChecked ?? true;
+            if (PreviewSliderPrevBtn != null) {
+                PreviewSliderPrevBtn.Visibility = arrowsEnabled ? Visibility.Visible : Visibility.Collapsed;
+                PreviewSliderPrevBtn.IsEnabled = _previewCurrentPage > 0;
+                PreviewSliderPrevBtn.Opacity = _previewCurrentPage > 0 ? 1.0 : 0.35;
+            }
+            if (PreviewSliderNextBtn != null) {
+                PreviewSliderNextBtn.Visibility = arrowsEnabled ? Visibility.Visible : Visibility.Collapsed;
+                PreviewSliderNextBtn.IsEnabled = _previewCurrentPage < _previewTotalPages - 1;
+                PreviewSliderNextBtn.Opacity = _previewCurrentPage < _previewTotalPages - 1 ? 1.0 : 0.35;
+            }
+        }
+
+        private void AnimatePreviewSliderPage(bool immediate) {
+            if (PreviewPagesTranslateX == null) return;
+            double targetX = -_previewCurrentPage * _previewPageWidth;
+            if (immediate) {
+                PreviewPagesTranslateX.BeginAnimation(TranslateTransform.XProperty, null);
+                PreviewPagesTranslateX.X = targetX;
+            } else {
+                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                var anim = new DoubleAnimation {
+                    To = targetX,
+                    Duration = TimeSpan.FromMilliseconds(240),
+                    EasingFunction = ease
+                };
+                PreviewPagesTranslateX.BeginAnimation(TranslateTransform.XProperty, anim);
+            }
+        }
+
+        private void PreviewSliderPrevBtn_Click(object sender, RoutedEventArgs e) {
+            if (_previewCurrentPage > 0) {
+                _previewCurrentPage--;
+                AnimatePreviewSliderPage(immediate: false);
+                UpdatePreviewDots();
+            }
+        }
+
+        private void PreviewSliderNextBtn_Click(object sender, RoutedEventArgs e) {
+            if (_previewCurrentPage < _previewTotalPages - 1) {
+                _previewCurrentPage++;
+                AnimatePreviewSliderPage(immediate: false);
+                UpdatePreviewDots();
+            }
+        }
+
+        private void PreviewSlider_MouseDown(object sender, MouseButtonEventArgs e) {
+            if (e.LeftButton == MouseButtonState.Pressed) {
+                _isDraggingPreviewSlider = true;
+                _previewDragStartPos = e.GetPosition(PreviewSliderPagesViewport);
+                PreviewSliderPagesViewport?.CaptureMouse();
+            }
+        }
+
+        private void PreviewSlider_MouseMove(object sender, MouseEventArgs e) {
+            if (_isDraggingPreviewSlider && e.LeftButton == MouseButtonState.Pressed) {
+                var currentPos = e.GetPosition(PreviewSliderPagesViewport);
+                double deltaX = currentPos.X - _previewDragStartPos.X;
+                if (Math.Abs(deltaX) > 40) {
+                    _isDraggingPreviewSlider = false;
+                    PreviewSliderPagesViewport?.ReleaseMouseCapture();
+                    if (deltaX < 0 && _previewCurrentPage < _previewTotalPages - 1) {
+                        _previewCurrentPage++;
+                        AnimatePreviewSliderPage(immediate: false);
+                        UpdatePreviewDots();
+                    } else if (deltaX > 0 && _previewCurrentPage > 0) {
+                        _previewCurrentPage--;
+                        AnimatePreviewSliderPage(immediate: false);
+                        UpdatePreviewDots();
+                    }
+                }
+            }
+        }
+
+        private void PreviewSlider_MouseUp(object sender, MouseButtonEventArgs e) {
+            _isDraggingPreviewSlider = false;
+            PreviewSliderPagesViewport?.ReleaseMouseCapture();
+        }
+
+        private void PreviewSlider_MouseWheel(object sender, MouseWheelEventArgs e) {
+            if (_previewTotalPages <= 1) return;
+            if (e.Delta < 0) {
+                if (_previewCurrentPage < _previewTotalPages - 1) {
+                    _previewCurrentPage++;
+                    AnimatePreviewSliderPage(immediate: false);
+                    UpdatePreviewDots();
+                    e.Handled = true;
+                }
+            } else if (e.Delta > 0) {
+                if (_previewCurrentPage > 0) {
+                    _previewCurrentPage--;
+                    AnimatePreviewSliderPage(immediate: false);
+                    UpdatePreviewDots();
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private void PreviewScrollViewer_MouseWheel(object sender, MouseWheelEventArgs e) {
+            if (PreviewItemsScrollViewer != null) {
+                if (e.Delta < 0) {
+                    PreviewItemsScrollViewer.LineDown();
+                } else {
+                    PreviewItemsScrollViewer.LineUp();
+                }
+                e.Handled = true;
+            }
+        }
+
+        private void PreviewPinButton_Click(object sender, RoutedEventArgs e) {
+            _isPreviewPinned = !_isPreviewPinned;
+            UpdatePreviewPinVisual();
+        }
+
+        private void UpdatePreviewPinVisual() {
+            if (PreviewPinIconPath == null) return;
+            if (_isPreviewPinned) {
+                PreviewPinIconPath.Fill = (Brush)FindResource("M3PrimaryBrush");
+                if (PreviewPinButton != null) {
+                    PreviewPinButton.ToolTip = "Ապաամրացնել";
+                }
+            } else {
+                PreviewPinIconPath.Fill = (Brush)FindResource("PopupHeaderBtnFg");
+                if (PreviewPinButton != null) {
+                    PreviewPinButton.ToolTip = "Ամրացնել";
+                }
+            }
+        }
+
+        private void PreviewEditButton_Click(object sender, RoutedEventArgs e) {
+            if (PreviewEditPanelContainer == null || PreviewEditPanel == null) return;
+
+            _isPreviewEditOpen = !_isPreviewEditOpen;
+            var duration = TimeSpan.FromMilliseconds(220);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+
+            if (_isPreviewEditOpen) {
+                PreviewEditPanelContainer.Visibility = Visibility.Visible;
+                PreviewEditPanel.Measure(new Size(234, double.PositiveInfinity));
+                double targetH = PreviewEditPanel.DesiredSize.Height > 0 ? PreviewEditPanel.DesiredSize.Height : 240.0;
+
+                var hAnim = new DoubleAnimation(0.0, targetH, duration) { EasingFunction = ease };
+                var opAnim = new DoubleAnimation(0.0, 1.0, duration) { EasingFunction = ease };
+                var trAnim = new DoubleAnimation(-10.0, 0.0, duration) { EasingFunction = ease };
+
+                PreviewEditPanelContainer.BeginAnimation(HeightProperty, hAnim);
+                PreviewEditPanel.BeginAnimation(OpacityProperty, opAnim);
+                PreviewEditPanelTranslate.BeginAnimation(TranslateTransform.YProperty, trAnim);
+            } else {
+                double startH = PreviewEditPanelContainer.ActualHeight > 0 ? PreviewEditPanelContainer.ActualHeight : PreviewEditPanelContainer.Height;
+                var hAnim = new DoubleAnimation(startH, 0.0, duration) { EasingFunction = ease };
+                var opAnim = new DoubleAnimation(1.0, 0.0, duration) { EasingFunction = ease };
+                var trAnim = new DoubleAnimation(0.0, -10.0, duration) { EasingFunction = ease };
+
+                hAnim.Completed += (s, ev) => {
+                    if (!_isPreviewEditOpen) {
+                        PreviewEditPanelContainer.Visibility = Visibility.Collapsed;
+                    }
+                };
+
+                PreviewEditPanelContainer.BeginAnimation(HeightProperty, hAnim);
+                PreviewEditPanel.BeginAnimation(OpacityProperty, opAnim);
+                PreviewEditPanelTranslate.BeginAnimation(TranslateTransform.YProperty, trAnim);
+            }
+
+            int cols = GridColumnsSlider != null ? (int)Math.Clamp(GridColumnsSlider.Value, 3, 8) : 3;
+            int rows = GridRowsSlider != null ? (int)Math.Clamp(GridRowsSlider.Value, 1, 5) : 3;
+            bool isSlider = PagingSliderRadio?.IsChecked ?? true;
+            UpdatePreviewCardDimensions(cols, rows, isSlider);
+        }
+
+        private void PreviewExplorerButton_Click(object sender, RoutedEventArgs e) {
+            try {
+                var defaultPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                ShellContextMenu.OpenFile(defaultPath);
+            } catch { }
+        }
+
+        private void PreviewCloseButton_Click(object sender, RoutedEventArgs e) {
+            if (PreviewPopupContainer == null || !_isPreviewPopupOpen) return;
+            _isPreviewPopupOpen = false;
+
+            var duration = TimeSpan.FromMilliseconds(220);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+
+            var scaleXAnim = new DoubleAnimation(PreviewPopupScale.ScaleX, 0.0, duration) { EasingFunction = ease };
+            var scaleYAnim = new DoubleAnimation(PreviewPopupScale.ScaleY, 0.0, duration) { EasingFunction = ease };
+            var opAnim = new DoubleAnimation(1.0, 0.0, duration) { EasingFunction = ease };
+
+            scaleXAnim.Completed += (s, ev) => {
+                if (!_isPreviewPopupOpen) {
+                    PreviewPopupContainer.Visibility = Visibility.Collapsed;
+                }
+            };
+
+            PreviewPopupScale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleXAnim);
+            PreviewPopupScale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleYAnim);
+            PreviewPopupContainer.BeginAnimation(OpacityProperty, opAnim);
+        }
+
+        private void PreviewDesktopIcon_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+            if (PreviewPopupContainer == null) return;
+            if (!_isPreviewPopupOpen) {
+                _isPreviewPopupOpen = true;
+                PreviewPopupContainer.Visibility = Visibility.Visible;
+
+                int cols = GridColumnsSlider != null ? (int)Math.Clamp(GridColumnsSlider.Value, 3, 8) : 3;
+                int rows = GridRowsSlider != null ? (int)Math.Clamp(GridRowsSlider.Value, 1, 5) : 3;
+                bool isSlider = PagingSliderRadio?.IsChecked ?? true;
+                UpdatePreviewCardDimensions(cols, rows, isSlider);
+
+                double targetScale = PreviewPopupScale.ScaleX > 0.1 ? PreviewPopupScale.ScaleX : 1.0;
+                PreviewPopupScale.ScaleX = 0.0;
+                PreviewPopupScale.ScaleY = 0.0;
+                PreviewPopupContainer.Opacity = 0.0;
+
+                var duration = TimeSpan.FromMilliseconds(260);
+                var ease = new BackEase { Amplitude = 0.3, EasingMode = EasingMode.EaseOut };
+
+                var scaleXAnim = new DoubleAnimation(0.0, targetScale, duration) { EasingFunction = ease };
+                var scaleYAnim = new DoubleAnimation(0.0, targetScale, duration) { EasingFunction = ease };
+                var opAnim = new DoubleAnimation(0.0, 1.0, duration) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+
+                PreviewPopupScale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleXAnim);
+                PreviewPopupScale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleYAnim);
+                PreviewPopupContainer.BeginAnimation(OpacityProperty, opAnim);
+            } else {
+                PreviewCloseButton_Click(sender, e);
+            }
+        }
+
+        private void PreviewSaveNameButton_Click(object sender, RoutedEventArgs e) {
+            if (PreviewNameEditBox != null && PreviewFolderTitleText != null) {
+                PreviewFolderTitleText.Text = PreviewNameEditBox.Text;
+                if (PreviewDesktopIconLabel != null) {
+                    PreviewDesktopIconLabel.Text = PreviewNameEditBox.Text;
+                }
+            }
+        }
+
+        private void PreviewNameEditBox_KeyDown(object sender, KeyEventArgs e) {
+            if (e.Key == Key.Enter) {
+                PreviewSaveNameButton_Click(sender, e);
+                e.Handled = true;
+            }
+        }
+
+        private void PreviewColorSwatch_Checked(object sender, RoutedEventArgs e) {
+            if (sender is RadioButton rb && rb.Tag is string hex) {
+                _selectedColor = hex;
+                double hue = ShellHelper.GetHueFromHex(hex);
+                if (SettingsHueSlider != null) {
+                    SettingsHueSlider.Value = hue;
+                }
+                UpdateLivePreview();
+            }
+        }
+
+        private void PreviewHueSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (SettingsHueSlider != null && Math.Abs(SettingsHueSlider.Value - e.NewValue) > 1.0) {
+                SettingsHueSlider.Value = e.NewValue;
+            }
+            ApplyMaterialYouPalette(e.NewValue);
+            UpdateLivePreview();
+        }
+
+        private void PreviewOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            if (GeneralFolderOpacitySlider != null && Math.Abs(GeneralFolderOpacitySlider.Value - (e.NewValue * 100.0)) > 1.0) {
+                GeneralFolderOpacitySlider.Value = e.NewValue * 100.0;
+            }
+            UpdateLivePreview();
+        }
+
+        private void PreviewShapeRadio_Click(object sender, RoutedEventArgs e) {
+            string chosenShape = "Squircle";
+            if (sender == PreviewShapeRadioCircle) chosenShape = "Circle";
+            else if (sender == PreviewShapeRadioSquircle) chosenShape = "Squircle";
+            else if (sender == PreviewShapeRadioClover) chosenShape = "Clover";
+            else if (sender == PreviewShapeRadioScallop) chosenShape = "Scallop";
+            else if (sender == PreviewShapeRadioArch) chosenShape = "Arch";
+
+            _selectedShape = chosenShape;
+            if (chosenShape == "Circle" && SettingsShapeCircle != null) SettingsShapeCircle.IsChecked = true;
+            else if (chosenShape == "Squircle" && SettingsShapeSquircle != null) SettingsShapeSquircle.IsChecked = true;
+            else if (chosenShape == "Clover" && SettingsShapeClover != null) SettingsShapeClover.IsChecked = true;
+            else if (chosenShape == "Scallop" && SettingsShapeScallop != null) SettingsShapeScallop.IsChecked = true;
+            else if (chosenShape == "Arch" && SettingsShapeArch != null) SettingsShapeArch.IsChecked = true;
+
+            UpdateLivePreview();
+        }
+
+        private void PreviewAlwaysPanakCheckBox_Checked(object sender, RoutedEventArgs e) { }
+        private void PreviewAlwaysPanakCheckBox_Unchecked(object sender, RoutedEventArgs e) { }
+        private void PreviewUnpackFolderButton_Click(object sender, RoutedEventArgs e) { }
+        private void PreviewFolderLockBtn_Click(object sender, RoutedEventArgs e) {
+            var win = new FolderLockSetupWindow("__PREVIEW__");
+            win.Owner = this;
+            win.ShowDialog();
+        }
+
+        // --- Settings Lock & Biometrics Enrollment ---
+        private void CheckSettingsLockState() {
+            if (FolderLockService.Instance.IsSettingsLocked) {
+                if (SettingsLockOverlay != null) {
+                    SettingsLockOverlay.Visibility = Visibility.Visible;
+                    SettingsLockOverlay.SetupForSettings();
+                    SettingsLockOverlay.Unlocked += () => {
+                        SettingsLockOverlay.Visibility = Visibility.Collapsed;
+                    };
+                }
+            } else {
+                if (SettingsLockOverlay != null) {
+                    SettingsLockOverlay.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+
+        private void UpdateSettingsLockUI() {
+            bool isLocked = FolderLockService.Instance.IsSettingsLocked;
+            if (LockSettingsCheckBox != null) {
+                LockSettingsCheckBox.IsChecked = isLocked;
+            }
+            if (SettingsLockStatusText != null) {
+                if (isLocked) {
+                    string typeArm = FolderLockService.Instance.SettingsLockType switch {
+                        "PIN" => "PIN կոդ",
+                        "Pattern" => "Նախշ",
+                        _ => "Գաղտնաբառ"
+                    };
+                    SettingsLockStatusText.Text = $"🔒 Կողպված է ({typeArm})";
+                    SettingsLockStatusText.Foreground = (Brush)FindResource("M3PrimaryBrush");
+                } else {
+                    SettingsLockStatusText.Text = "Կայանքները պաշտպանված չեն";
+                    SettingsLockStatusText.Foreground = (Brush)FindResource("M3OnSurfaceVariantBrush");
+                }
+            }
+        }
+
+        private void LockSettingsCheckBox_Click(object sender, RoutedEventArgs e) {
+            var win = new FolderLockSetupWindow("__SETTINGS__");
+            win.Owner = this;
+            win.ShowDialog();
+            UpdateSettingsLockUI();
+        }
+
+        private void ConfigureSettingsLockBtn_Click(object sender, RoutedEventArgs e) {
+            var win = new FolderLockSetupWindow("__SETTINGS__");
+            win.Owner = this;
+            win.ShowDialog();
+            UpdateSettingsLockUI();
         }
     }
 }

@@ -31,35 +31,150 @@ namespace Panak.Views {
         private bool _sliderDrag = true;
         private bool _focusMode = true;
         private double _focusDimming = 0.45;
+        private bool _focusBlurEnabled = true;
+        private double _focusBlurRadius = 28.0;
 
         private DispatcherTimer? _liveWallpaperTimer;
-        private bool _isPreviewOpen = true;
+        private bool _isPopup1Open = true;
+        private bool _isPopup2Open = false;
 
         private int _currentPreviewPage = 0;
-        private int _totalPreviewPages = 1;
-        private double _previewPageWidth = 270.0;
+        private int _totalPreviewPages = 3;
+        private double _previewPageWidth = 252.0;
         private bool _isDraggingSlider = false;
         private Point _dragStartPos;
 
-        private static readonly (string Name, string Icon)[] MockItems = new[] {
-            ("Project Plan.docx", "📄"),
-            ("Budget 2026.xlsx", "📊"),
-            ("Banner_Final.png", "🖼️"),
-            ("Notes.txt", "📝"),
-            ("AppSetup.exe", "⚙️"),
-            ("Client Brief.pdf", "📑"),
-            ("DesignSystem.fig", "🎨"),
-            ("Podcast_Ep4.mp3", "🎵"),
-            ("ReleaseDemo.mp4", "🎬"),
-            ("SourceBackup.zip", "📦"),
-            ("Architecture.drawio", "📐"),
-            ("Script.ps1", "💻"),
-            ("AppIcon.svg", "💠"),
-            ("Summary.md", "📋"),
-            ("Financials.csv", "📈"),
-            ("Database.sql", "🗄️"),
-            ("Contract.pdf", "📃"),
-            ("Wireframes.xd", "📱")
+        private static BitmapSource? _cachedFolderIcon;
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, BitmapSource?> _cachedMockIcons = new(StringComparer.OrdinalIgnoreCase);
+
+        // Master item pool for Folder 1 (Panak): 60+ diverse items
+        // The first 4 items are displayed in the desktop icon's 2x2 mini grid
+        private static readonly (string Name, bool IsFolder, string Ext)[] MasterFolder1Pool = new[] {
+            ("Documents", true, ""),
+            ("Pictures", true, ""),
+            ("Project Plan.docx", false, ".docx"),
+            ("Budget 2026.xlsx", false, ".xlsx"),
+            ("Banner_Final.png", false, ".png"),
+            ("Client Brief.pdf", false, ".pdf"),
+            ("Downloads", true, ""),
+            ("Work", true, ""),
+            ("Music", true, ""),
+            ("Videos", true, ""),
+            ("Code", true, ""),
+            ("Archive", true, ""),
+            ("ReleaseDemo.mp4", false, ".mp4"),
+            ("Podcast.mp3", false, ".mp3"),
+            ("AppSetup.exe", false, ".exe"),
+            ("SourceBackup.zip", false, ".zip"),
+            ("Backups", true, ""),
+            ("Configs", true, ""),
+            ("Scripts", true, ""),
+            ("Assets", true, ""),
+            ("Notes.txt", false, ".txt"),
+            ("Settings.json", false, ".json"),
+            ("README.md", false, ".md"),
+            ("Database.sql", false, ".sql"),
+            ("StyleGuide.pdf", false, ".pdf"),
+            ("QuarterlyReport.docx", false, ".docx"),
+            ("Inventory.xlsx", false, ".xlsx"),
+            ("Landscape.png", false, ".png"),
+            ("IntroVideo.mp4", false, ".mp4"),
+            ("SoundEffect.wav", false, ".wav"),
+            ("InstallHelper.msi", false, ".msi"),
+            ("Resources.zip", false, ".zip"),
+            ("Analytics", true, ""),
+            ("Research", true, ""),
+            ("Prototype", true, ""),
+            ("Deployments", true, ""),
+            ("AppIcon.png", false, ".png"),
+            ("UserStories.docx", false, ".docx"),
+            ("FinanceAudit.xlsx", false, ".xlsx"),
+            ("TermsOfService.pdf", false, ".pdf"),
+            ("Walkthrough.mp4", false, ".mp4"),
+            ("ThemeSong.mp3", false, ".mp3"),
+            ("Updater.exe", false, ".exe"),
+            ("Packages.7z", false, ".7z"),
+            ("SetupConfig.json", false, ".json"),
+            ("Migration.sql", false, ".sql"),
+            ("Main.cs", false, ".cs"),
+            ("Styles.css", false, ".css"),
+            ("Index.html", false, ".html"),
+            ("VectorLogo.svg", false, ".svg"),
+            ("DashboardMockup.png", false, ".png"),
+            ("KeyMetrics.xlsx", false, ".xlsx"),
+            ("SystemSpecs.docx", false, ".docx"),
+            ("SecurityPolicy.pdf", false, ".pdf"),
+            ("Webinar.mp4", false, ".mp4"),
+            ("ReleaseArchive.zip", false, ".zip"),
+            ("PatchTool.exe", false, ".exe"),
+            ("Documentation", true, ""),
+            ("Logs", true, ""),
+            ("Temp", true, "")
+        };
+
+        // Master item pool for Folder 2 (Projects): 60+ diverse items
+        // The first 4 items are displayed in the desktop icon's 2x2 mini grid
+        private static readonly (string Name, bool IsFolder, string Ext)[] MasterFolder2Pool = new[] {
+            ("Panak Core", true, ""),
+            ("UI Redesign", true, ""),
+            ("Roadmap.docx", false, ".docx"),
+            ("Financials.xlsx", false, ".xlsx"),
+            ("Mockup_v2.png", false, ".png"),
+            ("Proposal.pdf", false, ".pdf"),
+            ("Marketing", true, ""),
+            ("Branding", true, ""),
+            ("Components", true, ""),
+            ("Stylesheets", true, ""),
+            ("BuildArtifacts", true, ""),
+            ("Translations", true, ""),
+            ("Showreel.mp4", false, ".mp4"),
+            ("Voiceover.mp3", false, ".mp3"),
+            ("Installer.exe", false, ".exe"),
+            ("DeployBundle.zip", false, ".zip"),
+            ("Specs", true, ""),
+            ("Reports", true, ""),
+            ("Feedback", true, ""),
+            ("Templates", true, ""),
+            ("MeetingLog.txt", false, ".txt"),
+            ("Config.json", false, ".json"),
+            ("CHANGELOG.md", false, ".md"),
+            ("Schema.sql", false, ".sql"),
+            ("BrandGuidelines.pdf", false, ".pdf"),
+            ("PitchDeck.pptx", false, ".pptx"),
+            ("ExpenseSheet.xlsx", false, ".xlsx"),
+            ("HeroBanner.png", false, ".png"),
+            ("ProductDemo.mp4", false, ".mp4"),
+            ("Interview.mp3", false, ".mp3"),
+            ("DeployScript.ps1", false, ".ps1"),
+            ("ReleasePack.zip", false, ".zip"),
+            ("UserInterviews", true, ""),
+            ("Benchmarks", true, ""),
+            ("QA Testing", true, ""),
+            ("Legal", true, ""),
+            ("Wireframes.pdf", false, ".pdf"),
+            ("FeatureSpec.docx", false, ".docx"),
+            ("ProfitModel.xlsx", false, ".xlsx"),
+            ("IconSet_v3.png", false, ".png"),
+            ("PromoTrailer.mp4", false, ".mp4"),
+            ("Jingle.wav", false, ".wav"),
+            ("ServerSetup.exe", false, ".exe"),
+            ("BuildLogs.zip", false, ".zip"),
+            ("DatabaseDump.sql", false, ".sql"),
+            ("PackageLock.json", false, ".json"),
+            ("Frontend.ts", false, ".ts"),
+            ("Components.tsx", false, ".tsx"),
+            ("Contract.pdf", false, ".pdf"),
+            ("DesignTokens.json", false, ".json"),
+            ("SplashArt.png", false, ".png"),
+            ("MarketingPlan.docx", false, ".docx"),
+            ("CostAnalysis.xlsx", false, ".xlsx"),
+            ("ConferenceTalk.mp4", false, ".mp4"),
+            ("ReleaseNotes.md", false, ".md"),
+            ("ArchiveTool.exe", false, ".exe"),
+            ("Milestones", true, ""),
+            ("Releases", true, ""),
+            ("SharedAssets", true, ""),
+            ("CustomerSupport", true, "")
         };
 
         public WelcomeWindow() {
@@ -121,6 +236,8 @@ namespace Panak.Views {
             _sliderDrag = s.SliderDragEnabled;
             _focusMode = s.FocusModeEnabled;
             _focusDimming = s.FocusDimmingOpacity;
+            _focusBlurEnabled = s.FocusBlurEnabled;
+            _focusBlurRadius = s.FocusBlurRadius > 0 ? s.FocusBlurRadius : 28.0;
 
             // Step 1 controls
             if (string.Equals(_selectedShape, "Circle", StringComparison.OrdinalIgnoreCase)) ShapeCircleRadio.IsChecked = true;
@@ -133,7 +250,9 @@ namespace Panak.Views {
             Step1HueSlider.Value = hue;
             Step1OpacitySlider.Value = Math.Round(_folderOpacity * 100);
             Step1OpacityValueText.Text = $"{(int)Step1OpacitySlider.Value}%";
+            if (Step1BlurCheckBox != null) Step1BlurCheckBox.IsChecked = _folderBlurEnabled;
             Step1BlurRadiusSlider.Value = _folderBlurRadius;
+            Step1BlurRadiusSlider.IsEnabled = _folderBlurEnabled;
             Step1RadiusValueText.Text = $"{(int)_folderBlurRadius} px";
             RebuildStep1CustomSwatchesUI();
 
@@ -150,6 +269,12 @@ namespace Panak.Views {
             Step2FocusCheckBox.IsChecked = _focusMode;
             Step2DimmingSlider.Value = Math.Round(_focusDimming * 100);
             Step2DimmingValueText.Text = $"{(int)Step2DimmingSlider.Value}%";
+            if (Step2FocusBlurCheckBox != null) Step2FocusBlurCheckBox.IsChecked = _focusBlurEnabled;
+            if (Step2FocusBlurSlider != null) {
+                Step2FocusBlurSlider.Value = _focusBlurRadius;
+                Step2FocusBlurSlider.IsEnabled = _focusBlurEnabled;
+            }
+            if (Step2FocusBlurValueText != null) Step2FocusBlurValueText.Text = $"{(int)_focusBlurRadius} px";
             Step2ArrowsCheckBox.IsChecked = _sliderArrows;
             Step2DragCheckBox.IsChecked = _sliderDrag;
 
@@ -185,10 +310,13 @@ namespace Panak.Views {
         private void SetAllWallpaperSources(ImageSource src) {
             if (Step1WallpaperImage != null) Step1WallpaperImage.Source = src;
             if (Step1BlurredWallpaperImage != null) Step1BlurredWallpaperImage.Source = src;
+            if (Step1BlurredWallpaperImage2 != null) Step1BlurredWallpaperImage2.Source = src;
             if (Step2WallpaperImage != null) Step2WallpaperImage.Source = src;
             if (Step2BlurredWallpaperImage != null) Step2BlurredWallpaperImage.Source = src;
+            if (Step2BlurredWallpaperImage2 != null) Step2BlurredWallpaperImage2.Source = src;
             if (Step3WallpaperImage != null) Step3WallpaperImage.Source = src;
             if (Step3BlurredWallpaperImage != null) Step3BlurredWallpaperImage.Source = src;
+            if (Step3BlurredWallpaperImage2 != null) Step3BlurredWallpaperImage2.Source = src;
         }
 
         private void ApplyLocalization() {
@@ -207,14 +335,19 @@ namespace Panak.Views {
             Step1ColorLabel.Text = loc["DefaultFolderColor"];
             Step1OpacityLabel.Text = loc["GeneralFolderOpacity"];
             Step1BlurLabel.Text = loc["FolderBlur"];
+            if (Step1BlurWarningBadge != null) Step1BlurWarningBadge.Text = loc["SlowsDownSystemWarning"];
+            if (Step1RadiusLabel != null) Step1RadiusLabel.Text = loc["FolderBlurRadius"];
             Step1LivePreviewBadge.Text = loc["LivePreview"];
 
-            string countFormatted = string.Format(loc["ItemsCountBadge"] ?? "{0} նիշք", MockItems.Length);
+            string countFormatted = string.Format(loc["ItemsCountBadge"] ?? "{0} նիշք", 24);
             if (Step1PreviewCountText != null) Step1PreviewCountText.Text = countFormatted;
             if (Step2PreviewCountText != null) Step2PreviewCountText.Text = countFormatted;
             if (Step3PreviewCountText != null) Step3PreviewCountText.Text = countFormatted;
+            if (Step1PreviewCountText2 != null) Step1PreviewCountText2.Text = countFormatted;
+            if (Step2PreviewCountText2 != null) Step2PreviewCountText2.Text = countFormatted;
+            if (Step3PreviewCountText2 != null) Step3PreviewCountText2.Text = countFormatted;
 
-            Step2TitleText.Text = loc["Step2Title"] ?? "Դասավորություն եւ վարքագիծ";
+            Step2TitleText.Text = loc["Step2Title"] ?? "Դիրք եւ վարքագիծ";
             Step2SubtitleText.Text = loc["Step2Subtitle"];
             Step2PagingModeLabel.Text = loc["PagingMode"];
             Step2SliderRadio.Content = loc["PagingModeSlider"];
@@ -223,6 +356,9 @@ namespace Panak.Views {
             Step2RowsLabel.Text = loc["GridRows"];
             Step2FocusModeLabel.Text = loc["FocusMode"];
             Step2DimmingLabel.Text = loc["FocusDimming"];
+            if (Step2FocusBlurLabel != null) Step2FocusBlurLabel.Text = loc["FocusBlur"];
+            if (Step2FocusBlurWarningBadge != null) Step2FocusBlurWarningBadge.Text = loc["SlowsDownSystemWarning"];
+            if (Step2FocusBlurRadiusLabel != null) Step2FocusBlurRadiusLabel.Text = loc["FocusBlurRadius"];
             Step2ArrowsLabel.Text = loc["SliderArrows"];
             Step2DragLabel.Text = loc["SliderDrag"];
 
@@ -233,6 +369,7 @@ namespace Panak.Views {
             Feature3Text.Text = loc["WelcomeFeature3"];
             SettingsBtn.Content = "⚙️ " + loc["Settings"];
             KofiBtn.Content = loc["DonateOnKofi"];
+            if (CrowdinBtn != null) CrowdinBtn.ToolTip = loc["TranslateOnCrowdin"];
 
             BackBtn.Content = loc["Back"];
             SkipBtn.Content = loc["Skip"];
@@ -282,157 +419,445 @@ namespace Panak.Views {
         }
 
         private void RebuildPreviewItems() {
-            int totalItems = MockItems.Length;
-            int actualCols = Math.Clamp(Math.Min(totalItems, _gridColumns), 1, 8);
-            int actualRows = Math.Clamp(Math.Min((int)Math.Ceiling((double)totalItems / actualCols), _gridRows), 1, 5);
-
-            double contentW = actualCols * 70.0;
-            double contentH = actualRows * 78.0;
-            _previewPageWidth = contentW;
-
-            double popupW = Math.Max(240, contentW + 20.0);
-            double popupH = Math.Max(180, contentH + 82.0);
-
-            if (Step1BlurUnderlay != null) { Step1BlurUnderlay.Width = popupW; Step1BlurUnderlay.Height = popupH; }
-            if (Step1FolderCardBorder != null) { Step1FolderCardBorder.Width = popupW; Step1FolderCardBorder.Height = popupH; }
-            if (Step2BlurUnderlay != null) { Step2BlurUnderlay.Width = popupW; Step2BlurUnderlay.Height = popupH; }
-            if (Step2FolderCardBorder != null) { Step2FolderCardBorder.Width = popupW; Step2FolderCardBorder.Height = popupH; }
-            if (Step3BlurUnderlay != null) { Step3BlurUnderlay.Width = popupW; Step3BlurUnderlay.Height = popupH; }
-            if (Step3FolderCardBorder != null) { Step3FolderCardBorder.Width = popupW; Step3FolderCardBorder.Height = popupH; }
-
-            bool isSlider = string.Equals(_pagingMode, "Slider", StringComparison.OrdinalIgnoreCase);
+            int actualCols = Math.Clamp(_gridColumns, 1, 8);
+            int actualRows = Math.Clamp(_gridRows, 1, 5);
             int itemsPerPage = Math.Max(1, actualCols * actualRows);
-            _totalPreviewPages = Math.Max(1, (int)Math.Ceiling((double)totalItems / itemsPerPage));
+
+            // Last page (Page 2) is partially filled; Pages 0 and 1 are 100% full
+            int lastPageCount = Math.Max(2, (int)Math.Round(itemsPerPage * 0.65));
+            if (lastPageCount >= itemsPerPage) lastPageCount = Math.Max(1, itemsPerPage - 1);
+
+            // Dynamically construct 3 slider pages from master pools
+            var f1Page0 = MasterFolder1Pool.Take(itemsPerPage).ToArray();
+            var f1Page1 = MasterFolder1Pool.Skip(itemsPerPage).Take(itemsPerPage).ToArray();
+            var f1Page2 = MasterFolder1Pool.Skip(itemsPerPage * 2).Take(lastPageCount).ToArray();
+            var folder1Pages = new[] { f1Page0, f1Page1, f1Page2 };
+            int totalFolder1Items = f1Page0.Length + f1Page1.Length + f1Page2.Length;
+
+            var f2Page0 = MasterFolder2Pool.Take(itemsPerPage).ToArray();
+            var f2Page1 = MasterFolder2Pool.Skip(itemsPerPage).Take(itemsPerPage).ToArray();
+            var f2Page2 = MasterFolder2Pool.Skip(itemsPerPage * 2).Take(lastPageCount).ToArray();
+            var folder2Pages = new[] { f2Page0, f2Page1, f2Page2 };
+            int totalFolder2Items = f2Page0.Length + f2Page1.Length + f2Page2.Length;
+
+            _previewPageWidth = 252.0;
+            _totalPreviewPages = 3;
+
             if (_currentPreviewPage >= _totalPreviewPages) _currentPreviewPage = _totalPreviewPages - 1;
             if (_currentPreviewPage < 0) _currentPreviewPage = 0;
 
+            bool isSlider = string.Equals(_pagingMode, "Slider", StringComparison.OrdinalIgnoreCase);
             bool showPager = isSlider && _totalPreviewPages > 1;
 
-            if (Step1SliderViewport != null && Step1ScrollViewer != null && Step1FooterPagerGrid != null) {
-                Step1SliderViewport.Visibility = isSlider ? Visibility.Visible : Visibility.Collapsed;
-                Step1ScrollViewer.Visibility = isSlider ? Visibility.Collapsed : Visibility.Visible;
-                Step1FooterPagerGrid.Visibility = showPager ? Visibility.Visible : Visibility.Collapsed;
-                Step1PrevBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
-                Step1NextBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
+            void ConfigureViews(Grid? sliderVp, ScrollViewer? scrollVw, Grid? pagerGrid, Button? prevBtn, Button? nextBtn) {
+                if (sliderVp != null) sliderVp.Visibility = isSlider ? Visibility.Visible : Visibility.Collapsed;
+                if (scrollVw != null) scrollVw.Visibility = isSlider ? Visibility.Collapsed : Visibility.Visible;
+                if (pagerGrid != null) pagerGrid.Visibility = showPager ? Visibility.Visible : Visibility.Collapsed;
+                if (prevBtn != null) prevBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
+                if (nextBtn != null) nextBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
             }
 
-            if (Step2SliderViewport != null && Step2ScrollViewer != null && Step2FooterPagerGrid != null) {
-                Step2SliderViewport.Visibility = isSlider ? Visibility.Visible : Visibility.Collapsed;
-                Step2ScrollViewer.Visibility = isSlider ? Visibility.Collapsed : Visibility.Visible;
-                Step2FooterPagerGrid.Visibility = showPager ? Visibility.Visible : Visibility.Collapsed;
-                Step2PrevBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
-                Step2NextBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
-            }
+            ConfigureViews(Step1SliderViewport, Step1ScrollViewer, Step1FooterPagerGrid, Step1PrevBtn, Step1NextBtn);
+            ConfigureViews(Step1SliderViewport2, null, Step1FooterPagerGrid2, null, null);
+            ConfigureViews(Step2SliderViewport, Step2ScrollViewer, Step2FooterPagerGrid, Step2PrevBtn, Step2NextBtn);
+            ConfigureViews(Step2SliderViewport2, null, Step2FooterPagerGrid2, null, null);
+            ConfigureViews(Step3SliderViewport, Step3ScrollViewer, Step3FooterPagerGrid, Step3PrevBtn, Step3NextBtn);
+            ConfigureViews(Step3SliderViewport2, null, Step3FooterPagerGrid2, null, null);
 
-            if (Step3SliderViewport != null && Step3ScrollViewer != null && Step3FooterPagerGrid != null) {
-                Step3SliderViewport.Visibility = isSlider ? Visibility.Visible : Visibility.Collapsed;
-                Step3ScrollViewer.Visibility = isSlider ? Visibility.Collapsed : Visibility.Visible;
-                Step3FooterPagerGrid.Visibility = showPager ? Visibility.Visible : Visibility.Collapsed;
-                Step3PrevBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
-                Step3NextBtn.Visibility = (showPager && _sliderArrows) ? Visibility.Visible : Visibility.Collapsed;
-            }
+            // Folder 1 Slider Pages (Panak)
+            BuildSliderPages(Step1SliderPagesPanel, actualCols, actualRows, folder1Pages);
+            BuildSliderPages(Step2SliderPagesPanel, actualCols, actualRows, folder1Pages);
+            BuildSliderPages(Step3SliderPagesPanel, actualCols, actualRows, folder1Pages);
 
-            BuildSliderPages(Step1SliderPagesPanel, actualCols, actualRows, itemsPerPage);
-            BuildSliderPages(Step2SliderPagesPanel, actualCols, actualRows, itemsPerPage);
-            BuildSliderPages(Step3SliderPagesPanel, actualCols, actualRows, itemsPerPage);
+            // Folder 2 Slider Pages (Projects)
+            BuildSliderPages(Step1SliderPagesPanel2, actualCols, actualRows, folder2Pages);
+            BuildSliderPages(Step2SliderPagesPanel2, actualCols, actualRows, folder2Pages);
+            BuildSliderPages(Step3SliderPagesPanel2, actualCols, actualRows, folder2Pages);
 
-            BuildScrollGrid(Step1ScrollGrid, actualCols);
-            BuildScrollGrid(Step2ScrollGrid, actualCols);
-            BuildScrollGrid(Step3ScrollGrid, actualCols);
+            // Scroll Grids
+            BuildScrollGrid(Step1ScrollGrid, actualCols, folder1Pages);
+            BuildScrollGrid(Step2ScrollGrid, actualCols, folder1Pages);
+            BuildScrollGrid(Step3ScrollGrid, actualCols, folder1Pages);
 
-            UpdatePreviewDots(Step1DotsPanel);
-            UpdatePreviewDots(Step2DotsPanel);
-            UpdatePreviewDots(Step3DotsPanel);
+            // Desktop folder icons: 2x2 mini grid showing the EXACT first 4 items of each popup
+            UpdateDesktopIconMiniGrid(Step1DesktopIcon1MiniGrid, f1Page0);
+            UpdateDesktopIconMiniGrid(Step2DesktopIcon1MiniGrid, f1Page0);
+            UpdateDesktopIconMiniGrid(Step3DesktopIcon1MiniGrid, f1Page0);
+
+            UpdateDesktopIconMiniGrid(Step1DesktopIcon2MiniGrid, f2Page0);
+            UpdateDesktopIconMiniGrid(Step2DesktopIcon2MiniGrid, f2Page0);
+            UpdateDesktopIconMiniGrid(Step3DesktopIcon2MiniGrid, f2Page0);
+
+            UpdateAllPreviewDots();
             AnimatePreviewPage(false);
 
             var loc = LocalizationService.Instance;
-            string countFormatted = string.Format(loc["ItemsCountBadge"] ?? "{0} նիշք", totalItems);
-            if (Step1PreviewCountText != null) Step1PreviewCountText.Text = countFormatted;
-            if (Step2PreviewCountText != null) Step2PreviewCountText.Text = countFormatted;
-            if (Step3PreviewCountText != null) Step3PreviewCountText.Text = countFormatted;
+            string countFormatted1 = string.Format(loc["ItemsCountBadge"] ?? "{0} նիշք", totalFolder1Items);
+            string countFormatted2 = string.Format(loc["ItemsCountBadge"] ?? "{0} նիշք", totalFolder2Items);
+            if (Step1PreviewCountText != null) Step1PreviewCountText.Text = countFormatted1;
+            if (Step2PreviewCountText != null) Step2PreviewCountText.Text = countFormatted1;
+            if (Step3PreviewCountText != null) Step3PreviewCountText.Text = countFormatted1;
+            if (Step1PreviewCountText2 != null) Step1PreviewCountText2.Text = countFormatted2;
+            if (Step2PreviewCountText2 != null) Step2PreviewCountText2.Text = countFormatted2;
+            if (Step3PreviewCountText2 != null) Step3PreviewCountText2.Text = countFormatted2;
         }
 
-        private FrameworkElement CreateMockItemView(string name, string icon) {
+        private static ImageSource? GetMockIconSource(bool isFolder, string ext) {
+            try {
+                if (isFolder) {
+                    if (_cachedFolderIcon != null) return _cachedFolderIcon;
+                    _cachedFolderIcon = ShellHelper.GetFolderIconSource(isLarge: true);
+                    return _cachedFolderIcon;
+                }
+
+                if (!string.IsNullOrEmpty(ext)) {
+                    if (_cachedMockIcons.TryGetValue(ext, out var cached)) return cached;
+                    var src = ShellHelper.GetFileIconSource("sample" + ext, isLarge: true);
+                    if (src != null) {
+                        _cachedMockIcons[ext] = src;
+                        return src;
+                    }
+                }
+            } catch { }
+            return null;
+        }
+
+        private static FrameworkElement CreateCrispFileBadge(string ext) {
+            string normExt = (ext ?? "").TrimStart('.').ToUpperInvariant();
+            string label = string.IsNullOrEmpty(normExt) ? "FILE" : (normExt.Length > 4 ? normExt.Substring(0, 4) : normExt);
+
+            Color bg;
+            switch (normExt) {
+                case "DOCX":
+                case "DOC":
+                    bg = Color.FromRgb(43, 87, 154);
+                    break;
+                case "XLSX":
+                case "XLS":
+                    bg = Color.FromRgb(33, 115, 70);
+                    break;
+                case "PDF":
+                    bg = Color.FromRgb(211, 47, 47);
+                    break;
+                case "PNG":
+                case "JPG":
+                case "JPEG":
+                case "SVG":
+                case "GIF":
+                    bg = Color.FromRgb(2, 136, 209);
+                    break;
+                case "MP4":
+                case "MOV":
+                case "AVI":
+                    bg = Color.FromRgb(123, 31, 162);
+                    break;
+                case "MP3":
+                case "WAV":
+                case "FLAC":
+                    bg = Color.FromRgb(230, 81, 0);
+                    break;
+                case "ZIP":
+                case "RAR":
+                case "7Z":
+                    bg = Color.FromRgb(245, 127, 23);
+                    break;
+                case "EXE":
+                case "MSI":
+                    bg = Color.FromRgb(57, 73, 171);
+                    break;
+                case "CS":
+                case "JS":
+                case "TS":
+                case "JSON":
+                case "SQL":
+                    bg = Color.FromRgb(0, 137, 123);
+                    break;
+                default:
+                    bg = Color.FromRgb(84, 110, 122);
+                    break;
+            }
+
+            var badge = new Border {
+                Width = 26,
+                Height = 30,
+                CornerRadius = new CornerRadius(4),
+                Background = new SolidColorBrush(bg),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Effect = new DropShadowEffect {
+                    BlurRadius = 3,
+                    ShadowDepth = 1,
+                    Opacity = 0.25,
+                    Color = Colors.Black
+                }
+            };
+
+            var grid = new Grid();
+            var fold = new Border {
+                Width = 7,
+                Height = 7,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+                Background = new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)),
+                CornerRadius = new CornerRadius(0, 4, 0, 4)
+            };
+            grid.Children.Add(fold);
+
+            var txt = new TextBlock {
+                Text = label,
+                FontSize = label.Length > 3 ? 6.5 : 7.5,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.White,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Margin = new Thickness(1, 0, 1, 3)
+            };
+            grid.Children.Add(txt);
+
+            badge.Child = grid;
+            return badge;
+        }
+
+        private static FrameworkElement CreateVectorFolderIcon() {
+            return new System.Windows.Shapes.Path {
+                Data = Geometry.Parse("M 2,4 L 10,4 L 12,6 L 26,6 C 27.1,6 28,6.9 28,8 L 28,22 C 28,23.1 27.1,24 26,24 L 2,24 C 0.9,24 0,23.1 0,22 L 0,6 C 0,4.9 0.9,4 2,4 Z"),
+                Fill = new SolidColorBrush(Color.FromRgb(255, 179, 0)),
+                Stretch = Stretch.Uniform,
+                Width = 30,
+                Height = 26,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Effect = new DropShadowEffect {
+                    BlurRadius = 3,
+                    ShadowDepth = 1,
+                    Opacity = 0.25,
+                    Color = Colors.Black
+                }
+            };
+        }
+
+        private static FrameworkElement BuildMockItemIconVisual(bool isFolder, string ext) {
+            if (isFolder) {
+                var src = GetMockIconSource(true, "");
+                if (src != null) {
+                    var img = new Image {
+                        Source = src,
+                        Width = 32,
+                        Height = 32,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                    return img;
+                }
+                return CreateVectorFolderIcon();
+            } else {
+                var src = GetMockIconSource(false, ext);
+                if (src != null) {
+                    var img = new Image {
+                        Source = src,
+                        Width = 28,
+                        Height = 28,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                    return img;
+                }
+                return CreateCrispFileBadge(ext);
+            }
+        }
+
+        private static FrameworkElement BuildMiniMockItemVisual(bool isFolder, string ext) {
+            if (isFolder) {
+                var src = GetMockIconSource(true, "");
+                if (src != null) {
+                    var img = new Image {
+                        Source = src,
+                        Width = 13,
+                        Height = 13,
+                        Stretch = Stretch.Uniform,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                    return img;
+                }
+                return new System.Windows.Shapes.Path {
+                    Data = Geometry.Parse("M 2,4 L 10,4 L 12,6 L 26,6 C 27.1,6 28,6.9 28,8 L 28,22 C 28,23.1 27.1,24 26,24 L 2,24 C 0.9,24 0,23.1 0,22 L 0,6 C 0,4.9 0.9,4 2,4 Z"),
+                    Fill = new SolidColorBrush(Color.FromRgb(255, 179, 0)),
+                    Stretch = Stretch.Uniform,
+                    Width = 12,
+                    Height = 10,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+            } else {
+                var src = GetMockIconSource(false, ext);
+                if (src != null) {
+                    var img = new Image {
+                        Source = src,
+                        Width = 13,
+                        Height = 13,
+                        Stretch = Stretch.Uniform,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                    return img;
+                }
+                return CreateMiniCrispFileBadge(ext);
+            }
+        }
+
+        private static FrameworkElement CreateMiniCrispFileBadge(string ext) {
+            string normExt = (ext ?? "").TrimStart('.').ToUpperInvariant();
+            string label = string.IsNullOrEmpty(normExt) ? "F" : (normExt.Length > 3 ? normExt.Substring(0, 3) : normExt);
+            Color bg;
+            switch (normExt) {
+                case "DOCX": case "DOC": bg = Color.FromRgb(43, 87, 154); break;
+                case "XLSX": case "XLS": bg = Color.FromRgb(33, 115, 70); break;
+                case "PDF": bg = Color.FromRgb(211, 47, 47); break;
+                case "PNG": case "JPG": case "JPEG": case "SVG": bg = Color.FromRgb(2, 136, 209); break;
+                case "MP4": case "MOV": case "AVI": bg = Color.FromRgb(123, 31, 162); break;
+                case "MP3": case "WAV": bg = Color.FromRgb(230, 81, 0); break;
+                case "ZIP": case "RAR": bg = Color.FromRgb(245, 127, 23); break;
+                case "EXE": case "MSI": bg = Color.FromRgb(57, 73, 171); break;
+                default: bg = Color.FromRgb(84, 110, 122); break;
+            }
             var border = new Border {
-                Width = 68,
-                Height = 76,
-                Margin = new Thickness(5),
+                Width = 12,
+                Height = 13,
+                CornerRadius = new CornerRadius(2),
+                Background = new SolidColorBrush(bg),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            var text = new TextBlock {
+                Text = label,
+                FontSize = 6,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.White,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            border.Child = text;
+            return border;
+        }
+
+        private static void UpdateDesktopIconMiniGrid(System.Windows.Controls.Primitives.UniformGrid? grid, (string Name, bool IsFolder, string Ext)[] page0Items) {
+            if (grid == null) return;
+            grid.Children.Clear();
+            var firstFour = page0Items.Take(4).ToList();
+            foreach (var item in firstFour) {
+                var cell = new Border {
+                    CornerRadius = new CornerRadius(3),
+                    Background = new SolidColorBrush(Color.FromArgb(0x35, 255, 255, 255)),
+                    Margin = new Thickness(1.5),
+                    Child = BuildMiniMockItemVisual(item.IsFolder, item.Ext)
+                };
+                grid.Children.Add(cell);
+            }
+            while (grid.Children.Count < 4) {
+                grid.Children.Add(new Border {
+                    CornerRadius = new CornerRadius(3),
+                    Background = new SolidColorBrush(Color.FromArgb(0x18, 255, 255, 255)),
+                    Margin = new Thickness(1.5)
+                });
+            }
+        }
+
+        private FrameworkElement CreateMockItemView(string name, bool isFolder, string ext, double cellW, double cellH) {
+            var border = new Border {
+                Width = cellW,
+                Height = cellH,
+                Margin = new Thickness(0),
                 CornerRadius = new CornerRadius(10),
                 Background = Brushes.Transparent,
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Padding = new Thickness(2, 3, 2, 2)
             };
-            border.MouseEnter += (s, e) => border.Background = new SolidColorBrush(Color.FromArgb(35, 128, 128, 128));
+            border.MouseEnter += (s, e) => border.Background = Resources["PopupItemHoverBrush"] as Brush ?? new SolidColorBrush(Color.FromArgb(30, 255, 255, 255));
             border.MouseLeave += (s, e) => border.Background = Brushes.Transparent;
 
             var sp = new StackPanel {
                 HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                Width = Math.Max(20, cellW - 4)
             };
 
-            var iconBorder = new Border {
-                Width = 40,
-                Height = 40,
-                CornerRadius = new CornerRadius(10),
-                Background = Resources["M3SurfaceBrush"] as Brush ?? new SolidColorBrush(Color.FromRgb(254, 244, 235)),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Margin = new Thickness(0, 0, 0, 4)
-            };
-            var iconText = new TextBlock {
-                Text = icon,
-                FontSize = 18,
+            var iconContainer = new Grid {
+                Width = Math.Clamp(cellW * 0.55, 24, 32),
+                Height = Math.Clamp(cellH * 0.45, 24, 32),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            iconBorder.Child = iconText;
+            iconContainer.Children.Add(BuildMockItemIconVisual(isFolder, ext));
 
+            double fontSize = Math.Clamp(cellW * 0.16, 8.5, 9.8);
             var nameText = new TextBlock {
                 Text = name,
-                FontSize = 10,
-                FontWeight = FontWeights.Medium,
-                Foreground = Resources["M3OnSurfaceBrush"] as Brush ?? Brushes.Black,
+                FontSize = fontSize,
+                Foreground = Resources["PopupTextBrush"] as Brush ?? Brushes.Black,
                 TextAlignment = TextAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxWidth = 64
+                TextWrapping = TextWrapping.Wrap,
+                MaxHeight = 24,
+                Margin = new Thickness(0, 2, 0, 0),
+                ToolTip = name
             };
 
-            sp.Children.Add(iconBorder);
+            sp.Children.Add(iconContainer);
             sp.Children.Add(nameText);
             border.Child = sp;
             return border;
         }
 
-        private void BuildSliderPages(StackPanel? panel, int cols, int rows, int itemsPerPage) {
+        private void BuildSliderPages(StackPanel? panel, int cols, int rows, (string Name, bool IsFolder, string Ext)[][] folderPages) {
             if (panel == null) return;
             panel.Children.Clear();
+            panel.HorizontalAlignment = HorizontalAlignment.Left;
+            panel.Width = _totalPreviewPages * _previewPageWidth;
+            panel.Height = 166.0;
+
+            double cellW = _previewPageWidth / Math.Max(1, cols);
+            double cellH = 166.0 / Math.Max(1, rows);
+            int itemsPerPage = Math.Max(1, cols * rows);
 
             for (int p = 0; p < _totalPreviewPages; p++) {
                 var grid = new UniformGrid {
                     Columns = cols,
                     Rows = rows,
-                    Width = cols * 78.0,
-                    Height = rows * 86.0,
+                    Width = _previewPageWidth,
+                    Height = 166.0,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
                 };
 
-                int startIndex = p * itemsPerPage;
-                int count = Math.Min(itemsPerPage, MockItems.Length - startIndex);
+                var pageItems = folderPages[p % folderPages.Length];
+                int count = Math.Min(itemsPerPage, pageItems.Length);
                 for (int i = 0; i < count; i++) {
-                    var item = MockItems[startIndex + i];
-                    grid.Children.Add(CreateMockItemView(item.Name, item.Icon));
+                    var item = pageItems[i];
+                    grid.Children.Add(CreateMockItemView(item.Name, item.IsFolder, item.Ext, cellW, cellH));
                 }
 
                 panel.Children.Add(grid);
             }
         }
 
-        private void BuildScrollGrid(UniformGrid? grid, int cols) {
+        private void BuildScrollGrid(UniformGrid? grid, int cols, (string Name, bool IsFolder, string Ext)[][] folderPages) {
             if (grid == null) return;
             grid.Children.Clear();
             grid.Columns = cols;
-            grid.Width = cols * 78.0;
-            foreach (var item in MockItems) {
-                grid.Children.Add(CreateMockItemView(item.Name, item.Icon));
+            grid.Width = _previewPageWidth;
+
+            double cellW = _previewPageWidth / Math.Max(1, cols);
+            double cellH = 76.0;
+
+            foreach (var page in folderPages) {
+                foreach (var item in page) {
+                    grid.Children.Add(CreateMockItemView(item.Name, item.IsFolder, item.Ext, cellW, cellH));
+                }
             }
         }
 
@@ -459,12 +884,28 @@ namespace Panak.Views {
                 dot.MouseDown += (s, e) => {
                     _currentPreviewPage = pageIndex;
                     AnimatePreviewPage(true);
-                    UpdatePreviewDots(Step1DotsPanel);
-                    UpdatePreviewDots(Step2DotsPanel);
-                    UpdatePreviewDots(Step3DotsPanel);
+                    UpdateAllPreviewDots();
                 };
                 panel.Children.Add(dot);
             }
+        }
+
+        private void UpdateAllPreviewDots() {
+            UpdatePreviewDots(Step1DotsPanel);
+            UpdatePreviewDots(Step1DotsPanel2);
+            UpdatePreviewDots(Step2DotsPanel);
+            UpdatePreviewDots(Step2DotsPanel2);
+            UpdatePreviewDots(Step3DotsPanel);
+            UpdatePreviewDots(Step3DotsPanel2);
+        }
+
+        private void SetAllPagesTranslateX(double x) {
+            if (Step1PagesTranslate != null) { Step1PagesTranslate.BeginAnimation(TranslateTransform.XProperty, null); Step1PagesTranslate.X = x; }
+            if (Step1PagesTranslate2 != null) { Step1PagesTranslate2.BeginAnimation(TranslateTransform.XProperty, null); Step1PagesTranslate2.X = x; }
+            if (Step2PagesTranslate != null) { Step2PagesTranslate.BeginAnimation(TranslateTransform.XProperty, null); Step2PagesTranslate.X = x; }
+            if (Step2PagesTranslate2 != null) { Step2PagesTranslate2.BeginAnimation(TranslateTransform.XProperty, null); Step2PagesTranslate2.X = x; }
+            if (Step3PagesTranslate != null) { Step3PagesTranslate.BeginAnimation(TranslateTransform.XProperty, null); Step3PagesTranslate.X = x; }
+            if (Step3PagesTranslate2 != null) { Step3PagesTranslate2.BeginAnimation(TranslateTransform.XProperty, null); Step3PagesTranslate2.X = x; }
         }
 
         private void AnimatePreviewPage(bool animate) {
@@ -476,21 +917,13 @@ namespace Panak.Views {
                     EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
                 };
                 if (Step1PagesTranslate != null) Step1PagesTranslate.BeginAnimation(TranslateTransform.XProperty, anim);
+                if (Step1PagesTranslate2 != null) Step1PagesTranslate2.BeginAnimation(TranslateTransform.XProperty, anim);
                 if (Step2PagesTranslate != null) Step2PagesTranslate.BeginAnimation(TranslateTransform.XProperty, anim);
+                if (Step2PagesTranslate2 != null) Step2PagesTranslate2.BeginAnimation(TranslateTransform.XProperty, anim);
                 if (Step3PagesTranslate != null) Step3PagesTranslate.BeginAnimation(TranslateTransform.XProperty, anim);
+                if (Step3PagesTranslate2 != null) Step3PagesTranslate2.BeginAnimation(TranslateTransform.XProperty, anim);
             } else {
-                if (Step1PagesTranslate != null) {
-                    Step1PagesTranslate.BeginAnimation(TranslateTransform.XProperty, null);
-                    Step1PagesTranslate.X = targetX;
-                }
-                if (Step2PagesTranslate != null) {
-                    Step2PagesTranslate.BeginAnimation(TranslateTransform.XProperty, null);
-                    Step2PagesTranslate.X = targetX;
-                }
-                if (Step3PagesTranslate != null) {
-                    Step3PagesTranslate.BeginAnimation(TranslateTransform.XProperty, null);
-                    Step3PagesTranslate.X = targetX;
-                }
+                SetAllPagesTranslateX(targetX);
             }
         }
 
@@ -499,16 +932,12 @@ namespace Panak.Views {
                 if (e.Delta < 0 && _currentPreviewPage < _totalPreviewPages - 1) {
                     _currentPreviewPage++;
                     AnimatePreviewPage(true);
-                    UpdatePreviewDots(Step1DotsPanel);
-                    UpdatePreviewDots(Step2DotsPanel);
-                    UpdatePreviewDots(Step3DotsPanel);
+                    UpdateAllPreviewDots();
                     e.Handled = true;
                 } else if (e.Delta > 0 && _currentPreviewPage > 0) {
                     _currentPreviewPage--;
                     AnimatePreviewPage(true);
-                    UpdatePreviewDots(Step1DotsPanel);
-                    UpdatePreviewDots(Step2DotsPanel);
-                    UpdatePreviewDots(Step3DotsPanel);
+                    UpdateAllPreviewDots();
                     e.Handled = true;
                 }
             }
@@ -522,7 +951,14 @@ namespace Panak.Views {
             }
         }
 
-        private void PreviewSlider_MouseMove(object sender, MouseEventArgs e) { }
+        private void PreviewSlider_MouseMove(object sender, MouseEventArgs e) {
+            if (_isDraggingSlider && _sliderDrag && e.LeftButton == MouseButtonState.Pressed) {
+                var curPos = e.GetPosition(this);
+                double deltaX = curPos.X - _dragStartPos.X;
+                double baseX = -_currentPreviewPage * _previewPageWidth;
+                SetAllPagesTranslateX(baseX + deltaX);
+            }
+        }
 
         private void PreviewSlider_MouseUp(object sender, MouseButtonEventArgs e) {
             if (_isDraggingSlider) {
@@ -532,17 +968,11 @@ namespace Panak.Views {
                 double deltaX = endPos.X - _dragStartPos.X;
                 if (deltaX < -30 && _currentPreviewPage < _totalPreviewPages - 1) {
                     _currentPreviewPage++;
-                    AnimatePreviewPage(true);
-                    UpdatePreviewDots(Step1DotsPanel);
-                    UpdatePreviewDots(Step2DotsPanel);
-                    UpdatePreviewDots(Step3DotsPanel);
                 } else if (deltaX > 30 && _currentPreviewPage > 0) {
                     _currentPreviewPage--;
-                    AnimatePreviewPage(true);
-                    UpdatePreviewDots(Step1DotsPanel);
-                    UpdatePreviewDots(Step2DotsPanel);
-                    UpdatePreviewDots(Step3DotsPanel);
                 }
+                AnimatePreviewPage(true);
+                UpdateAllPreviewDots();
             }
         }
 
@@ -550,9 +980,7 @@ namespace Panak.Views {
             if (_currentPreviewPage > 0) {
                 _currentPreviewPage--;
                 AnimatePreviewPage(true);
-                UpdatePreviewDots(Step1DotsPanel);
-                UpdatePreviewDots(Step2DotsPanel);
-                UpdatePreviewDots(Step3DotsPanel);
+                UpdateAllPreviewDots();
             }
         }
 
@@ -560,55 +988,144 @@ namespace Panak.Views {
             if (_currentPreviewPage < _totalPreviewPages - 1) {
                 _currentPreviewPage++;
                 AnimatePreviewPage(true);
-                UpdatePreviewDots(Step1DotsPanel);
-                UpdatePreviewDots(Step2DotsPanel);
-                UpdatePreviewDots(Step3DotsPanel);
+                UpdateAllPreviewDots();
             }
+        }
+
+        private void TogglePopup1() {
+            _isPopup1Open = !_isPopup1Open;
+            if (_isPopup1Open && _isPopup2Open) {
+                _isPopup2Open = false;
+                AnimatePopupState(
+                    false,
+                    new[] { Step1PopupContainer2, Step2PopupContainer2, Step3PopupContainer2 },
+                    new[] { Step1PopupScale2, Step2PopupScale2, Step3PopupScale2 }
+                );
+            }
+            AnimatePopupState(
+                _isPopup1Open,
+                new[] { Step1PopupContainer, Step2PopupContainer, Step3PopupContainer },
+                new[] { Step1PopupScale, Step2PopupScale, Step3PopupScale }
+            );
+        }
+
+        private void TogglePopup2() {
+            _isPopup2Open = !_isPopup2Open;
+            if (_isPopup2Open && _isPopup1Open) {
+                _isPopup1Open = false;
+                AnimatePopupState(
+                    false,
+                    new[] { Step1PopupContainer, Step2PopupContainer, Step3PopupContainer },
+                    new[] { Step1PopupScale, Step2PopupScale, Step3PopupScale }
+                );
+            }
+            AnimatePopupState(
+                _isPopup2Open,
+                new[] { Step1PopupContainer2, Step2PopupContainer2, Step3PopupContainer2 },
+                new[] { Step1PopupScale2, Step2PopupScale2, Step3PopupScale2 }
+            );
+        }
+
+        private void ClosePopup1() {
+            if (_isPopup1Open) TogglePopup1();
+        }
+
+        private void ClosePopup2() {
+            if (_isPopup2Open) TogglePopup2();
+        }
+
+        private void AnimatePopupState(bool open, Grid?[] containers, ScaleTransform?[] scales) {
+            var origin = new Point(0.0, 1.0); // Animate from bottom-left folder icon
+            foreach (var container in containers) {
+                if (container != null) container.RenderTransformOrigin = origin;
+            }
+
+            if (!open) {
+                var scaleAnim = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(200)) {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+                };
+                var opacityAnim = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(180));
+                scaleAnim.Completed += (s, e) => {
+                    foreach (var container in containers) {
+                        if (container != null) container.Visibility = Visibility.Collapsed;
+                    }
+                };
+                for (int i = 0; i < scales.Length; i++) {
+                    scales[i]?.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
+                    scales[i]?.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
+                }
+                foreach (var container in containers) {
+                    container?.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+                }
+            } else {
+                foreach (var container in containers) {
+                    if (container != null) {
+                        container.Visibility = Visibility.Visible;
+                        container.Opacity = 0.0;
+                    }
+                }
+                var scaleAnim = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(220)) {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                var opacityAnim = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(200));
+                for (int i = 0; i < scales.Length; i++) {
+                    scales[i]?.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
+                    scales[i]?.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
+                }
+                foreach (var container in containers) {
+                    container?.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+                }
+            }
+        }
+
+        private void DesktopIcon1_MouseDown(object sender, MouseButtonEventArgs e) {
+            TogglePopup1();
         }
 
         private void DesktopIcon_MouseDown(object sender, MouseButtonEventArgs e) {
-            TogglePopupVisibility();
+            TogglePopup1();
+        }
+
+        private void DesktopIcon2_MouseDown(object sender, MouseButtonEventArgs e) {
+            TogglePopup2();
         }
 
         private void PreviewCloseBtn_Click(object sender, RoutedEventArgs e) {
-            if (_isPreviewOpen) {
-                TogglePopupVisibility();
-            }
+            ClosePopup1();
         }
 
-        private void TogglePopupVisibility() {
-            bool openInCenter = SettingsService.Instance.Current.OpenInCenterOnly;
-            var origin = openInCenter ? new Point(0.5, 0.5) : new Point(0.0, 1.0);
+        private void PreviewCloseBtn2_Click(object sender, RoutedEventArgs e) {
+            ClosePopup2();
+        }
 
-            void AnimateContainer(Grid? container, ScaleTransform? scale) {
-                if (container == null || scale == null) return;
-                container.RenderTransformOrigin = origin;
-                if (_isPreviewOpen) {
-                    var scaleAnim = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(200)) {
-                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-                    };
-                    var opacityAnim = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(180));
-                    scaleAnim.Completed += (s, e) => {
-                        container.Visibility = Visibility.Collapsed;
-                    };
-                    scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
-                    scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
-                    container.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
-                } else {
-                    container.Visibility = Visibility.Visible;
-                    var scaleAnim = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(220)) {
-                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                    };
-                    var opacityAnim = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(200));
-                    scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
-                    scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
-                    container.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
-                }
+        private void Step1PreviewCloseBtn_Click(object sender, RoutedEventArgs e) {
+            ClosePopup1();
+        }
+
+        private void Step1PreviewCloseBtn2_Click(object sender, RoutedEventArgs e) {
+            ClosePopup2();
+        }
+
+        private void Step2PreviewCloseBtn_Click(object sender, RoutedEventArgs e) {
+            ClosePopup1();
+        }
+
+        private void Step2PreviewCloseBtn2_Click(object sender, RoutedEventArgs e) {
+            ClosePopup2();
+        }
+
+        private void Step3PreviewCloseBtn_Click(object sender, RoutedEventArgs e) {
+            ClosePopup1();
+        }
+
+        private void Step3PreviewCloseBtn2_Click(object sender, RoutedEventArgs e) {
+            ClosePopup2();
+        }
+
+        private void PreviewBorder_SizeChanged(object sender, SizeChangedEventArgs e) {
+            if (sender is Border b && b.Clip is RectangleGeometry rectGeom) {
+                rectGeom.Rect = new Rect(0, 0, e.NewSize.Width, e.NewSize.Height);
             }
-
-            AnimateContainer(Step1PopupContainer, Step1PopupScale);
-            AnimateContainer(Step3PopupContainer, Step3PopupScale);
-            _isPreviewOpen = !_isPreviewOpen;
         }
 
         private void UpdateLivePreview() {
@@ -623,7 +1140,29 @@ namespace Panak.Views {
                 byte alpha = (byte)(Math.Clamp(_folderOpacity, 0.2, 1.0) * 255);
                 var folderBrush = new SolidColorBrush(Color.FromArgb(alpha, baseCol.R, baseCol.G, baseCol.B));
 
-                // Step 1
+                // Determine luminance for dynamic text/button contrast in the popup card (matching FolderPopupWindow)
+                double luminance = (0.299 * baseCol.R + 0.587 * baseCol.G + 0.114 * baseCol.B) / 255.0;
+                bool isLight = luminance > 0.55;
+
+                if (isLight) {
+                    Resources["PopupTextBrush"] = new SolidColorBrush(Color.FromRgb(15, 23, 42));
+                    Resources["PopupSubtextBrush"] = new SolidColorBrush(Color.FromRgb(100, 116, 139));
+                    Resources["PopupHeaderBtnBg"] = new SolidColorBrush(Color.FromArgb(30, 0, 0, 0));
+                    Resources["PopupHeaderBtnFg"] = new SolidColorBrush(Color.FromRgb(30, 41, 59));
+                    Resources["PopupItemBadgeBg"] = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0));
+                    Resources["PopupItemBadgeFg"] = new SolidColorBrush(Color.FromRgb(71, 85, 105));
+                    Resources["PopupItemHoverBrush"] = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0));
+                } else {
+                    Resources["PopupTextBrush"] = new SolidColorBrush(Color.FromRgb(248, 250, 252));
+                    Resources["PopupSubtextBrush"] = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+                    Resources["PopupHeaderBtnBg"] = new SolidColorBrush(Color.FromArgb(37, 255, 255, 255));
+                    Resources["PopupHeaderBtnFg"] = new SolidColorBrush(Color.FromRgb(226, 232, 240));
+                    Resources["PopupItemBadgeBg"] = new SolidColorBrush(Color.FromArgb(37, 255, 255, 255));
+                    Resources["PopupItemBadgeFg"] = new SolidColorBrush(Color.FromRgb(203, 213, 225));
+                    Resources["PopupItemHoverBrush"] = new SolidColorBrush(Color.FromArgb(45, 255, 255, 255));
+                }
+
+                // Step 1 - Folder 1
                 if (Step1FolderCardBorder != null) {
                     Step1FolderCardBorder.Background = folderBrush;
                     if (Step1FolderBlurFx != null) Step1FolderBlurFx.Radius = _folderBlurRadius;
@@ -633,16 +1172,42 @@ namespace Panak.Views {
                         ApplyShapeToDesktopIconPlate(Step1DesktopIconShapePath, null, _selectedShape);
                     }
                 }
+                // Step 1 - Folder 2
+                if (Step1FolderCardBorder2 != null) {
+                    Step1FolderCardBorder2.Background = folderBrush;
+                    if (Step1FolderBlurFx2 != null) Step1FolderBlurFx2.Radius = _folderBlurRadius;
+                    if (Step1BlurUnderlay2 != null) Step1BlurUnderlay2.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
+                    if (Step1DesktopIcon2ShapePath != null) {
+                        Step1DesktopIcon2ShapePath.Fill = folderBrush;
+                        ApplyShapeToDesktopIconPlate(Step1DesktopIcon2ShapePath, null, _selectedShape);
+                    }
+                }
 
-                // Step 2
+                // Step 2 - Folder 1
                 if (Step2FolderCardBorder != null) {
                     Step2FolderCardBorder.Background = folderBrush;
                     if (Step2FolderBlurFx != null) Step2FolderBlurFx.Radius = _folderBlurRadius;
                     if (Step2BlurUnderlay != null) Step2BlurUnderlay.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
-                    if (Step2FocusDimOverlay != null) Step2FocusDimOverlay.Opacity = _focusMode ? _focusDimming : 0.0;
+                    if (Step2DesktopIconShapePath != null) {
+                        Step2DesktopIconShapePath.Fill = folderBrush;
+                        ApplyShapeToDesktopIconPlate(Step2DesktopIconShapePath, null, _selectedShape);
+                    }
                 }
+                // Step 2 - Folder 2
+                if (Step2FolderCardBorder2 != null) {
+                    Step2FolderCardBorder2.Background = folderBrush;
+                    if (Step2FolderBlurFx2 != null) Step2FolderBlurFx2.Radius = _folderBlurRadius;
+                    if (Step2BlurUnderlay2 != null) Step2BlurUnderlay2.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
+                    if (Step2DesktopIcon2ShapePath != null) {
+                        Step2DesktopIcon2ShapePath.Fill = folderBrush;
+                        ApplyShapeToDesktopIconPlate(Step2DesktopIcon2ShapePath, null, _selectedShape);
+                    }
+                }
+                // Step 2 Focus Overlay & Blur
+                if (Step2FocusDimOverlay != null) Step2FocusDimOverlay.Opacity = _focusMode ? _focusDimming : 0.0;
+                if (Step2FocusWallpaperBlurFx != null) Step2FocusWallpaperBlurFx.Radius = (_focusMode && _focusBlurEnabled) ? _focusBlurRadius : 0.0;
 
-                // Step 3
+                // Step 3 - Folder 1
                 if (Step3FolderCardBorder != null) {
                     Step3FolderCardBorder.Background = folderBrush;
                     if (Step3FolderBlurFx != null) Step3FolderBlurFx.Radius = _folderBlurRadius;
@@ -650,6 +1215,16 @@ namespace Panak.Views {
                     if (Step3DesktopIconShapePath != null) {
                         Step3DesktopIconShapePath.Fill = folderBrush;
                         ApplyShapeToDesktopIconPlate(Step3DesktopIconShapePath, null, _selectedShape);
+                    }
+                }
+                // Step 3 - Folder 2
+                if (Step3FolderCardBorder2 != null) {
+                    Step3FolderCardBorder2.Background = folderBrush;
+                    if (Step3FolderBlurFx2 != null) Step3FolderBlurFx2.Radius = _folderBlurRadius;
+                    if (Step3BlurUnderlay2 != null) Step3BlurUnderlay2.Visibility = _folderBlurEnabled ? Visibility.Visible : Visibility.Collapsed;
+                    if (Step3DesktopIcon2ShapePath != null) {
+                        Step3DesktopIcon2ShapePath.Fill = folderBrush;
+                        ApplyShapeToDesktopIconPlate(Step3DesktopIcon2ShapePath, null, _selectedShape);
                     }
                 }
             } catch { }
@@ -781,7 +1356,7 @@ namespace Panak.Views {
             s.IconShape = _selectedShape;
             s.ThemeColor = _selectedColor;
             s.FolderOpacity = _folderOpacity;
-            s.FolderBlurEnabled = _folderBlurRadius > 0;
+            s.FolderBlurEnabled = _folderBlurEnabled;
             s.FolderBlurRadius = _folderBlurRadius;
 
             s.PagingMode = _pagingMode;
@@ -791,6 +1366,8 @@ namespace Panak.Views {
             s.SliderDragEnabled = _sliderDrag;
             s.FocusModeEnabled = _focusMode;
             s.FocusDimmingOpacity = _focusDimming;
+            s.FocusBlurEnabled = _focusBlurEnabled;
+            s.FocusBlurRadius = _focusBlurRadius;
 
             SettingsService.Instance.SaveSettings(s);
             PanakManager.Instance.UpdateOpenPopupSettings();
@@ -799,10 +1376,12 @@ namespace Panak.Views {
         private bool _isPreviewPinned = false;
         private void PreviewPinBtn_Click(object sender, RoutedEventArgs e) {
             _isPreviewPinned = !_isPreviewPinned;
-            if (Step1PreviewPinBtn != null) {
-                Step1PreviewPinBtn.Background = _isPreviewPinned 
-                    ? (Resources["M3PrimaryBrush"] as Brush ?? Brushes.SkyBlue) 
-                    : Brushes.Transparent;
+            var activeBrush = Resources["M3PrimaryBrush"] as Brush ?? Brushes.SkyBlue;
+            var normalBrush = Resources["PopupHeaderBtnBg"] as Brush ?? new SolidColorBrush(Color.FromArgb(37, 255, 255, 255));
+            if (sender is Button btn) {
+                btn.Background = _isPreviewPinned ? activeBrush : normalBrush;
+            } else if (Step1PreviewPinBtn != null) {
+                Step1PreviewPinBtn.Background = _isPreviewPinned ? activeBrush : normalBrush;
             }
         }
 
@@ -831,13 +1410,23 @@ namespace Panak.Views {
 
             foreach (var hex in s.CustomPaletteColors) {
                 string colHex = hex;
+                var grid = new Grid {
+                    Width = 28,
+                    Height = 28,
+                    Margin = new Thickness(3, 0, 3, 0),
+                    Background = Brushes.Transparent,
+                    Cursor = Cursors.Hand
+                };
+
                 var rb = new RadioButton {
                     GroupName = "WizardColorGroup",
                     Style = (Style)FindResource("ColorSwatchStyle"),
                     Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colHex)),
                     Tag = colHex,
                     ToolTip = colHex,
-                    Margin = new Thickness(3, 0, 3, 0)
+                    Margin = new Thickness(0),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
                 };
                 if (string.Equals(_selectedColor, colHex, StringComparison.OrdinalIgnoreCase)) {
                     rb.IsChecked = true;
@@ -855,7 +1444,60 @@ namespace Panak.Views {
                     }
                     UpdateLivePreview();
                 };
-                Step1CustomSwatchesPanel.Children.Add(rb);
+                grid.Children.Add(rb);
+
+                var deleteBadge = new Border {
+                    Width = 12,
+                    Height = 12,
+                    CornerRadius = new CornerRadius(6),
+                    Background = new SolidColorBrush(Color.FromArgb(210, 30, 30, 30)),
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Margin = new Thickness(0, 0, 0, 0),
+                    Visibility = Visibility.Collapsed,
+                    Cursor = Cursors.Hand,
+                    ToolTip = LocalizationService.Instance["Delete"] ?? "Delete"
+                };
+
+                var crossPath = new System.Windows.Shapes.Path {
+                    Data = Geometry.Parse("M 3,3 L 9,9 M 9,3 L 3,9"),
+                    Stroke = Brushes.White,
+                    StrokeThickness = 1.5,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                deleteBadge.Child = crossPath;
+
+                grid.MouseEnter += (snd, ev) => deleteBadge.Visibility = Visibility.Visible;
+                grid.MouseLeave += (snd, ev) => deleteBadge.Visibility = Visibility.Collapsed;
+                deleteBadge.MouseEnter += (snd, ev) => deleteBadge.Background = new SolidColorBrush(Color.FromRgb(229, 57, 53));
+                deleteBadge.MouseLeave += (snd, ev) => deleteBadge.Background = new SolidColorBrush(Color.FromArgb(210, 30, 30, 30));
+
+                deleteBadge.PreviewMouseLeftButtonDown += (snd, ev) => {
+                    ev.Handled = true;
+                    var curSettings = SettingsService.Instance.Current;
+                    curSettings.CustomPaletteColors.Remove(colHex);
+                    SettingsService.Instance.SaveSettings(curSettings);
+                    RebuildStep1CustomSwatchesUI();
+                    if (string.Equals(_selectedColor, colHex, StringComparison.OrdinalIgnoreCase)) {
+                        string defaultPastel = ShellHelper.DefaultPastelColorHex;
+                        _selectedColor = defaultPastel;
+                        double hue = ShellHelper.GetHueFromHex(defaultPastel);
+                        ApplyMaterialYouPalette(hue);
+                        _isInitializing = true;
+                        try {
+                            Step1HueSlider.Value = hue;
+                        } finally {
+                            _isInitializing = false;
+                        }
+                        UpdateLivePreview();
+                    }
+                };
+
+                grid.Children.Add(deleteBadge);
+                Step1CustomSwatchesPanel.Children.Add(grid);
             }
         }
 
@@ -902,9 +1544,16 @@ namespace Panak.Views {
             if (!_isInitializing) UpdateLivePreview();
         }
 
+        private void Step1BlurCheckBox_Click(object sender, RoutedEventArgs e) {
+            _folderBlurEnabled = Step1BlurCheckBox.IsChecked ?? true;
+            if (Step1BlurRadiusSlider != null) {
+                Step1BlurRadiusSlider.IsEnabled = _folderBlurEnabled;
+            }
+            if (!_isInitializing) UpdateLivePreview();
+        }
+
         private void Step1BlurRadiusSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
             _folderBlurRadius = e.NewValue;
-            _folderBlurEnabled = _folderBlurRadius > 0;
             if (Step1RadiusValueText != null) {
                 Step1RadiusValueText.Text = $"{(int)e.NewValue} px";
             }
@@ -942,6 +1591,23 @@ namespace Panak.Views {
 
         private void Step2FocusCheckBox_Click(object sender, RoutedEventArgs e) {
             _focusMode = Step2FocusCheckBox.IsChecked ?? true;
+            if (Step2FocusDimOverlay != null) {
+                Step2FocusDimOverlay.Opacity = _focusMode ? _focusDimming : 0.0;
+            }
+            if (Step2FocusWallpaperBlurFx != null) {
+                Step2FocusWallpaperBlurFx.Radius = (_focusMode && _focusBlurEnabled) ? _focusBlurRadius : 0.0;
+            }
+            UpdateLivePreview();
+        }
+
+        private void Step2FocusBlurCheckBox_Click(object sender, RoutedEventArgs e) {
+            _focusBlurEnabled = Step2FocusBlurCheckBox.IsChecked ?? true;
+            if (Step2FocusBlurSlider != null) {
+                Step2FocusBlurSlider.IsEnabled = _focusBlurEnabled;
+            }
+            if (Step2FocusWallpaperBlurFx != null) {
+                Step2FocusWallpaperBlurFx.Radius = (_focusMode && _focusBlurEnabled) ? _focusBlurRadius : 0.0;
+            }
             UpdateLivePreview();
         }
 
@@ -949,6 +1615,17 @@ namespace Panak.Views {
             _focusDimming = e.NewValue / 100.0;
             if (Step2DimmingValueText != null) {
                 Step2DimmingValueText.Text = $"{(int)e.NewValue}%";
+            }
+            if (!_isInitializing) UpdateLivePreview();
+        }
+
+        private void Step2FocusBlurSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            _focusBlurRadius = e.NewValue;
+            if (Step2FocusBlurValueText != null) {
+                Step2FocusBlurValueText.Text = $"{(int)e.NewValue} px";
+            }
+            if (Step2FocusWallpaperBlurFx != null) {
+                Step2FocusWallpaperBlurFx.Radius = (_focusMode && _focusBlurEnabled) ? _focusBlurRadius : 0.0;
             }
             if (!_isInitializing) UpdateLivePreview();
         }
@@ -985,6 +1662,12 @@ namespace Panak.Views {
             if (sender is FrameworkElement el && el.Tag is string tag && int.TryParse(tag, out int idx)) {
                 GoToStep(idx);
             }
+        }
+
+        private void CrowdinBtn_Click(object sender, RoutedEventArgs e) {
+            try {
+                Process.Start(new ProcessStartInfo("https://crowdin.com/project/panak") { UseShellExecute = true });
+            } catch { }
         }
 
         private void KofiBtn_Click(object sender, RoutedEventArgs e) {

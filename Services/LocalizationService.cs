@@ -27,10 +27,10 @@ namespace Panak.Services {
                 ["NewFolder"] = "Նոր Panak պանակ",
                 ["Settings"] = "Կայանքներ",
                 ["General"] = "Ընդհանուր",
-                ["Appearance"] = "Արտաքին տեսք",
+                ["Appearance"] = "Արտաքին",
                 ["Behavior"] = "Վարքագիծ",
                 ["Integration"] = "Ինտեգրում",
-                ["LockFolders"] = "Պանակների կողպում",
+                ["LockFolders"] = "Դարձնել անշարժ",
                 ["LockFoldersDesc"] = "Արգելափակել նիշքերի տեղափոխումը կամ Drag & Drop-ը պատահական փոփոխություններից խուսափելու համար",
                 ["IconShape"] = "Պատկերակի ձեւ",
                 ["Circle"] = "Շրջան",
@@ -45,7 +45,7 @@ namespace Panak.Services {
                 ["FocusModeDesc"] = "Պանակը բացվելիս էկրանի ետեւի ֆոնը մթագնում է",
                 ["FocusDimming"] = "Ֆոնի մթագնման աստիճան",
                 ["FocusBlur"] = "Ֆոնի լղոզման էֆֆեկտ",
-                ["FocusBlurDesc"] = "Լղոզել աշխատասեղանի ֆոնը՝ պանակի վրա կենտրոնանալու համար",
+                ["FocusBlurDesc"] = "Լղոզել աշխատասեղանի ֆոնը՝ պանակի վրա կենտրոնանալու համար (կարող է դանդաղեցնել համակարգիչը)",
                 ["FocusBlurRadius"] = "Լղոզման աստիճան",
                 ["Language"] = "Հավելվածի լեզու",
                 ["LanguageAiNote"] = "Թարգմանված է ԱԲ-ով",
@@ -54,6 +54,8 @@ namespace Panak.Services {
                 ["Support"] = "Աջակցել նախագծին",
                 ["SupportDesc"] = "Աջակցեք Panak-ի զարգացմանը Ko-fi-ի միջոցով",
                 ["DonateOnKofi"] = "☕ Ko-fi",
+                ["CrowdinProject"] = "🌐 Crowdin",
+                ["TranslateOnCrowdin"] = "Թարգմանել Crowdin-ում",
                 ["RightDoubleClick"] = "Աջ կրկնակտտոցով արագ բացում",
                 ["RightDoubleClickDesc"] = "Windows-ի ցանկացած պանակ բացել աջ կրկնակտտոցով",
                 ["SpaceQuickLook"] = "Արագ դիտում Space ստեղնով",
@@ -103,7 +105,8 @@ namespace Panak.Services {
                 ["UninstallDesc"] = "Հեռացնել Panak-ը եւ բոլոր Explorer ինտեգրումները համակարգչից",
                 ["CombineFilesOnDrop"] = "Նիշքը նիշքի վրա գցելիս ստեղծել պանակ",
                 ["CombineFilesOnDropDesc"] = "Նիշքը մեկ այլ նիշքի վրա գցելիս երկուսն էլ հավաքել նոր Panak պանակում",
-                ["CollectIntoPanakFolder"] = "Հավաքել Panak պանակի մեջ",
+                ["CollectIntoPanakFolder"] = "Հավաքել Panak-ի մեջ",
+                ["UnpackPanakFolder"] = "Ապահավաքել Panak-ը",
                 ["Hue"] = "Երանգ",
                 ["DefaultFolderColor"] = "Պանակի նախադրված գույն",
                 ["Updates"] = "Թարմացումներ",
@@ -134,7 +137,8 @@ namespace Panak.Services {
                 ["UninstallItemShortcuts"] = "Աշխատասեղանի եւ Start ընտրացանկի դյուրանցումները",
                 ["UninstallItemStartup"] = "Ինքնաշխատ մեկնարկի կարգավորումները",
                 ["UninstallItemFiles"] = "Ծրագրային նիշքերը եւ գրանցամատյանի գրառումները",
-                ["UninstallApology"] = "Ցավում եմ, եթե ծրագիրը չի արդարացրել Ձեր սպասելիքները։ Խնդրում եմ կիսվել Ձեր կարծիքով կայքի կամ էլ. փոստի միջոցով. ես մեծ սիրով հաշվի կառնեմ այն եւ կշտկեմ թերությունները։",
+                ["UninstallApology"] = "Ներողություն ենք խնդրում, եթե ծրագիրը չի արդարացրել Ձեր սպասելիքները։ Խնդրում ենք կիսվել Ձեր կարծիքով կայքի կամ էլ. փոստի միջոցով. ես մեծ սիրով հաշվի կառնեմ այն եւ կշտկեմ թերությունները։",
+                ["LockedFoldersExistWarning"] = "Առկա են կողպված պանակներ: Ապատեղադրելու համար խնդրում ենք նախ ապակողպել բոլոր պանակները Panak-ում:",
                 ["UninstallDotNet8"] = "Ջնջել .NET 8.0 Desktop Runtime",
                 ["UninstallRemoveMenusAndShortcuts"] = "Հեռացնել կոնտեքստային մենյուները եւ դյուրանցումները",
                 ["UninstallRemoveSettingsData"] = "Ջնջել կարգավորումները եւ տվյալները (%AppData%/Panak)",
@@ -183,9 +187,10 @@ namespace Panak.Services {
                 ["InstallErrorEnsureUnlocked"] = "Խնդրում ենք համոզվել, որ ֆայլերը զբաղված չեն այլ ծրագրով, և փորձել կրկին:",
                 ["InstallationFolder"] = "Տեղադրման թղթապանակ",
                 ["Browse"] = "Ընտրել...",
-                            ["FolderBlur"] = "Պանակի լղոզման էֆֆեկտ",
-                ["FolderBlurDesc"] = "Լղոզել աշխատասեղանի ֆոնը պանակի ետեւում",
+                ["FolderBlur"] = "Պանակի լղոզման էֆֆեկտ",
+                ["FolderBlurDesc"] = "Լղոզել աշխատասեղանի ֆոնը պանակի ետեւում (կարող է դանդաղեցնել համակարգիչը)",
                 ["FolderBlurRadius"] = "Լղոզման աստիճան",
+                ["SlowsDownSystemWarning"] = "կարող է դանդաղեցնել համակարգիչը",
                 ["PagingMode"] = "Էջերի թերթման կերպ",
                 ["PagingModeDesc"] = "Օգտագործել էջավորված սլայդեր կամ ուղղահայաց scrollbar",
                 ["PagingModeSlider"] = "Սլայդեր",
@@ -195,7 +200,7 @@ namespace Panak.Services {
                 ["SliderDrag"] = "Թերթել մկնիկով քաշելով (Swipe)",
                 ["Step1Title"] = "Քայլ 1. Գույն, ձեւ եւ թափանցիկություն",
                 ["Step1Subtitle"] = "Հարմարեցրեք պանակների արտաքին տեսքը Ձեր նախասիրությամբ",
-                ["Step2Title"] = "Քայլ 2. Դասավորություն եւ կառավարում",
+                ["Step2Title"] = "Քայլ 2. Դիրք եւ կառավարում",
                 ["Step2Subtitle"] = "Կարգավորեք նավիգացիան, չափսերը եւ կենտրոնացման ռեժիմը",
                 ["Step3Title"] = "Քայլ 3. Պատրա՞ստ եք սկսել",
                 ["Step3Subtitle"] = "Ձեր պանակները պատրաստ են օգտագործման։ Բարի գալուստ Panak!",
@@ -211,8 +216,8 @@ namespace Panak.Services {
                 ["RandomShape"] = "Պատահական ձեւ",
                 ["RandomColor"] = "Պատահական գույն",
                 ["RandomOpacity"] = "Պատահական թափանցիկություն",
-                ["ExportSettings"] = "Արտածել կարգավորումները",
-                ["ImportSettings"] = "Ներածել կարգավորումները",
+                ["ExportSettings"] = "Արտածել",
+                ["ImportSettings"] = "Ներածել",
                 ["SettingsExported"] = "Կարգավորումները հաջողությամբ արտածվեցին",
                 ["SettingsImported"] = "Կարգավորումները հաջողությամբ ներածվեցին",
                 ["InvalidSettingsFile"] = "Անվավեր կարգավորումների ֆայլ",
@@ -220,6 +225,17 @@ namespace Panak.Services {
                 ["AddCustomColor"] = "Ավելացնել ընթացիկ գույնը",
                 ["BackupAndRestore"] = "Կարգավորումների պահուստավորում",
                 ["ExportImportDesc"] = "Արտահանեք կամ ներմուծեք JSON ֆայլով",
+                ["RandomByChance"] = "Պատահականությամբ",
+                ["RestoreDefaultColors"] = "Վերականգնել լռելյայն գույները",
+                ["AppearanceTab"] = "🎨 Արտաքին",
+                ["LayoutTab"] = "📐 Դիրք",
+                ["SecurityTab"] = "🔒 Անվտանգություն",
+                ["SystemTab"] = "⚙️ Համակարգ",
+                ["LockSettings"] = "Կողպել Կայանքները",
+                ["LockSettingsDesc"] = "Պահանջել գաղտնաբառ/PIN/նախշ/կենսաչափություն կայանքները բացելու կամ փոփոխելու համար",
+                ["ConfigureLock"] = "Կարգավորել կողպումը",
+                ["HidePreview"] = "Թաքցնել",
+                ["ShowPreview"] = "Նախադիտում",
             },
             ["en"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Popup Folders",
@@ -249,7 +265,7 @@ namespace Panak.Services {
                 ["FocusModeDesc"] = "Dims or blurs the background when a folder popup opens",
                 ["FocusDimming"] = "Background dimming opacity",
                 ["FocusBlur"] = "Background Blur Effect",
-                ["FocusBlurDesc"] = "Blur the desktop background to enhance focus on folder contents",
+                ["FocusBlurDesc"] = "Blur the desktop background to enhance focus on folder contents (may slow down system)",
                 ["FocusBlurRadius"] = "Blur Radius",
                 ["Language"] = "Application Language",
                 ["LanguageAiNote"] = "Translated with AI",
@@ -258,6 +274,8 @@ namespace Panak.Services {
                 ["Support"] = "Support project",
                 ["SupportDesc"] = "Support Panak's development on Ko-fi",
                 ["DonateOnKofi"] = "☕ Ko-fi",
+                ["CrowdinProject"] = "🌐 Crowdin",
+                ["TranslateOnCrowdin"] = "Translate on Crowdin",
                 ["RightDoubleClick"] = "Right Double-Click Open",
                 ["RightDoubleClickDesc"] = "Open any Windows folder as a Panak popup with right double-click",
                 ["SpaceQuickLook"] = "Quick Look with Space",
@@ -308,6 +326,7 @@ namespace Panak.Services {
                 ["CombineFilesOnDrop"] = "Combine files into folder on drag-and-drop",
                 ["CombineFilesOnDropDesc"] = "Automatically combine both files into a new Panak folder when dropping one file onto another",
                 ["CollectIntoPanakFolder"] = "Collect into Panak folder",
+                ["UnpackPanakFolder"] = "Unpack Panak folder",
                 ["Hue"] = "Hue",
                 ["DefaultFolderColor"] = "Default Folder Color",
                 ["Updates"] = "Updates",
@@ -339,6 +358,7 @@ namespace Panak.Services {
                 ["UninstallItemStartup"] = "Automatic startup configuration",
                 ["UninstallItemFiles"] = "Program files and registry entries",
                 ["UninstallApology"] = "I'm sorry if the app did not meet your expectations. Please share your feedback via the website or email—I will gladly take it into account and fix the issues.",
+                ["LockedFoldersExistWarning"] = "There are currently locked folders. Please unlock all folders in Panak before uninstalling.",
                 ["UninstallDotNet8"] = "Uninstall .NET 8.0 Desktop Runtime",
                 ["UninstallRemoveMenusAndShortcuts"] = "Remove context menus and shortcuts",
                 ["UninstallRemoveSettingsData"] = "Delete user settings and data (%AppData%/Panak)",
@@ -387,9 +407,10 @@ namespace Panak.Services {
                 ["InstallErrorEnsureUnlocked"] = "Please ensure no files are currently locked and try again.",
                 ["InstallationFolder"] = "Installation Folder",
                 ["Browse"] = "Browse...",
-                            ["FolderBlur"] = "Folder Blur Effect",
-                ["FolderBlurDesc"] = "Blur desktop background behind folder cards",
+                ["FolderBlur"] = "Folder Blur Effect",
+                ["FolderBlurDesc"] = "Blur desktop background behind folder cards (may slow down system)",
                 ["FolderBlurRadius"] = "Blur Radius",
+                ["SlowsDownSystemWarning"] = "may slow down system",
                 ["PagingMode"] = "Page Navigation Mode",
                 ["PagingModeDesc"] = "Use paged slider or vertical scrollbar",
                 ["PagingModeSlider"] = "Slider",
@@ -424,6 +445,17 @@ namespace Panak.Services {
                 ["AddCustomColor"] = "Add current color to swatches",
                 ["BackupAndRestore"] = "Backup & Restore",
                 ["ExportImportDesc"] = "Export or import configuration via JSON file",
+                ["RandomByChance"] = "Randomly",
+                ["RestoreDefaultColors"] = "Restore default colors",
+                ["AppearanceTab"] = "🎨 Appearance",
+                ["LayoutTab"] = "📐 Layout",
+                ["SecurityTab"] = "🔒 Security",
+                ["SystemTab"] = "⚙️ System",
+                ["LockSettings"] = "Lock Settings",
+                ["LockSettingsDesc"] = "Require password/PIN/pattern/biometrics to open or edit settings",
+                ["ConfigureLock"] = "Configure Lock",
+                ["HidePreview"] = "Hide",
+                ["ShowPreview"] = "Preview",
             },
             ["ru"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Папки",
@@ -453,7 +485,7 @@ namespace Panak.Services {
                 ["FocusModeDesc"] = "Затемняет фон при открытии всплывающего окна папки",
                 ["FocusDimming"] = "Степень затемнения фона",
                 ["FocusBlur"] = "Эффект размытия фона",
-                ["FocusBlurDesc"] = "Размывать фон рабочего стола для концентрации на папке",
+                ["FocusBlurDesc"] = "Размывать фон рабочего стола для концентрации на папке (может замедлить систему)",
                 ["FocusBlurRadius"] = "Радиус размытия",
                 ["Language"] = "Язык приложения",
                 ["LanguageAiNote"] = "Переведено с помощью ИИ",
@@ -462,6 +494,8 @@ namespace Panak.Services {
                 ["Support"] = "Поддержать проект",
                 ["SupportDesc"] = "Поддержите развитие Panak через Ko-fi",
                 ["DonateOnKofi"] = "☕ Ko-fi",
+                ["CrowdinProject"] = "🌐 Crowdin",
+                ["TranslateOnCrowdin"] = "Перевести на Crowdin",
                 ["RightDoubleClick"] = "Быстрое открытие правым двойным кликом",
                 ["RightDoubleClickDesc"] = "Открывать любую папку Windows правым двойным кликом",
                 ["SpaceQuickLook"] = "Быстрый просмотр клавишей Пробел",
@@ -512,6 +546,7 @@ namespace Panak.Services {
                 ["CombineFilesOnDrop"] = "Создавать папку при перетаскивании файла на файл",
                 ["CombineFilesOnDropDesc"] = "Автоматически объединять файлы в новую папку Panak при перетаскивании одного на другой",
                 ["CollectIntoPanakFolder"] = "Собрать в папку Panak",
+                ["UnpackPanakFolder"] = "Распаковать папку Panak",
                 ["Hue"] = "Оттенок",
                 ["DefaultFolderColor"] = "Цвет папок по умолчанию",
                 ["Updates"] = "Обновления",
@@ -543,6 +578,7 @@ namespace Panak.Services {
                 ["UninstallItemStartup"] = "Настройки автоматического запуска",
                 ["UninstallItemFiles"] = "Файлы программы и записи реестра",
                 ["UninstallApology"] = "Мне очень жаль, если программа не оправдала ваших ожиданий. Пожалуйста, поделитесь своим мнением через сайт или по электронной почте — я с радостью учту его и исправлю недочёты.",
+                ["LockedFoldersExistWarning"] = "Имеются заблокированные папки. Пожалуйста, разблокируйте все папки в Panak перед удалением.",
                 ["UninstallDotNet8"] = "Удалить .NET 8.0 Desktop Runtime",
                 ["UninstallRemoveMenusAndShortcuts"] = "Удалить контекстные меню и ярлыки",
                 ["UninstallRemoveSettingsData"] = "Удалить настройки и данные (%AppData%/Panak)",
@@ -591,9 +627,10 @@ namespace Panak.Services {
                 ["InstallErrorEnsureUnlocked"] = "Убедитесь, что файлы не заблокированы, и повторите попытку.",
                 ["InstallationFolder"] = "Папка установки",
                 ["Browse"] = "Обзор...",
-                            ["FolderBlur"] = "Эффект размытия папки",
-                ["FolderBlurDesc"] = "Размывать фон рабочего стола позади папок",
+                ["FolderBlur"] = "Эффект размытия папки",
+                ["FolderBlurDesc"] = "Размывать фон рабочего стола позади папок (может замедлить систему)",
                 ["FolderBlurRadius"] = "Радиус размытия",
+                ["SlowsDownSystemWarning"] = "может замедлить систему",
                 ["PagingMode"] = "Режим навигации по страницам",
                 ["PagingModeDesc"] = "Использовать слайдер со страницами или вертикальную полосу прокрутки",
                 ["PagingModeSlider"] = "Слайдер",
@@ -628,6 +665,17 @@ namespace Panak.Services {
                 ["AddCustomColor"] = "Добавить текущий цвет в палитру",
                 ["BackupAndRestore"] = "Резервное копирование",
                 ["ExportImportDesc"] = "Экспорт или импорт настроек через JSON",
+                ["RandomByChance"] = "Случайно",
+                ["RestoreDefaultColors"] = "Восстановить цвета по умолчанию",
+                ["AppearanceTab"] = "🎨 Внешний вид",
+                ["LayoutTab"] = "📐 Расположение",
+                ["SecurityTab"] = "🔒 Безопасность",
+                ["SystemTab"] = "⚙️ Система",
+                ["LockSettings"] = "Блокировка настроек",
+                ["LockSettingsDesc"] = "Требовать пароль/PIN/графический ключ/биометрию для открытия или изменения настроек",
+                ["ConfigureLock"] = "Настроить блокировку",
+                ["HidePreview"] = "Скрыть",
+                ["ShowPreview"] = "Предпросмотр",
             },
             ["fr"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Dossiers popup",
@@ -657,7 +705,7 @@ namespace Panak.Services {
                 ["FocusModeDesc"] = "Assombrit l'arrière-plan à l'ouverture du dossier",
                 ["FocusDimming"] = "Opacité d'assombrissement",
                 ["FocusBlur"] = "Effet de flou d'arrière-plan",
-                ["FocusBlurDesc"] = "Flouter l'arrière-plan du bureau pour se concentrer sur le dossier",
+                ["FocusBlurDesc"] = "Flouter l'arrière-plan du bureau pour se concentrer sur le dossier (peut ralentir le système)",
                 ["FocusBlurRadius"] = "Rayon de flou",
                 ["Language"] = "Langue de l'application",
                 ["LanguageAiNote"] = "Traduit par l'IA",
@@ -666,6 +714,8 @@ namespace Panak.Services {
                 ["Support"] = "Soutenir le projet",
                 ["SupportDesc"] = "Soutenez le développement de Panak via Ko-fi",
                 ["DonateOnKofi"] = "☕ Ko-fi",
+                ["CrowdinProject"] = "🌐 Crowdin",
+                ["TranslateOnCrowdin"] = "Traduire sur Crowdin",
                 ["RightDoubleClick"] = "Ouverture par double-clic droit",
                 ["RightDoubleClickDesc"] = "Ouvrir n'importe quel dossier Windows avec un double-clic droit",
                 ["SpaceQuickLook"] = "Aperçu rapide avec Espace",
@@ -711,6 +761,7 @@ namespace Panak.Services {
                 ["CombineFilesOnDrop"] = "Combiner les fichiers en dossier lors du dépôt",
                 ["CombineFilesOnDropDesc"] = "Créer automatiquement un dossier Panak en glissant un fichier sur un autre",
                 ["CollectIntoPanakFolder"] = "Rassembler dans un dossier Panak",
+                ["UnpackPanakFolder"] = "Décompresser le dossier Panak",
                 ["Hue"] = "Teinte",
                 ["DefaultFolderColor"] = "Couleur par défaut du dossier",
                 ["Updates"] = "Mises à jour",
@@ -790,9 +841,10 @@ namespace Panak.Services {
                 ["InstallErrorEnsureUnlocked"] = "Veuillez vous assurer qu'aucun fichier n'est verrouillé et réessayer.",
                 ["InstallationFolder"] = "Dossier d'installation",
                 ["Browse"] = "Parcourir...",
-                            ["FolderBlur"] = "Effet de flou du dossier",
-                ["FolderBlurDesc"] = "Flouter l'arrière-plan du bureau derrière les dossiers",
+                ["FolderBlur"] = "Effet de flou du dossier",
+                ["FolderBlurDesc"] = "Flouter l'arrière-plan du bureau derrière les dossiers (peut ralentir le système)",
                 ["FolderBlurRadius"] = "Rayon de flou",
+                ["SlowsDownSystemWarning"] = "peut ralentir le système",
                 ["PagingMode"] = "Mode de navigation par pages",
                 ["PagingModeDesc"] = "Utiliser un curseur paginé ou une barre de défilement verticale",
                 ["PagingModeSlider"] = "Curseur",
@@ -827,6 +879,8 @@ namespace Panak.Services {
                 ["AddCustomColor"] = "Ajouter la couleur actuelle",
                 ["BackupAndRestore"] = "Sauvegarde et restauration",
                 ["ExportImportDesc"] = "Exporter ou importer via un fichier JSON",
+                ["RandomByChance"] = "Aléatoirement",
+                ["RestoreDefaultColors"] = "Restaurer les couleurs par défaut",
             },
             ["es"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - Carpetas emergentes",
@@ -856,7 +910,7 @@ namespace Panak.Services {
                 ["FocusModeDesc"] = "Atenúa el fondo al abrir la carpeta emergente",
                 ["FocusDimming"] = "Opacidad de atenuación",
                 ["FocusBlur"] = "Efecto de desenfoque de fondo",
-                ["FocusBlurDesc"] = "Desenfocar el fondo del escritorio para concentrarse en la carpeta",
+                ["FocusBlurDesc"] = "Desenfocar el fondo del escritorio para concentrarse en la carpeta (puede ralentizar el sistema)",
                 ["FocusBlurRadius"] = "Radio de desenfoque",
                 ["Language"] = "Idioma de la aplicación",
                 ["LanguageAiNote"] = "Traducido con IA",
@@ -865,6 +919,8 @@ namespace Panak.Services {
                 ["Support"] = "Apoyar el proyecto",
                 ["SupportDesc"] = "Apoya el desarrollo de Panak en Ko-fi",
                 ["DonateOnKofi"] = "☕ Ko-fi",
+                ["CrowdinProject"] = "🌐 Crowdin",
+                ["TranslateOnCrowdin"] = "Traducir en Crowdin",
                 ["RightDoubleClick"] = "Abrir con doble clic derecho",
                 ["RightDoubleClickDesc"] = "Abrir cualquier carpeta de Windows con doble clic derecho",
                 ["SpaceQuickLook"] = "Vista previa rápida con Espacio",
@@ -910,6 +966,7 @@ namespace Panak.Services {
                 ["CombineFilesOnDrop"] = "Combinar archivos al soltar",
                 ["CombineFilesOnDropDesc"] = "Combinar automáticamente en una nueva carpeta Panak al arrastrar un archivo sobre otro",
                 ["CollectIntoPanakFolder"] = "Reunir en carpeta Panak",
+                ["UnpackPanakFolder"] = "Desempaquetar carpeta Panak",
                 ["Hue"] = "Tono",
                 ["DefaultFolderColor"] = "Color predeterminado de carpeta",
                 ["Updates"] = "Actualizaciones",
@@ -989,9 +1046,10 @@ namespace Panak.Services {
                 ["InstallErrorEnsureUnlocked"] = "Asegúrese de que no haya archivos bloqueados e inténtelo de nuevo.",
                 ["InstallationFolder"] = "Carpeta de instalación",
                 ["Browse"] = "Examinar...",
-                            ["FolderBlur"] = "Efecto de desenfoque de carpeta",
-                ["FolderBlurDesc"] = "Desenfocar el fondo del escritorio detrás de las carpetas",
+                ["FolderBlur"] = "Efecto de desenfoque de carpeta",
+                ["FolderBlurDesc"] = "Desenfocar el fondo del escritorio detrás de las carpetas (puede ralentizar el sistema)",
                 ["FolderBlurRadius"] = "Radio de desenfoque",
+                ["SlowsDownSystemWarning"] = "puede ralentizar el sistema",
                 ["PagingMode"] = "Modo de navegación por páginas",
                 ["PagingModeDesc"] = "Usar control deslizante paginado o barra de desplazamiento vertical",
                 ["PagingModeSlider"] = "Deslizador",
@@ -1026,6 +1084,8 @@ namespace Panak.Services {
                 ["AddCustomColor"] = "Agregar color actual",
                 ["BackupAndRestore"] = "Copia de seguridad y restauración",
                 ["ExportImportDesc"] = "Exportar o importar configuración mediante archivo JSON",
+                ["RandomByChance"] = "Aleatoriamente",
+                ["RestoreDefaultColors"] = "Restaurar colores predeterminados",
             },
             ["zh"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - 弹出式文件夹",
@@ -1055,7 +1115,7 @@ namespace Panak.Services {
                 ["FocusModeDesc"] = "打开文件夹弹窗时变暗背景",
                 ["FocusDimming"] = "背景变暗透明度",
                 ["FocusBlur"] = "背景模糊效果",
-                ["FocusBlurDesc"] = "模糊桌面背景以增强对文件夹内容的关注",
+                ["FocusBlurDesc"] = "模糊桌面背景以增强对文件夹内容的关注（可能会降低系统速度）",
                 ["FocusBlurRadius"] = "模糊半径",
                 ["Language"] = "应用语言",
                 ["LanguageAiNote"] = "由人工智能翻译",
@@ -1064,6 +1124,8 @@ namespace Panak.Services {
                 ["Support"] = "赞助项目",
                 ["SupportDesc"] = "通过 Ko-fi 支持 Panak 的后续开发",
                 ["DonateOnKofi"] = "☕ Ko-fi",
+                ["CrowdinProject"] = "🌐 Crowdin",
+                ["TranslateOnCrowdin"] = "在 Crowdin 上翻译",
                 ["RightDoubleClick"] = "右键双击快速打开",
                 ["RightDoubleClickDesc"] = "右键双击打开任意 Windows 文件夹弹窗",
                 ["SpaceQuickLook"] = "空格键快速预览",
@@ -1109,6 +1171,7 @@ namespace Panak.Services {
                 ["CombineFilesOnDrop"] = "拖放重叠时合并文件为文件夹",
                 ["CombineFilesOnDropDesc"] = "将一个文件拖到另一个文件上时自动合并为新 Panak 文件夹",
                 ["CollectIntoPanakFolder"] = "收集到 Panak 文件夹",
+                ["UnpackPanakFolder"] = "解包 Panak 文件夹",
                 ["Hue"] = "色相",
                 ["DefaultFolderColor"] = "默认文件夹颜色",
                 ["Updates"] = "更新",
@@ -1188,9 +1251,10 @@ namespace Panak.Services {
                 ["InstallErrorEnsureUnlocked"] = "请确保没有文件被占用，然后重试。",
                 ["InstallationFolder"] = "安装目录",
                 ["Browse"] = "浏览...",
-                            ["FolderBlur"] = "文件夹模糊效果",
-                ["FolderBlurDesc"] = "模糊文件夹卡片背后的桌面背景",
+                ["FolderBlur"] = "文件夹模糊效果",
+                ["FolderBlurDesc"] = "模糊文件夹卡片背后的桌面背景（可能会降低系统速度）",
                 ["FolderBlurRadius"] = "模糊半径",
+                ["SlowsDownSystemWarning"] = "可能会降低系统速度",
                 ["PagingMode"] = "页面导航模式",
                 ["PagingModeDesc"] = "使用分页滑块或垂直滚动条",
                 ["PagingModeSlider"] = "滑块",
@@ -1225,6 +1289,8 @@ namespace Panak.Services {
                 ["AddCustomColor"] = "将当前颜色添加到调色板",
                 ["BackupAndRestore"] = "备份与恢复",
                 ["ExportImportDesc"] = "通过 JSON 文件导出或导入配置",
+                ["RandomByChance"] = "随机",
+                ["RestoreDefaultColors"] = "恢复默认颜色",
             },
             ["ar"] = new Dictionary<string, string> {
                 ["AppTitle"] = "Panak - مجلدات منبثقة",
@@ -1254,7 +1320,7 @@ namespace Panak.Services {
                 ["FocusModeDesc"] = "تعتيم الخلفية عند فتح نافذة المجلد المنبثقة",
                 ["FocusDimming"] = "درجة تعتيم الخلفية",
                 ["FocusBlur"] = "تأثير تمويه الخلفية",
-                ["FocusBlurDesc"] = "تمويه خلفية سطح المكتب لزيادة التركيز على محتويات المجلد",
+                ["FocusBlurDesc"] = "تمويه خلفية سطح المكتب لزيادة التركيز على محتويات المجلد (قد يبطئ النظام)",
                 ["FocusBlurRadius"] = "نصف قطر التمويه",
                 ["Language"] = "لغة التطبيق",
                 ["LanguageAiNote"] = "مترجم بالذكاء الاصطناعي",
@@ -1263,6 +1329,8 @@ namespace Panak.Services {
                 ["Support"] = "دعم المشروع",
                 ["SupportDesc"] = "ادعم تطوير Panak عبر Ko-fi",
                 ["DonateOnKofi"] = "☕ Ko-fi",
+                ["CrowdinProject"] = "🌐 Crowdin",
+                ["TranslateOnCrowdin"] = "ترجم على Crowdin",
                 ["RightDoubleClick"] = "فتح بالنقر المزدوج الأيمن",
                 ["RightDoubleClickDesc"] = "فتح أي مجلد في Windows بالنقر المزدوج بزر الفأرة الأيمن",
                 ["SpaceQuickLook"] = "المعاينة السريعة بمفتاح المسافة",
@@ -1308,6 +1376,7 @@ namespace Panak.Services {
                 ["CombineFilesOnDrop"] = "دمج الملفات في مجلد عند الإفلات",
                 ["CombineFilesOnDropDesc"] = "دمج الملفين تلقائياً في مجلد Panak جديد عند إفلات ملف فوق آخر",
                 ["CollectIntoPanakFolder"] = "جمع في مجلد Panak",
+                ["UnpackPanakFolder"] = "فك تجميع مجلد Panak",
                 ["Hue"] = "تدرج اللون",
                 ["DefaultFolderColor"] = "لون المجلد الافتراضي",
                 ["Updates"] = "التحديثات",
@@ -1387,9 +1456,10 @@ namespace Panak.Services {
                 ["InstallErrorEnsureUnlocked"] = "يرجى التأكد من عدم وجود ملفات مقفلة والمحاولة مرة أخرى.",
                 ["InstallationFolder"] = "مجلد التثبيت",
                 ["Browse"] = "استعراض...",
-                            ["FolderBlur"] = "تأثير تمويه المجلد",
-                ["FolderBlurDesc"] = "تمويه خلفية سطح المكتب خلف بطاقات المجلد",
+                ["FolderBlur"] = "تأثير تمويه المجلد",
+                ["FolderBlurDesc"] = "تمويه خلفية سطح المكتب خلف بطاقات المجلد (قد يبطئ النظام)",
                 ["FolderBlurRadius"] = "نصف قطر التمويه",
+                ["SlowsDownSystemWarning"] = "قد يبطئ النظام",
                 ["PagingMode"] = "وضع التنقل بين الصفحات",
                 ["PagingModeDesc"] = "استخدام شريط التمرير المقسم لصفحات أو شريط التمرير الرأسي",
                 ["PagingModeSlider"] = "شريط تمرير",
@@ -1424,17 +1494,76 @@ namespace Panak.Services {
                 ["AddCustomColor"] = "إضافة اللون الحالي إلى اللوحة",
                 ["BackupAndRestore"] = "النسخ الاحتياطي والاستعادة",
                 ["ExportImportDesc"] = "تصدير أو استيراد الإعدادات عبر ملف JSON",
+                ["RandomByChance"] = "عشوائياً",
+                ["RestoreDefaultColors"] = "استعادة الألوان الافتراضية",
             },
         };
+
+        private readonly CrowdinOtaService _otaService = CrowdinOtaService.Instance;
+
+        public LocalizationService() {
+            LoadCachedOtaTranslations(_currentLanguage);
+        }
 
         public string CurrentLanguage {
             get => _currentLanguage;
             set {
                 if (_currentLanguage != value) {
                     _currentLanguage = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+                    LoadCachedOtaTranslations(_currentLanguage);
+                    NotifyAllPropertiesChanged();
+                    _ = Task.Run(async () => {
+                        try {
+                            await SyncOtaTranslationsAsync(_currentLanguage);
+                        } catch { }
+                    });
                 }
             }
+        }
+
+        public async Task InitOtaAsync() {
+            LoadCachedOtaTranslations(_currentLanguage);
+            await SyncOtaTranslationsAsync(_currentLanguage);
+        }
+
+        public void LoadCachedOtaTranslations(string lang) {
+            try {
+                var cached = _otaService.LoadCachedTranslations(lang);
+                if (cached != null) {
+                    ApplyOtaDictionary(lang, cached);
+                }
+            } catch { }
+        }
+
+        public async Task<bool> SyncOtaTranslationsAsync(string lang, CancellationToken ct = default) {
+            try {
+                var remote = await _otaService.RefreshLanguageAsync(lang, ct);
+                if (remote != null) {
+                    ApplyOtaDictionary(lang, remote);
+                    return true;
+                }
+            } catch { }
+            return false;
+        }
+
+        public async Task<bool> RefreshOtaTranslationsAsync(CancellationToken ct = default) {
+            return await SyncOtaTranslationsAsync(_currentLanguage, ct);
+        }
+
+        private void ApplyOtaDictionary(string lang, Dictionary<string, string> strings) {
+            if (!_translations.ContainsKey(lang)) {
+                _translations[lang] = new Dictionary<string, string>();
+            }
+            foreach (var (k, v) in strings) {
+                _translations[lang][k] = v;
+            }
+            NotifyAllPropertiesChanged();
+        }
+
+        private void NotifyAllPropertiesChanged() {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentLanguage)));
         }
 
         public string this[string key] {
@@ -1518,5 +1647,8 @@ namespace Panak.Services {
 
             return "en"; // Default fallback
         }
+    }
+    public class LocalizationManager {
+        public static LocalizationService Instance => LocalizationService.Instance;
     }
 }

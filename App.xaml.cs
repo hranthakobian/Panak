@@ -90,6 +90,7 @@ namespace Panak {
                 if (!string.IsNullOrEmpty(settings?.Language)) {
                     LocalizationService.Instance.CurrentLanguage = settings.Language;
                 }
+                _ = LocalizationService.Instance.InitOtaAsync();
             } catch { }
 
             InitializeBackgroundServices();
@@ -179,6 +180,8 @@ namespace Panak {
 
             if (args.Length >= 2 && args[0].Equals("--open", StringComparison.OrdinalIgnoreCase)) {
                 SingleInstanceIpc.SendCommand($"OPEN|{args[1]}|{cx}|{cy}");
+            } else if (args.Length >= 2 && args[0].Equals("--unpack", StringComparison.OrdinalIgnoreCase)) {
+                SingleInstanceIpc.SendCommand($"UNPACK|{args[1]}");
             } else if (args.Length >= 2 && args[0].Equals("--create", StringComparison.OrdinalIgnoreCase)) {
                 SingleInstanceIpc.SendCommand($"CREATE|{args[1]}|{cx}|{cy}");
             } else if (args.Length >= 2 && args[0].Equals("--convert", StringComparison.OrdinalIgnoreCase)) {
@@ -220,6 +223,8 @@ namespace Panak {
 
             if (args.Length >= 2 && args[0].Equals("--open", StringComparison.OrdinalIgnoreCase)) {
                 OpenFolderFromPath(args[1], clickPt);
+            } else if (args.Length >= 2 && args[0].Equals("--unpack", StringComparison.OrdinalIgnoreCase)) {
+                PanakManager.Instance.UnpackPanakFolder(args[1]);
             } else if (args.Length >= 2 && args[0].Equals("--create", StringComparison.OrdinalIgnoreCase)) {
                 CreateAndOpenFromPath(args[1], clickPt);
             } else if (args.Length >= 2 && args[0].Equals("--convert", StringComparison.OrdinalIgnoreCase)) {
@@ -268,6 +273,10 @@ namespace Panak {
                 switch (action) {
                     case "OPEN": {
                         OpenFolderFromPath(payload, clickPt);
+                        break;
+                    }
+                    case "UNPACK": {
+                        PanakManager.Instance.UnpackPanakFolder(payload);
                         break;
                     }
                     case "CREATE": {

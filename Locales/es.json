@@ -199,5 +199,7 @@
   "BackupAndRestore": "Copia de seguridad y restauración",
   "ExportImportDesc": "Exportar o importar configuración mediante archivo JSON",
   "RandomByChance": "Aleatoriamente",
-  "RestoreDefaultColors": "Restaurar colores predeterminados"
+  "RestoreDefaultColors": "Restaurar colores predeterminados",
+  "CrowdinProject": "🌐 Crowdin",
+  "TranslateOnCrowdin": "Traducir en Crowdin"
 }

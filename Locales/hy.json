@@ -214,5 +214,7 @@
   "LockSettingsDesc": "Պահանջել գաղտնաբառ/PIN/նախշ/կենսաչափություն կայանքները բացելու կամ փոփոխելու համար",
   "ConfigureLock": "Կարգավորել կողպումը",
   "HidePreview": "Թաքցնել",
-  "ShowPreview": "Նախադիտում"
+  "ShowPreview": "Նախադիտում",
+  "CrowdinProject": "🌐 Crowdin",
+  "TranslateOnCrowdin": "Թարգմանել Crowdin-ում"
 }

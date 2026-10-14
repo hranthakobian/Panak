@@ -199,5 +199,7 @@
   "BackupAndRestore": "备份与恢复",
   "ExportImportDesc": "通过 JSON 文件导出或导入配置",
   "RandomByChance": "随机",
-  "RestoreDefaultColors": "恢复默认颜色"
+  "RestoreDefaultColors": "恢复默认颜色",
+  "CrowdinProject": "🌐 Crowdin",
+  "TranslateOnCrowdin": "在 Crowdin 上翻译"
 }
