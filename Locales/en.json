@@ -214,5 +214,7 @@
   "LockSettingsDesc": "Require password/PIN/pattern/biometrics to open or edit settings",
   "ConfigureLock": "Configure Lock",
   "HidePreview": "Hide",
-  "ShowPreview": "Preview"
+  "ShowPreview": "Preview",
+  "CrowdinProject": "🌐 Crowdin",
+  "TranslateOnCrowdin": "Translate on Crowdin"
 }
