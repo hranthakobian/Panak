@@ -35,6 +35,7 @@ namespace Panak.Services {
                 string createText = LocalizationService.Instance["CollectIntoPanakFolder"];
                 string openText = LocalizationService.Instance["OpenInPanak"];
                 string convertText = LocalizationService.Instance["ConvertToPanak"];
+                string unpackText = LocalizationService.Instance["UnpackPanakFolder"];
 
                 // 1. HKCU\Software\Classes\*\shell\PanakCreate, Directory, Folder, AllFilesystemObjects
                 string[] createKeys = new[] { "*", "Directory", "Folder", "AllFilesystemObjects" };
@@ -64,6 +65,13 @@ namespace Panak.Services {
                         using var cmdKey = key.CreateSubKey("command");
                         cmdKey.SetValue("", $"\"{exePath}\" --convert \"%1\"");
                     }
+
+                    using (var key = Registry.CurrentUser.CreateSubKey($@"{HKCU_CLASSES}\{dk}\shell\PanakUnpack")) {
+                        key.SetValue("", unpackText);
+                        key.SetValue("Icon", $"\"{exePath}\",0");
+                        using var cmdKey = key.CreateSubKey("command");
+                        cmdKey.SetValue("", $"\"{exePath}\" --unpack \"%1\"");
+                    }
                 }
 
                 // 3. HKCU\Software\Classes\Directory\Background\shell\PanakNew and DesktopBackground (New Panak folder in background)
@@ -90,6 +98,11 @@ namespace Panak.Services {
                     using var open = shell.CreateSubKey("open");
                     using var cmd = open.CreateSubKey("command");
                     cmd.SetValue("", $"\"{exePath}\" --open \"%1\"");
+                    using var unpack = shell.CreateSubKey("unpack");
+                    unpack.SetValue("", unpackText);
+                    unpack.SetValue("Icon", $"\"{exePath}\",0");
+                    using var unpackCmd = unpack.CreateSubKey("command");
+                    unpackCmd.SetValue("", $"\"{exePath}\" --unpack \"%1\"");
                 }
 
                 // 5. DragDropHandlers for right-click drag and drop (like 7-Zip & WinRAR)
@@ -200,8 +213,10 @@ namespace Panak.Services {
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\AllFilesystemObjects\shell\PanakCreate", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Directory\shell\PanakOpen", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Directory\shell\PanakConvert", false);
+                Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Directory\shell\PanakUnpack", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Folder\shell\PanakOpen", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Folder\shell\PanakConvert", false);
+                Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Folder\shell\PanakUnpack", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\Directory\Background\shell\PanakNew", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\DesktopBackground\shell\PanakNew", false);
                 Registry.CurrentUser.DeleteSubKeyTree($@"{HKCU_CLASSES}\.panak", false);

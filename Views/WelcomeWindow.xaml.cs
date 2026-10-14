@@ -186,6 +186,12 @@ namespace Panak.Views {
             RebuildPreviewItems();
             UpdateLivePreview();
             _isInitializing = false;
+
+            Loaded += (s, e) => {
+                StartWallpaperCapture();
+                UpdateWallpaperCrop();
+            };
+            LocationChanged += (s, e) => UpdateWallpaperCrop();
         }
 
         private void LoadLogo() {
@@ -281,12 +287,12 @@ namespace Panak.Views {
             ApplyMaterialYouPalette(hue);
         }
 
+        private BitmapSource? _fullWallpaper = null;
+
         private void StartWallpaperCapture() {
             try {
-                var bmp = ShellHelper.GetDesktopWallpaperBitmap();
-                if (bmp != null) {
-                    SetAllWallpaperSources(bmp);
-                }
+                _fullWallpaper = ShellHelper.GetDesktopWallpaperBitmap();
+                UpdateWallpaperCrop();
             } catch { }
 
             try {
@@ -298,7 +304,8 @@ namespace Panak.Views {
                         try {
                             var liveFrame = ShellHelper.CaptureLiveWallpaper();
                             if (liveFrame != null) {
-                                SetAllWallpaperSources(liveFrame);
+                                _fullWallpaper = liveFrame;
+                                UpdateWallpaperCrop();
                             }
                         } catch { }
                     };
@@ -307,16 +314,79 @@ namespace Panak.Views {
             } catch { }
         }
 
-        private void SetAllWallpaperSources(ImageSource src) {
-            if (Step1WallpaperImage != null) Step1WallpaperImage.Source = src;
-            if (Step1BlurredWallpaperImage != null) Step1BlurredWallpaperImage.Source = src;
-            if (Step1BlurredWallpaperImage2 != null) Step1BlurredWallpaperImage2.Source = src;
-            if (Step2WallpaperImage != null) Step2WallpaperImage.Source = src;
-            if (Step2BlurredWallpaperImage != null) Step2BlurredWallpaperImage.Source = src;
-            if (Step2BlurredWallpaperImage2 != null) Step2BlurredWallpaperImage2.Source = src;
-            if (Step3WallpaperImage != null) Step3WallpaperImage.Source = src;
-            if (Step3BlurredWallpaperImage != null) Step3BlurredWallpaperImage.Source = src;
-            if (Step3BlurredWallpaperImage2 != null) Step3BlurredWallpaperImage2.Source = src;
+        private void UpdateBorderCrop(Border? border, Image? wallImg, Image? blurImg1, Image? blurImg2) {
+            if (_fullWallpaper == null) return;
+            if (border == null || !IsLoaded || !border.IsVisible || border.ActualWidth <= 0 || border.ActualHeight <= 0) {
+                if (wallImg != null && wallImg.Source != _fullWallpaper) wallImg.Source = _fullWallpaper;
+                if (blurImg1 != null && blurImg1.Source != _fullWallpaper) blurImg1.Source = _fullWallpaper;
+                if (blurImg2 != null && blurImg2.Source != _fullWallpaper) blurImg2.Source = _fullWallpaper;
+                return;
+            }
+
+            try {
+                double dpiScaleX = 1.0;
+                double dpiScaleY = 1.0;
+                try {
+                    var dpi = VisualTreeHelper.GetDpi(this);
+                    dpiScaleX = dpi.DpiScaleX > 0 ? dpi.DpiScaleX : 1.0;
+                    dpiScaleY = dpi.DpiScaleY > 0 ? dpi.DpiScaleY : 1.0;
+                } catch { }
+
+                Point screenPt = border.PointToScreen(new Point(0, 0));
+                double pxW = border.ActualWidth * dpiScaleX;
+                double pxH = border.ActualHeight * dpiScaleY;
+
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                Rect monBounds = ShellHelper.GetMonitorBounds(hwnd);
+
+                double monW = monBounds.Width > 0 ? monBounds.Width : SystemParameters.PrimaryScreenWidth * dpiScaleX;
+                double monH = monBounds.Height > 0 ? monBounds.Height : SystemParameters.PrimaryScreenHeight * dpiScaleY;
+
+                double relX = screenPt.X - monBounds.Left;
+                double relY = screenPt.Y - monBounds.Top;
+
+                double scaleX = (double)_fullWallpaper.PixelWidth / monW;
+                double scaleY = (double)_fullWallpaper.PixelHeight / monH;
+
+                int cropX = (int)Math.Round(relX * scaleX);
+                int cropY = (int)Math.Round(relY * scaleY);
+                int cropW = (int)Math.Round(pxW * scaleX);
+                int cropH = (int)Math.Round(pxH * scaleY);
+
+                if (cropX < 0) { cropW += cropX; cropX = 0; }
+                if (cropY < 0) { cropH += cropY; cropY = 0; }
+                if (cropX + cropW > _fullWallpaper.PixelWidth) cropW = _fullWallpaper.PixelWidth - cropX;
+                if (cropY + cropH > _fullWallpaper.PixelHeight) cropH = _fullWallpaper.PixelHeight - cropY;
+
+                if (cropW > 20 && cropH > 20) {
+                    var cropped = new CroppedBitmap(_fullWallpaper, new Int32Rect(cropX, cropY, cropW, cropH));
+                    cropped.Freeze();
+                    if (wallImg != null) wallImg.Source = cropped;
+                    if (blurImg1 != null) blurImg1.Source = cropped;
+                    if (blurImg2 != null) blurImg2.Source = cropped;
+                } else {
+                    if (wallImg != null) wallImg.Source = _fullWallpaper;
+                    if (blurImg1 != null) blurImg1.Source = _fullWallpaper;
+                    if (blurImg2 != null) blurImg2.Source = _fullWallpaper;
+                }
+            } catch {
+                if (wallImg != null) wallImg.Source = _fullWallpaper;
+                if (blurImg1 != null) blurImg1.Source = _fullWallpaper;
+                if (blurImg2 != null) blurImg2.Source = _fullWallpaper;
+            }
+        }
+
+        public void UpdateWallpaperCrop() {
+            try {
+                if (_fullWallpaper == null) {
+                    _fullWallpaper = ShellHelper.GetDesktopWallpaperBitmap();
+                    if (_fullWallpaper == null) return;
+                }
+
+                UpdateBorderCrop(Step1PreviewBorder, Step1WallpaperImage, Step1BlurredWallpaperImage, Step1BlurredWallpaperImage2);
+                UpdateBorderCrop(Step2PreviewBorder, Step2WallpaperImage, Step2BlurredWallpaperImage, Step2BlurredWallpaperImage2);
+                UpdateBorderCrop(Step3PreviewBorder, Step3WallpaperImage, Step3BlurredWallpaperImage, Step3BlurredWallpaperImage2);
+            } catch { }
         }
 
         private void ApplyLocalization() {
@@ -1126,6 +1196,7 @@ namespace Panak.Views {
             if (sender is Border b && b.Clip is RectangleGeometry rectGeom) {
                 rectGeom.Rect = new Rect(0, 0, e.NewSize.Width, e.NewSize.Height);
             }
+            UpdateWallpaperCrop();
         }
 
         private void UpdateLivePreview() {
@@ -1309,6 +1380,7 @@ namespace Panak.Views {
                     EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
                 };
                 var targetFade = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(240));
+                targetAnim.Completed += (s, e) => UpdateWallpaperCrop();
                 targetTranslate.BeginAnimation(TranslateTransform.XProperty, targetAnim);
                 targetGrid.BeginAnimation(UIElement.OpacityProperty, targetFade);
             } else {
@@ -1320,6 +1392,7 @@ namespace Panak.Views {
 
             UpdateStepDots();
             UpdateStepButtons();
+            UpdateWallpaperCrop();
         }
 
         private void UpdateStepDots() {
@@ -1694,6 +1767,7 @@ namespace Panak.Views {
         private void Header_MouseDown(object sender, MouseButtonEventArgs e) {
             if (e.LeftButton == MouseButtonState.Pressed) {
                 DragMove();
+                UpdateWallpaperCrop();
             }
         }
 

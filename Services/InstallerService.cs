@@ -107,9 +107,11 @@ namespace Panak.Services {
 
                 // 4. Windows "Add or Remove Programs" entry
                 using (var key = Registry.CurrentUser.CreateSubKey(UNINSTALL_REG_KEY)) {
+                    string uninstExe = Path.Combine(targetDir, "Uninstall.exe");
+                    string displayIcon = File.Exists(uninstExe) ? $"\"{uninstExe}\",0" : $"\"{targetExe}\",0";
                     key.SetValue("DisplayName", "Panak - Material You Folders");
-                    key.SetValue("DisplayIcon", $"\"{targetExe}\",0");
-                    key.SetValue("DisplayVersion", "1.8.1");
+                    key.SetValue("DisplayIcon", displayIcon);
+                    key.SetValue("DisplayVersion", "2.0.0");
                     key.SetValue("Publisher", "Panak Team");
                     key.SetValue("InstallLocation", targetDir);
                     key.SetValue("UninstallString", $"\"{targetExe}\" --uninstall");

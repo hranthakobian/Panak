@@ -1276,6 +1276,8 @@
             </Setter>
         </Style>
 
+        <Style x:Key="SecondaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}"/>
+
         <!-- Danger Button: Fully rounded pill corners (CornerRadius="20") -->
         <Style x:Key="DangerButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource M3ErrorContainerBrush}"/>
@@ -1516,15 +1518,16 @@
                     </StackPanel>
                 </Grid>
 
-            <!-- Body: 2-Column Responsive Layout (Column 0 = Settings Sections, Column 1 = Live Preview) -->
+            <!-- Body: 3-Column Responsive Layout (Column 0 = Settings Sections, Column 1 = Resizing Splitter, Column 2 = Live Preview) -->
             <Grid Grid.Row="1" Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition x:Name="PreviewColumn" Width="340"/>
+                    <ColumnDefinition Width="*" MinWidth="360"/>
+                    <ColumnDefinition x:Name="SplitterColumn" Width="Auto"/>
+                    <ColumnDefinition x:Name="PreviewColumn" Width="340" MinWidth="240" MaxWidth="460"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Left Column: Compact Navigation Tabs & Scrollable Settings Sections -->
-                <Grid Grid.Column="0" Margin="0,0,10,0">
+                <Grid Grid.Column="0" Margin="0,0,4,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/> <!-- Compact Navigation Tabs above tools -->
                         <RowDefinition Height="*"/>    <!-- Scrollable Settings Sections -->
@@ -1559,7 +1562,7 @@
                                             <TextBlock x:Name="SupportDescText" Text="Աջակցեք Panak-ի զարգացմանը Ko-fi-ի միջոցով" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button x:Name="CrowdinButton" Style="{StaticResource SecondaryActionButtonStyle}" Content="🌐 Crowdin" VerticalAlignment="Center" Padding="14,8" Margin="0,0,8,0" FontWeight="Bold" Click="CrowdinButton_Click" ToolTip="https://crowdin.com/project/panak"/>
+                                            <Button x:Name="CrowdinButton" Style="{StaticResource SecondaryButtonStyle}" Content="🌐 Crowdin" VerticalAlignment="Center" Padding="14,8" Margin="0,0,8,0" FontWeight="Bold" Click="CrowdinButton_Click" ToolTip="https://crowdin.com/project/panak"/>
                                             <Button x:Name="KofiButton" Style="{StaticResource ActionButtonStyle}" Content="☕ Ko-fi" VerticalAlignment="Center" Padding="18,8" FontWeight="Bold" Click="KofiButton_Click"/>
                                         </StackPanel>
                                     </Grid>
@@ -1838,15 +1841,17 @@
                                     </StackPanel>
                                     <CheckBox x:Name="FocusModeCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center" IsChecked="True"/>
                                 </Grid>
-                                <Grid Margin="0,8,0,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="FocusDimmingLabel" Text="Focus Dimming Opacity" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
-                                    <TextBlock x:Name="FocusDimmingValueText" Grid.Column="1" Text="45%" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
-                                </Grid>
-                                <Slider x:Name="FocusDimmingSlider" Minimum="0" Maximum="80" Value="45" Style="{StaticResource MaterialSliderStyle}" ValueChanged="FocusDimmingSlider_ValueChanged"/>
+                                <StackPanel x:Name="FocusDimmingContainer" ClipToBounds="True">
+                                    <Grid Margin="0,8,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="FocusDimmingLabel" Text="Focus Dimming Opacity" FontSize="12" Foreground="{DynamicResource M3OnSurfaceVariantBrush}"/>
+                                        <TextBlock x:Name="FocusDimmingValueText" Grid.Column="1" Text="45%" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource M3PrimaryBrush}"/>
+                                    </Grid>
+                                    <Slider x:Name="FocusDimmingSlider" Minimum="0" Maximum="80" Value="45" Style="{StaticResource MaterialSliderStyle}" ValueChanged="FocusDimmingSlider_ValueChanged"/>
+                                </StackPanel>
 
                                 <Border Height="1" Background="{DynamicResource M3SurfaceContainerBrush}" Margin="0,10,0,10" BorderThickness="0"/>
 
@@ -1900,7 +1905,7 @@
                             <TextBlock Text="🔒 Անվտանգություն" Style="{StaticResource SectionDividerHeaderStyle}"/>
                         </Border>
 
-                        <!-- 1. "Դարձնել անշարժ" (Rename from Lock Folders) -->
+                        <!-- 1. "Անջատել նիշքի քաշելով հանելը" (Disable file drag-out) -->
                         <Border Style="{StaticResource SectionCardStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -1908,10 +1913,25 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
-                                    <TextBlock x:Name="LockFoldersLabel" Text="Դարձնել անշարժ" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
-                                    <TextBlock x:Name="LockFoldersDescText" Text="Արգելել նիշքերի տեղափոխումը կամ վերադասավորումը" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="LockFoldersLabel" Text="Անջատել նիշքի քաշելով հանելը" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="LockFoldersDescText" Text="Արգելել նիշքերը քաշելով պանակից դուրս հանելը (Drag &amp; Drop)" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <CheckBox x:Name="LockFoldersCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- 2. "Արգելափակել փոփափի տեղաշարժումը" (Lock Popup Position) -->
+                        <Border Style="{StaticResource SectionCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="LockPopupPositionLabel" Text="Արգելափակել փոփափի տեղաշարժումը" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource M3OnSurfaceBrush}"/>
+                                    <TextBlock x:Name="LockPopupPositionDescText" Text="Արգելել պանակի փոփափի տեղաշարժումը մկնիկով" FontSize="11" Foreground="{DynamicResource M3OnSurfaceVariantBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox x:Name="LockPopupPositionCheckBox" Grid.Column="1" Style="{StaticResource MaterialSwitchStyle}" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
 
@@ -2194,8 +2214,49 @@
                 </ScrollViewer>
             </Grid>
 
+                <!-- Center Vertical Resizing Splitter Line (Smooth hover fade-in, dark color) -->
+                <GridSplitter x:Name="PreviewSplitter" Grid.Column="1" Width="10" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                              Background="Transparent" Focusable="False" Cursor="SizeWE" ResizeBehavior="PreviousAndNext" ResizeDirection="Columns">
+                    <GridSplitter.Template>
+                        <ControlTemplate TargetType="GridSplitter">
+                            <Border Background="Transparent">
+                                <Border x:Name="SplitterLine" Width="3" CornerRadius="1.5" Background="#1C1C26" HorizontalAlignment="Center" VerticalAlignment="Stretch" Margin="0,16" Opacity="0"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="SplitterLine" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.20">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="SplitterLine" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+                                </Trigger>
+                                <Trigger Property="IsDragging" Value="True">
+                                    <Setter TargetName="SplitterLine" Property="Opacity" Value="1"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </GridSplitter.Template>
+                </GridSplitter>
+
                 <!-- Right Column: Live Desktop Preview Pane -->
-                <Border x:Name="PreviewCardBorder" Grid.Column="1" Margin="6,0,0,0" CornerRadius="18" Background="#181824" BorderThickness="0" ClipToBounds="True" SizeChanged="PreviewCardBorder_SizeChanged">
+                <Border x:Name="PreviewCardBorder" Grid.Column="2" Margin="4,0,0,0" CornerRadius="18" Background="#181824" BorderThickness="0" ClipToBounds="True" SizeChanged="PreviewCardBorder_SizeChanged">
                     <Border.Clip>
                         <RectangleGeometry x:Name="PreviewClipRect" RadiusX="18" RadiusY="18"/>
                     </Border.Clip>
@@ -2240,7 +2301,7 @@
                                     <Grid>
                                         <!-- Blurred Screen Wallpaper layer -->
                                         <Canvas IsHitTestVisible="False">
-                                            <Image x:Name="PreviewPopupBlurImage" Stretch="UniformToFill">
+                                            <Image x:Name="PreviewPopupBlurImage" Stretch="Fill">
                                                 <Image.Effect>
                                                     <BlurEffect x:Name="PreviewPopupBlurEffect" Radius="28" KernelType="Gaussian" RenderingBias="Performance"/>
                                                 </Image.Effect>

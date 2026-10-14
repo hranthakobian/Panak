@@ -351,6 +351,15 @@ namespace Panak.Uninstall {
 
             var loc = LocalizationService.Instance;
 
+            if (FolderLockService.Instance.HasAnyLockedFolders()) {
+                MessageBox.Show(
+                    loc["LockedFoldersExistWarning"] ?? "Առկա են կողպված պանակներ: Ապատեղադրելու համար խնդրում ենք նախ ապակողպել բոլոր պանակները Panak-ում:",
+                    "Panak",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             // Transition to progress state
             PromptPanel.Visibility = Visibility.Collapsed;
             ProgressPanel.Visibility = Visibility.Visible;

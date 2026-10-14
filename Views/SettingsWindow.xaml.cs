@@ -47,6 +47,9 @@ namespace Panak.Views {
             CheckSettingsLockState();
             _isInitializing = false;
 
+            Loaded += (s, e) => UpdateWallpaperCrop();
+            LocationChanged += (s, e) => UpdateWallpaperCrop();
+
             FocusModeCheckBox.Click += (s, e) => { UpdateFocusModeControlsEnabled(animate: true); UpdateLivePreview(); };
             FocusBlurCheckBox.Click += (s, e) => { UpdateFocusModeControlsEnabled(animate: true); UpdateLivePreview(); };
             FolderBlurCheckBox.Click += (s, e) => { UpdateFolderBlurControlsEnabled(animate: true); UpdateLivePreview(); };
@@ -313,6 +316,7 @@ namespace Panak.Views {
 
             // Lock & Hooks
             LockFoldersCheckBox.IsChecked = s.IsLocked;
+            if (LockPopupPositionCheckBox != null) LockPopupPositionCheckBox.IsChecked = s.LockPopupPosition;
             CenterPopupCheckBox.IsChecked = s.OpenInCenterOnly;
             RightDoubleClickCheckBox.IsChecked = s.RightDoubleClickEnabled;
             SpaceQuickLookCheckBox.IsChecked = s.SpaceQuickLookEnabled;
@@ -386,6 +390,8 @@ namespace Panak.Views {
             CenterPopupDescText.Text = loc["CenterPopupOnlyDesc"];
             LockFoldersLabel.Text = loc["LockFolders"];
             LockFoldersDescText.Text = loc["LockFoldersDesc"];
+            if (LockPopupPositionLabel != null) LockPopupPositionLabel.Text = loc["LockPopupPosition"];
+            if (LockPopupPositionDescText != null) LockPopupPositionDescText.Text = loc["LockPopupPositionDesc"];
             RightDoubleClickLabel.Text = loc["RightDoubleClick"];
             RightDoubleClickDescText.Text = loc["RightDoubleClickDesc"];
             SpaceQuickLookLabel.Text = loc["SpaceQuickLook"];
@@ -574,7 +580,111 @@ namespace Panak.Views {
             if (FocusDimmingSlider != null) FocusDimmingSlider.IsEnabled = focusOn;
             if (FocusBlurCheckBox != null) FocusBlurCheckBox.IsEnabled = focusOn;
 
+            SetFocusDimmingSliderVisible(focusOn, animate);
             SetFocusBlurSliderVisible(focusOn && blurOn, animate);
+        }
+
+        private void SetFocusDimmingSliderVisible(bool visible, bool animate) {
+            if (FocusDimmingContainer == null) return;
+
+            if (!animate) {
+                FocusDimmingContainer.BeginAnimation(UIElement.OpacityProperty, null);
+                FocusDimmingContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, null);
+
+                if (visible) {
+                    FocusDimmingContainer.Visibility = Visibility.Visible;
+                    FocusDimmingContainer.Opacity = 1.0;
+                    FocusDimmingContainer.MaxHeight = double.PositiveInfinity;
+                    if (FocusDimmingSlider != null) FocusDimmingSlider.IsEnabled = true;
+                } else {
+                    FocusDimmingContainer.Visibility = Visibility.Collapsed;
+                    FocusDimmingContainer.Opacity = 0.0;
+                    FocusDimmingContainer.MaxHeight = 0;
+                    if (FocusDimmingSlider != null) FocusDimmingSlider.IsEnabled = false;
+                }
+                return;
+            }
+
+            var ease = new System.Windows.Media.Animation.CubicEase {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseInOut
+            };
+
+            if (visible) {
+                FocusDimmingContainer.Visibility = Visibility.Visible;
+                if (FocusDimmingSlider != null) FocusDimmingSlider.IsEnabled = true;
+
+                FocusDimmingContainer.Measure(new Size(
+                    FocusDimmingContainer.ActualWidth > 0 ? FocusDimmingContainer.ActualWidth : 350,
+                    double.PositiveInfinity));
+                double targetHeight = FocusDimmingContainer.DesiredSize.Height > 0
+                    ? FocusDimmingContainer.DesiredSize.Height
+                    : 65.0;
+
+                double fromHeight = FocusDimmingContainer.ActualHeight;
+                if (fromHeight <= 0 || double.IsNaN(fromHeight)) {
+                    fromHeight = 0;
+                }
+
+                var heightAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = fromHeight,
+                    To = targetHeight,
+                    Duration = TimeSpan.FromMilliseconds(240),
+                    EasingFunction = ease
+                };
+
+                var opacityAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = FocusDimmingContainer.Opacity,
+                    To = 1.0,
+                    Duration = TimeSpan.FromMilliseconds(240),
+                    EasingFunction = ease
+                };
+
+                heightAnim.Completed += (s, e) => {
+                    FocusDimmingContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, null);
+                    FocusDimmingContainer.MaxHeight = double.PositiveInfinity;
+                };
+
+                FocusDimmingContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, heightAnim);
+                FocusDimmingContainer.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+            } else {
+                if (FocusDimmingSlider != null) FocusDimmingSlider.IsEnabled = false;
+
+                double fromHeight = FocusDimmingContainer.ActualHeight;
+                if (fromHeight <= 0 || double.IsNaN(fromHeight)) {
+                    FocusDimmingContainer.Measure(new Size(
+                        FocusDimmingContainer.ActualWidth > 0 ? FocusDimmingContainer.ActualWidth : 350,
+                        double.PositiveInfinity));
+                    fromHeight = FocusDimmingContainer.DesiredSize.Height > 0
+                        ? FocusDimmingContainer.DesiredSize.Height
+                        : 65.0;
+                }
+
+                var heightAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = fromHeight,
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(220),
+                    EasingFunction = ease
+                };
+
+                var opacityAnim = new System.Windows.Media.Animation.DoubleAnimation {
+                    From = FocusDimmingContainer.Opacity,
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(200),
+                    EasingFunction = ease
+                };
+
+                heightAnim.Completed += (s, e) => {
+                    bool focusOn = FocusModeCheckBox?.IsChecked ?? true;
+                    if (!focusOn) {
+                        FocusDimmingContainer.Visibility = Visibility.Collapsed;
+                        FocusDimmingContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, null);
+                        FocusDimmingContainer.MaxHeight = 0;
+                    }
+                };
+
+                FocusDimmingContainer.BeginAnimation(FrameworkElement.MaxHeightProperty, heightAnim);
+                FocusDimmingContainer.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+            }
         }
 
         private void SetFocusBlurSliderVisible(bool visible, bool animate) {
@@ -848,6 +958,7 @@ namespace Panak.Views {
             s.FocusBlurEnabled = FocusBlurCheckBox.IsChecked ?? true;
             s.FocusBlurRadius = FocusBlurSlider.Value;
             s.IsLocked = LockFoldersCheckBox.IsChecked ?? false;
+            if (LockPopupPositionCheckBox != null) s.LockPopupPosition = LockPopupPositionCheckBox.IsChecked ?? false;
             s.OpenInCenterOnly = CenterPopupCheckBox.IsChecked ?? false;
             s.RightDoubleClickEnabled = RightDoubleClickCheckBox.IsChecked ?? true;
             s.SpaceQuickLookEnabled = SpaceQuickLookCheckBox.IsChecked ?? true;
@@ -1330,6 +1441,7 @@ namespace Panak.Views {
         private void Header_MouseDown(object sender, MouseButtonEventArgs e) {
             if (e.LeftButton == MouseButtonState.Pressed) {
                 DragMove();
+                UpdateWallpaperCrop();
             }
         }
 
@@ -1595,11 +1707,26 @@ namespace Panak.Views {
             _isPreviewVisible = !_isPreviewVisible;
             var loc = LocalizationService.Instance;
             if (_isPreviewVisible) {
-                if (PreviewColumn != null) PreviewColumn.Width = new GridLength(340);
+                if (PreviewCardBorder != null) PreviewCardBorder.Visibility = Visibility.Visible;
+                if (SplitterColumn != null) SplitterColumn.Width = GridLength.Auto;
+                if (PreviewSplitter != null) PreviewSplitter.Visibility = Visibility.Visible;
+                if (PreviewColumn != null) {
+                    PreviewColumn.MinWidth = 240;
+                    PreviewColumn.MaxWidth = 460;
+                    PreviewColumn.Width = new GridLength(340);
+                }
                 if (TogglePreviewBtnText != null) TogglePreviewBtnText.Text = loc["HidePreview"] ?? "Նախադիտում";
                 AnimateWindowWidth(880);
+                UpdateWallpaperCrop();
             } else {
-                if (PreviewColumn != null) PreviewColumn.Width = new GridLength(0);
+                if (PreviewCardBorder != null) PreviewCardBorder.Visibility = Visibility.Collapsed;
+                if (SplitterColumn != null) SplitterColumn.Width = new GridLength(0);
+                if (PreviewSplitter != null) PreviewSplitter.Visibility = Visibility.Collapsed;
+                if (PreviewColumn != null) {
+                    PreviewColumn.MinWidth = 0;
+                    PreviewColumn.MaxWidth = 0;
+                    PreviewColumn.Width = new GridLength(0);
+                }
                 if (TogglePreviewBtnText != null) TogglePreviewBtnText.Text = loc["ShowPreview"] ?? "Նախադիտում";
                 AnimateWindowWidth(520);
             }
@@ -1635,17 +1762,85 @@ namespace Panak.Views {
             int rows = GridRowsSlider != null ? (int)Math.Clamp(GridRowsSlider.Value, 1, 5) : 3;
             bool isSlider = PagingSliderRadio?.IsChecked ?? true;
             UpdatePreviewCardDimensions(cols, rows, isSlider);
+            UpdateWallpaperCrop();
         }
 
         // --- Live Desktop Preview System ---
+        private BitmapSource? _fullWallpaper = null;
+
         private void StartWallpaperCapture() {
             try {
-                var bmp = ShellHelper.GetDesktopWallpaperBitmap();
-                if (bmp != null) {
-                    if (PreviewWallpaperImage != null) PreviewWallpaperImage.Source = bmp;
-                    if (PreviewPopupBlurImage != null) PreviewPopupBlurImage.Source = bmp;
-                }
+                _fullWallpaper = ShellHelper.GetDesktopWallpaperBitmap();
+                UpdateWallpaperCrop();
             } catch { }
+        }
+
+        public void UpdateWallpaperCrop() {
+            try {
+                if (_fullWallpaper == null) {
+                    _fullWallpaper = ShellHelper.GetDesktopWallpaperBitmap();
+                    if (_fullWallpaper == null) return;
+                }
+
+                if (PreviewCardBorder == null || !IsLoaded || !_isPreviewVisible) {
+                    if (PreviewWallpaperImage != null && PreviewWallpaperImage.Source != _fullWallpaper) {
+                        PreviewWallpaperImage.Source = _fullWallpaper;
+                    }
+                    if (PreviewPopupBlurImage != null && PreviewPopupBlurImage.Source != _fullWallpaper) {
+                        PreviewPopupBlurImage.Source = _fullWallpaper;
+                    }
+                    return;
+                }
+
+                double dpiScaleX = 1.0;
+                double dpiScaleY = 1.0;
+                try {
+                    var dpi = VisualTreeHelper.GetDpi(this);
+                    dpiScaleX = dpi.DpiScaleX > 0 ? dpi.DpiScaleX : 1.0;
+                    dpiScaleY = dpi.DpiScaleY > 0 ? dpi.DpiScaleY : 1.0;
+                } catch { }
+
+                Point screenPt = PreviewCardBorder.PointToScreen(new Point(0, 0));
+                double pxW = (PreviewCardBorder.ActualWidth > 0 ? PreviewCardBorder.ActualWidth : 340) * dpiScaleX;
+                double pxH = (PreviewCardBorder.ActualHeight > 0 ? PreviewCardBorder.ActualHeight : 600) * dpiScaleY;
+
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                Rect monBounds = ShellHelper.GetMonitorBounds(hwnd);
+
+                double monW = monBounds.Width > 0 ? monBounds.Width : SystemParameters.PrimaryScreenWidth * dpiScaleX;
+                double monH = monBounds.Height > 0 ? monBounds.Height : SystemParameters.PrimaryScreenHeight * dpiScaleY;
+
+                double relX = screenPt.X - monBounds.Left;
+                double relY = screenPt.Y - monBounds.Top;
+
+                double scaleX = (double)_fullWallpaper.PixelWidth / monW;
+                double scaleY = (double)_fullWallpaper.PixelHeight / monH;
+
+                int cropX = (int)Math.Round(relX * scaleX);
+                int cropY = (int)Math.Round(relY * scaleY);
+                int cropW = (int)Math.Round(pxW * scaleX);
+                int cropH = (int)Math.Round(pxH * scaleY);
+
+                if (cropX < 0) { cropW += cropX; cropX = 0; }
+                if (cropY < 0) { cropH += cropY; cropY = 0; }
+                if (cropX + cropW > _fullWallpaper.PixelWidth) cropW = _fullWallpaper.PixelWidth - cropX;
+                if (cropY + cropH > _fullWallpaper.PixelHeight) cropH = _fullWallpaper.PixelHeight - cropY;
+
+                if (cropW > 20 && cropH > 20) {
+                    var cropped = new CroppedBitmap(_fullWallpaper, new Int32Rect(cropX, cropY, cropW, cropH));
+                    cropped.Freeze();
+                    if (PreviewWallpaperImage != null) PreviewWallpaperImage.Source = cropped;
+                    if (PreviewPopupBlurImage != null) PreviewPopupBlurImage.Source = cropped;
+                } else {
+                    if (PreviewWallpaperImage != null) PreviewWallpaperImage.Source = _fullWallpaper;
+                    if (PreviewPopupBlurImage != null) PreviewPopupBlurImage.Source = _fullWallpaper;
+                }
+            } catch {
+                if (_fullWallpaper != null) {
+                    if (PreviewWallpaperImage != null) PreviewWallpaperImage.Source = _fullWallpaper;
+                    if (PreviewPopupBlurImage != null) PreviewPopupBlurImage.Source = _fullWallpaper;
+                }
+            }
         }
 
         private static ImageSource? _cachedFolderMockIcon = null;
@@ -1848,7 +2043,9 @@ namespace Panak.Views {
                         _ => FindResource("GeomSquircle") as Geometry
                     };
                     if (geom != null) PreviewDesktopIconShapePath.Data = geom;
-                    PreviewDesktopIconShapePath.Fill = (Brush)FindResource("M3SurfaceContainerBrush");
+                    byte iconAlpha = (byte)Math.Clamp((int)Math.Round(normOpacity * 255.0), 30, 255);
+                    PreviewDesktopIconShapePath.Fill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(iconAlpha, baseCol.R, baseCol.G, baseCol.B));
+                    PreviewDesktopIconShapePath.Opacity = normOpacity;
                 }
 
                 UpdatePreviewPinVisual();
@@ -2031,6 +2228,11 @@ namespace Panak.Views {
             PreviewInnerClippingBorder.Width = naturalW;
             PreviewInnerClippingBorder.Height = naturalH;
             PreviewCardClipGeometry.Rect = new Rect(0, 0, naturalW, naturalH);
+
+            if (PreviewPopupBlurImage != null) {
+                PreviewPopupBlurImage.Width = naturalW;
+                PreviewPopupBlurImage.Height = naturalH;
+            }
 
             double availW = Math.Max(240, PreviewCardBorder.ActualWidth > 0 ? PreviewCardBorder.ActualWidth - 28.0 : 312.0);
             double availH = Math.Max(300, PreviewCardBorder.ActualHeight > 0 ? PreviewCardBorder.ActualHeight - 85.0 : 445.0);

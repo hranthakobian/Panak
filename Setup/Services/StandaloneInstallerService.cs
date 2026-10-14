@@ -271,7 +271,7 @@ namespace Panak.Services {
                     using (var key = Registry.CurrentUser.CreateSubKey(UNINSTALL_REG_KEY)) {
                         key.SetValue("DisplayName", "Panak - Material You Folders");
                         key.SetValue("DisplayIcon", displayIcon);
-                        key.SetValue("DisplayVersion", "1.9.0");
+                        key.SetValue("DisplayVersion", "2.0.0");
                         key.SetValue("Publisher", "Panak Team");
                         key.SetValue("InstallLocation", targetDir);
                         key.SetValue("UninstallString", uninstallCommand);

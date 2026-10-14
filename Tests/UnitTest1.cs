@@ -24,7 +24,7 @@ namespace Panak.Tests {
                 "Hue", "DefaultFolderColor", "Apply",
                 "LanguageAiNote", "CenterPopupOnly", "CenterPopupOnlyDesc", "Support", "SupportDesc", "DonateOnKofi",
                 "DotNetRuntime", "DotNetRuntimeDesc", "DotNetAlreadyInstalled", "DotNetNotInstalled", "DotNetDownloading", "DotNetInstalling",
-                "FolderBlur", "FolderBlurDesc", "FolderBlurRadius", "PagingMode", "PagingModeDesc", "PagingModeSlider", "PagingModeScrollbar",
+                "FolderBlur", "FolderBlurDesc", "FolderBlurRadius", "SlowsDownSystemWarning", "PagingMode", "PagingModeDesc", "PagingModeSlider", "PagingModeScrollbar",
                 "GridRows", "SliderArrows", "SliderDrag", "Step1Title", "Step1Subtitle", "Step2Title", "Step2Subtitle", "Step3Title", "Step3Subtitle", "Skip", "Next", "Back", "Preview", "Step", "LivePreview"
             };
 
@@ -214,6 +214,7 @@ namespace Panak.Tests {
                 FocusBlurRadius = 35.0,
                 IconShape = "Circle",
                 IsLocked = true,
+                LockPopupPosition = true,
                 ThemeColor = "#8B5CF6",
                 CombineFilesOnDrop = true,
                 OpenInCenterOnly = true
@@ -230,9 +231,25 @@ namespace Panak.Tests {
             Assert.AreEqual(35.0, deserialized.FocusBlurRadius);
             Assert.AreEqual("Circle", deserialized.IconShape);
             Assert.IsTrue(deserialized.IsLocked);
+            Assert.IsTrue(deserialized.LockPopupPosition);
             Assert.AreEqual("#8B5CF6", deserialized.ThemeColor);
             Assert.IsTrue(deserialized.CombineFilesOnDrop);
             Assert.IsTrue(deserialized.OpenInCenterOnly);
+        }
+
+        [TestMethod]
+        public void TestLockPopupPositionDefaultsAndLocalization() {
+            var settings = new AppSettings();
+            Assert.IsFalse(settings.LockPopupPosition);
+
+            var hyLoc = LocalizationService.Instance;
+            hyLoc.CurrentLanguage = "hy";
+            Assert.AreEqual("Անջատել նիշքի քաշելով հանելը", hyLoc["LockFolders"]);
+            Assert.IsFalse(string.IsNullOrEmpty(hyLoc["LockPopupPosition"]));
+
+            hyLoc.CurrentLanguage = "en";
+            Assert.AreEqual("Disable file drag-out", hyLoc["LockFolders"]);
+            Assert.IsFalse(string.IsNullOrEmpty(hyLoc["LockPopupPosition"]));
         }
 
         [TestMethod]
@@ -775,8 +792,8 @@ namespace Panak.Tests {
         public void TestGitHubUpdateServiceVersionAndDefaults() {
             var updater = GitHubUpdateService.Instance;
             Assert.IsNotNull(updater);
-            Assert.AreEqual("1.9.0", updater.CurrentVersionString);
-            Assert.AreEqual(new Version(1, 9, 0), updater.CurrentVersion);
+            Assert.AreEqual("2.0.0", updater.CurrentVersionString);
+            Assert.AreEqual(new Version(2, 0, 0), updater.CurrentVersion);
             Assert.AreEqual(UpdateStatus.Idle, updater.Status);
         }
 
@@ -924,11 +941,15 @@ namespace Panak.Tests {
             ContextMenuRegistry.RegisterAll(exePath, "hy");
             using (var keyHy = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\*\shell\PanakCreate")) {
                 Assert.IsNotNull(keyHy);
-                Assert.AreEqual("Հավաքել Panak պանակի մեջ", keyHy.GetValue(""));
+                Assert.AreEqual("Հավաքել Panak-ի մեջ", keyHy.GetValue(""));
             }
             using (var keyHyDir = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\shell\PanakOpen")) {
                 Assert.IsNotNull(keyHyDir);
                 Assert.AreEqual("Բացել Panak-ով", keyHyDir.GetValue(""));
+            }
+            using (var keyHyUnpack = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\shell\PanakUnpack")) {
+                Assert.IsNotNull(keyHyUnpack);
+                Assert.AreEqual("Ապահավաքել Panak-ը", keyHyUnpack.GetValue(""));
             }
 
             // Change language to English (en)
@@ -941,12 +962,16 @@ namespace Panak.Tests {
                 Assert.IsNotNull(keyEnDir);
                 Assert.AreEqual("Open with Panak", keyEnDir.GetValue(""));
             }
+            using (var keyEnUnpack = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\Directory\shell\PanakUnpack")) {
+                Assert.IsNotNull(keyEnUnpack);
+                Assert.AreEqual("Unpack Panak folder", keyEnUnpack.GetValue(""));
+            }
 
             // Change back to Armenian (hy)
             ContextMenuRegistry.RegisterAll(exePath, "hy");
             using (var keyBackHy = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\*\shell\PanakCreate")) {
                 Assert.IsNotNull(keyBackHy);
-                Assert.AreEqual("Հավաքել Panak պանակի մեջ", keyBackHy.GetValue(""));
+                Assert.AreEqual("Հավաքել Panak-ի մեջ", keyBackHy.GetValue(""));
             }
         }
 
@@ -1374,6 +1399,54 @@ namespace Panak.Tests {
             PanakManager.Instance.RestoreBackdropAfterDrag();
         }
 
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+        private const uint GW_HWNDNEXT = 2;
+
+        [TestMethod]
+        public void TestBackdropZOrderBehavior() {
+            var thread = new System.Threading.Thread(() => {
+                var popup = new FolderPopupWindow();
+                popup.Show();
+                var backdrop = new BackdropWindow();
+                backdrop.Show();
+
+                IntPtr popupHwnd = new System.Windows.Interop.WindowInteropHelper(popup).Handle;
+                IntPtr backdropHwnd = new System.Windows.Interop.WindowInteropHelper(backdrop).Handle;
+
+                popup.Topmost = true;
+                backdrop.Visibility = System.Windows.Visibility.Hidden;
+                popup.TogglePin(); // pinned
+                popup.TogglePin(); // unpinned
+
+                backdrop.Visibility = System.Windows.Visibility.Visible;
+                popup.Topmost = true;
+                ShellHelper.SetWindowPos(popupHwnd, ShellHelper.HWND_TOPMOST, 0, 0, 0, 0, ShellHelper.SWP_NOMOVE | ShellHelper.SWP_NOSIZE | ShellHelper.SWP_SHOWWINDOW);
+                ShellHelper.SetWindowPos(backdropHwnd, popupHwnd, 0, 0, 0, 0, ShellHelper.SWP_NOMOVE | ShellHelper.SWP_NOSIZE | ShellHelper.SWP_NOACTIVATE);
+                ShellHelper.ForceForegroundWindow(popupHwnd);
+
+                bool popupAboveBackdrop = IsWindowAbove(popupHwnd, backdropHwnd);
+                Assert.IsTrue(popupAboveBackdrop, "Popup window must be strictly above Backdrop in OS Z-order");
+
+                popup.Close();
+                backdrop.Close();
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+        }
+
+        private static bool IsWindowAbove(IntPtr higherHwnd, IntPtr lowerHwnd) {
+            IntPtr current = higherHwnd;
+            while (current != IntPtr.Zero) {
+                current = GetWindow(current, GW_HWNDNEXT);
+                if (current == lowerHwnd) {
+                    return true; // higherHwnd precedes lowerHwnd in Z order (higher is above lower)
+                }
+            }
+            return false;
+        }
+
         [TestMethod]
         public void TestFolderPopupWindowEditPanelWidthAnimation() {
             var thread = new System.Threading.Thread(() => {
@@ -1540,7 +1613,7 @@ namespace Panak.Tests {
                     SettingsService.Instance.Current.FocusModeEnabled = false;
                     popup.TogglePin();
                     Assert.IsFalse(popup.IsPinned, "Window should be unpinned after toggle");
-                    Assert.IsFalse(popup.Topmost, "Window should not be Topmost when unpinned without focus mode");
+                    Assert.IsTrue(popup.Topmost, "Window should always stay Topmost even when unpinned without focus mode");
 
                     SettingsService.Instance.Current.FocusModeEnabled = true;
                     popup.TogglePin(); // pin
@@ -1587,6 +1660,711 @@ namespace Panak.Tests {
             thread.SetApartmentState(System.Threading.ApartmentState.STA);
             thread.Start();
             thread.Join();
+        }
+
+        [TestMethod]
+        public void TestFolderAndFileIconExtraction() {
+            var thread = new System.Threading.Thread(() => {
+                var folderIcon = ShellHelper.GetFolderIconSource(isLarge: true);
+                Assert.IsNotNull(folderIcon, "ShellHelper.GetFolderIconSource must return a valid folder icon");
+                Assert.IsTrue(folderIcon.IsFrozen, "Folder icon must be frozen");
+
+                var docxIcon = ShellHelper.GetFileIconSource("sample.docx", isLarge: true);
+                if (docxIcon != null) {
+                    Assert.IsTrue(docxIcon.IsFrozen, "File icon must be frozen");
+                }
+
+                var txtIcon = ShellHelper.GetFileIconSource("sample.txt", isLarge: true);
+                if (txtIcon != null) {
+                    Assert.IsTrue(txtIcon.IsFrozen, "File icon must be frozen");
+                }
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+        }
+
+        [TestMethod]
+        public void TestFolderPopupWindowSliderPageContent() {
+            Exception? threadEx = null;
+            var thread = new System.Threading.Thread(() => {
+                try {
+                    var popup = new FolderPopupWindow();
+                    SettingsService.Instance.Current.PagingMode = "Slider";
+                    SettingsService.Instance.Current.GridColumns = 3;
+                    SettingsService.Instance.Current.GridRows = 3;
+
+                    // Add 10 items (9 items on page 0, 1 item on page 1)
+                    popup.Items.Clear();
+                    for (int i = 0; i < 10; i++) {
+                        popup.Items.Add(new Panak.Models.PanakItem {
+                            DisplayName = $"Item {i}",
+                            FullPath = $"C:\\test\\item{i}.txt",
+                            IconSource = ShellHelper.GetFolderIconSource(isLarge: true)
+                        });
+                    }
+
+                    popup.ApplySettingsFromGlobal();
+                    popup.Show();
+
+                    var frame = new System.Windows.Threading.DispatcherFrame();
+                    System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                        System.Windows.Threading.DispatcherPriority.Loaded,
+                        new Action(() => frame.Continue = false));
+                    System.Windows.Threading.Dispatcher.PushFrame(frame);
+
+                    popup.UpdateLayout();
+
+                    var panel = (System.Windows.Controls.StackPanel)popup.FindName("SliderPagesPanel");
+                    var viewport = (System.Windows.Controls.Grid)popup.FindName("SliderPagesViewport");
+                    var trans = (System.Windows.Media.TranslateTransform)popup.FindName("PagesTranslateX");
+                    var nextBtn = (System.Windows.Controls.Button)popup.FindName("SliderNextButton");
+
+                    Assert.IsNotNull(panel);
+                    Assert.IsNotNull(viewport);
+                    Assert.IsNotNull(trans);
+                    Assert.AreEqual(2, panel.Children.Count, "10 items with 9/page should create exactly 2 slider pages");
+
+                    // SliderPagesPanel must not have a layout clip restricting its width to single page
+                    Assert.IsNull(System.Windows.Media.VisualTreeHelper.GetClip(panel), "SliderPagesPanel must have null layout clip to allow rendering page 2");
+
+                    // Click next page
+                    nextBtn.RaiseEvent(new System.Windows.RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+
+                    // Wait for page animation
+                    var animEnd = DateTime.UtcNow.AddMilliseconds(350);
+                    while (DateTime.UtcNow < animEnd) {
+                        var f = new System.Windows.Threading.DispatcherFrame();
+                        System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                            System.Windows.Threading.DispatcherPriority.Background,
+                            new Action(() => f.Continue = false));
+                        System.Windows.Threading.Dispatcher.PushFrame(f);
+                        System.Threading.Thread.Sleep(10);
+                    }
+
+                    popup.UpdateLayout();
+
+                    // Hit test inside the viewport bounds to ensure Item 9 on page 2 is actually present and hit-testable
+                    var hitResult = System.Windows.Media.VisualTreeHelper.HitTest(viewport, new System.Windows.Point(20, 20));
+                    Assert.IsNotNull(hitResult?.VisualHit, "Second page items must be hit-testable and rendered inside viewport");
+
+                    popup.Close();
+                } catch (Exception ex) {
+                    threadEx = ex;
+                }
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+
+            if (threadEx != null) {
+                throw new AssertFailedException("STA Thread failed: " + threadEx.Message, threadEx);
+            }
+        }
+
+        [TestMethod]
+        public void TestRandomizerTogglesSettingsPersistence()
+        {
+            var settings = new Panak.Models.AppSettings
+            {
+                RandomShapeOnCreate = true,
+                RandomColorOnCreate = false,
+                RandomOpacityOnCreate = true,
+                HiddenPresetColors = new System.Collections.Generic.List<string> { "#A8DADC", "#F4A261" }
+            };
+
+            string json = System.Text.Json.JsonSerializer.Serialize(settings);
+            var deserialized = System.Text.Json.JsonSerializer.Deserialize<Panak.Models.AppSettings>(json);
+
+            Assert.IsNotNull(deserialized);
+            Assert.IsTrue(deserialized.RandomShapeOnCreate);
+            Assert.IsFalse(deserialized.RandomColorOnCreate);
+            Assert.IsTrue(deserialized.RandomOpacityOnCreate);
+            Assert.AreEqual(2, deserialized.HiddenPresetColors.Count);
+            Assert.AreEqual("#A8DADC", deserialized.HiddenPresetColors[0]);
+            Assert.AreEqual("#F4A261", deserialized.HiddenPresetColors[1]);
+        }
+
+        [TestMethod]
+        public void TestCustomColorDeletionAndHiddenPresets()
+        {
+            var settings = new Panak.Models.AppSettings();
+            settings.CustomPaletteColors.Add("#112233");
+            settings.CustomPaletteColors.Add("#445566");
+
+            // Deleting custom color
+            bool removedCustom = settings.CustomPaletteColors.Remove("#112233");
+            Assert.IsTrue(removedCustom);
+            Assert.AreEqual(1, settings.CustomPaletteColors.Count);
+            Assert.IsFalse(settings.CustomPaletteColors.Contains("#112233"));
+
+            // Hiding preset color
+            settings.HiddenPresetColors.Add("#E6D7BD");
+            Assert.IsTrue(settings.HiddenPresetColors.Contains("#E6D7BD"));
+
+            // Restoring preset colors
+            settings.HiddenPresetColors.Clear();
+            Assert.AreEqual(0, settings.HiddenPresetColors.Count);
+        }
+
+        [TestMethod]
+        public void TestLocalizationRandomByChance()
+        {
+            var loc = Panak.Services.LocalizationService.Instance;
+            string prevLang = loc.CurrentLanguage;
+            try
+            {
+                loc.CurrentLanguage = "hy";
+                Assert.AreEqual("Պատահականությամբ", loc.Get("RandomByChance"));
+                Assert.AreEqual("Վերականգնել լռելյայն գույները", loc.Get("RestoreDefaultColors"));
+
+                loc.CurrentLanguage = "en";
+                Assert.AreEqual("Randomly", loc.Get("RandomByChance"));
+                Assert.AreEqual("Restore default colors", loc.Get("RestoreDefaultColors"));
+
+                loc.CurrentLanguage = "ru";
+                Assert.AreEqual("Случайно", loc.Get("RandomByChance"));
+                Assert.AreEqual("Восстановить цвета по умолчанию", loc.Get("RestoreDefaultColors"));
+            }
+            finally
+            {
+                loc.CurrentLanguage = prevLang;
+            }
+        }
+
+        [TestMethod]
+        public void TestUnpackPanakFolderMovesFilesAndDissolves()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), $"panak_unpack_test_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                // Create a Panak folder inside tempDir
+                string file1 = Path.Combine(tempDir, "document1.txt");
+                string file2 = Path.Combine(tempDir, "document2.txt");
+                File.WriteAllText(file1, "Content 1");
+                File.WriteAllText(file2, "Content 2");
+
+                string panakFolder = PanakManager.Instance.CreatePanakFolder(tempDir, new[] { file1, file2 }, "TestUnpackFolder");
+                Assert.IsTrue(Directory.Exists(panakFolder));
+                Assert.IsTrue(File.Exists(Path.Combine(panakFolder, "document1.txt")));
+                Assert.IsTrue(File.Exists(Path.Combine(panakFolder, "document2.txt")));
+
+                // Unpack Panak
+                bool unpacked = PanakManager.Instance.UnpackPanakFolder(panakFolder);
+                Assert.IsTrue(unpacked);
+
+                // Both files should now be back in tempDir
+                Assert.IsTrue(File.Exists(Path.Combine(tempDir, "document1.txt")));
+                Assert.IsTrue(File.Exists(Path.Combine(tempDir, "document2.txt")));
+
+                // Panak folder should no longer exist
+                Assert.IsFalse(Directory.Exists(panakFolder));
+            }
+            finally
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+        }
+
+        [TestMethod]
+        public void TestUnpackPanakLocalization()
+        {
+            var loc = Panak.Services.LocalizationService.Instance;
+            string prev = loc.CurrentLanguage;
+            try
+            {
+                loc.CurrentLanguage = "hy";
+                Assert.AreEqual("Հավաքել Panak-ի մեջ", loc["CollectIntoPanakFolder"]);
+                Assert.AreEqual("Ապահավաքել Panak-ը", loc["UnpackPanakFolder"]);
+
+                loc.CurrentLanguage = "en";
+                Assert.AreEqual("Collect into Panak folder", loc["CollectIntoPanakFolder"]);
+                Assert.AreEqual("Unpack Panak folder", loc["UnpackPanakFolder"]);
+            }
+            finally
+            {
+                loc.CurrentLanguage = prev;
+            }
+        }
+
+        [TestMethod]
+        public void TestPanakJsonCreationAndDeletionSync()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), "PanakSyncTest_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            File.WriteAllText(Path.Combine(tempDir, "item1.txt"), "A");
+            File.WriteAllText(Path.Combine(tempDir, "item2.txt"), "B");
+            try
+            {
+                string metaFile = Path.Combine(tempDir, "panak.json");
+                Assert.IsFalse(File.Exists(metaFile), "Initially panak.json should not exist");
+
+                // 1. EnsurePanakFolderIntegrity automatically creates panak.json with AutoPopup = true
+                PanakManager.Instance.EnsurePanakFolderIntegrity(tempDir);
+                Assert.IsTrue(File.Exists(metaFile), "EnsurePanakFolderIntegrity must automatically create panak.json");
+
+                var data = PanakFolderData.Load(tempDir);
+                Assert.IsTrue(data.AutoPopup, "AutoPopup must be enabled by default");
+
+                // 2. Test FolderPopupWindow sync when always open with Panak is toggled
+                var thread = new System.Threading.Thread(() =>
+                {
+                    var popup = new Views.FolderPopupWindow();
+                    popup.LoadFolder(tempDir, System.Windows.Rect.Empty);
+
+                    Assert.IsTrue(popup.AlwaysPanakCheckBox.IsChecked == true, "AlwaysPanakCheckBox must be checked");
+                    Assert.IsTrue(File.Exists(metaFile), "panak.json should exist when AlwaysPanakCheckBox is true");
+
+                    // Uncheck Always Panak -> panak.json must be deleted
+                    popup.AlwaysPanakCheckBox.IsChecked = false;
+                    Assert.IsFalse(File.Exists(metaFile), "panak.json must be deleted when AlwaysPanak is unchecked");
+
+                    // Re-check Always Panak -> panak.json must be recreated
+                    popup.AlwaysPanakCheckBox.IsChecked = true;
+                    Assert.IsTrue(File.Exists(metaFile), "panak.json must be recreated when AlwaysPanak is checked");
+
+                    popup.Close();
+                });
+                thread.SetApartmentState(System.Threading.ApartmentState.STA);
+                thread.Start();
+                thread.Join();
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        [TestMethod]
+        public void TestUnpackPanakFolderMovesItemsToParentAndDissolves()
+        {
+            string rootDir = Path.Combine(Path.GetTempPath(), "PanakUnpackTest_" + Guid.NewGuid().ToString("N"));
+            string folderToUnpack = Path.Combine(rootDir, "MySpecialPanak");
+            string subDir = Path.Combine(folderToUnpack, "NestedSubFolder");
+
+            Directory.CreateDirectory(folderToUnpack);
+            Directory.CreateDirectory(subDir);
+
+            string file1 = Path.Combine(folderToUnpack, "Document1.txt");
+            string file2 = Path.Combine(folderToUnpack, "Photo.png");
+            string fileInsideSub = Path.Combine(subDir, "InsideSub.txt");
+
+            File.WriteAllText(file1, "Content 1");
+            File.WriteAllText(file2, "Content 2");
+            File.WriteAllText(fileInsideSub, "Inside sub content");
+
+            try
+            {
+                Assert.IsTrue(Directory.Exists(folderToUnpack));
+                Assert.IsTrue(File.Exists(file1));
+                Assert.IsTrue(File.Exists(file2));
+
+                PanakManager.Instance.UnpackPanakFolder(folderToUnpack);
+
+                // Panak folder must be dissolved
+                Assert.IsFalse(Directory.Exists(folderToUnpack), "The Panak folder must be dissolved and deleted.");
+
+                // Files must have been unpacked to parent rootDir
+                string unpackedFile1 = Path.Combine(rootDir, "Document1.txt");
+                string unpackedFile2 = Path.Combine(rootDir, "Photo.png");
+                string unpackedSubDir = Path.Combine(rootDir, "NestedSubFolder");
+
+                Assert.IsTrue(File.Exists(unpackedFile1), "Document1.txt must exist in parent directory");
+                Assert.IsTrue(File.Exists(unpackedFile2), "Photo.png must exist in parent directory");
+                Assert.IsTrue(Directory.Exists(unpackedSubDir), "NestedSubFolder must exist in parent directory");
+                Assert.IsTrue(File.Exists(Path.Combine(unpackedSubDir, "InsideSub.txt")), "Nested files must be intact");
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(rootDir))
+                    {
+                        Directory.Delete(rootDir, true);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        [TestMethod]
+        public void TestFolderLockService_CredentialsAndSession()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "PanakLockTest_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testDir);
+
+            try
+            {
+                var lockService = FolderLockService.Instance;
+
+                // 1. Password Lock
+                lockService.SetFolderLock(testDir, "Password", "MySecretPassword123!");
+                Assert.IsTrue(lockService.IsFolderLocked(testDir), "Folder must be reported as locked");
+
+                // Wrong credential session unlock fails
+                bool unlockedWrong = lockService.UnlockFolderSession(testDir, "WrongPass");
+                Assert.IsFalse(unlockedWrong, "Wrong password must fail session unlock");
+                Assert.IsTrue(lockService.IsFolderLocked(testDir), "Folder must remain locked");
+
+                // Right credential session unlock succeeds
+                bool unlockedRight = lockService.UnlockFolderSession(testDir, "MySecretPassword123!");
+                Assert.IsTrue(unlockedRight, "Correct password must succeed session unlock");
+                Assert.IsFalse(lockService.IsFolderLocked(testDir), "Folder must be temporarily unlocked for active session");
+
+                // Relocking returns it to locked
+                lockService.RelockFolderSession(testDir);
+                Assert.IsTrue(lockService.IsFolderLocked(testDir), "Folder must be locked again after session relock");
+
+                // Remove lock with right credential succeeds
+                bool removed = lockService.RemoveFolderLock(testDir, "MySecretPassword123!");
+                Assert.IsTrue(removed, "Correct password must allow removing the lock");
+                Assert.IsFalse(lockService.IsFolderLocked(testDir), "Folder must no longer be locked");
+
+                // 2. PIN Lock
+                lockService.SetFolderLock(testDir, "PIN", "1234");
+                Assert.IsTrue(lockService.IsFolderLocked(testDir));
+                Assert.IsTrue(lockService.UnlockFolderSession(testDir, "1234"));
+                Assert.IsTrue(lockService.RemoveFolderLock(testDir, "1234"));
+                Assert.IsFalse(lockService.IsFolderLocked(testDir));
+
+                // 3. Pattern Lock
+                lockService.SetFolderLock(testDir, "Pattern", "0-1-2-5-8");
+                Assert.IsTrue(lockService.IsFolderLocked(testDir));
+                Assert.IsTrue(lockService.UnlockFolderSession(testDir, "0-1-2-5-8"));
+                Assert.IsTrue(lockService.RemoveFolderLock(testDir, "0-1-2-5-8"));
+                Assert.IsFalse(lockService.IsFolderLocked(testDir));
+            }
+            finally
+            {
+                try
+                {
+                    FolderLockService.Instance.RemoveFolderLock(testDir, "");
+                    if (Directory.Exists(testDir))
+                    {
+                        Directory.Delete(testDir, true);
+                    }
+                }
+                catch { }
+            }
+        }
+
+
+        [TestMethod]
+        public void TestFolderLockService_SettingsLockAndUninstallerGuard()
+        {
+            var lockService = FolderLockService.Instance;
+
+            // Remove any existing settings lock
+            lockService.RemoveSettingsLock("");
+
+            Assert.IsFalse(lockService.IsSettingsLocked);
+
+            // Set settings lock
+            lockService.SetSettingsLock("Password", "AdminPassword999");
+            Assert.IsTrue(lockService.IsSettingsLocked);
+            Assert.AreEqual("Password", lockService.SettingsLockType);
+
+            // Verify unlock
+            Assert.IsFalse(lockService.VerifySettingsUnlock("WrongPass"));
+            Assert.IsTrue(lockService.VerifySettingsUnlock("AdminPassword999"));
+
+            // Remove settings lock
+            Assert.IsTrue(lockService.RemoveSettingsLock("AdminPassword999"));
+            Assert.IsFalse(lockService.IsSettingsLocked);
+
+            // Test HasAnyLockedFolders
+            lockService.ClearAllLocksForTesting();
+            string tempDir = Path.Combine(Path.GetTempPath(), "PanakGuardTest_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                lockService.SetFolderLock(tempDir, "PIN", "9999");
+                Assert.IsTrue(lockService.HasAnyLockedFolders(), "HasAnyLockedFolders must be true when a locked folder exists");
+
+                lockService.RemoveFolderLock(tempDir, "9999");
+                Assert.IsFalse(lockService.HasAnyLockedFolders(), "HasAnyLockedFolders must be false after removing the lock");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            }
+        }
+
+        [TestMethod]
+        public void TestLocalization_ArmenianRenamedToDarzdnelAnsharzhAndApology()
+        {
+            var loc = LocalizationService.Instance;
+            loc.CurrentLanguage = "hy";
+
+            // Verify "LockFolders" is renamed to "Անջատել նիշքի քաշելով հանելը"
+            string lockFoldersArm = loc["LockFolders"];
+            Assert.AreEqual("Անջատել նիշքի քաշելով հանելը", lockFoldersArm, "Armenian LockFolders must be 'Անջատել նիշքի քաշելով հանելը'");
+            Assert.AreEqual("Արգելափակել փոփափի տեղաշարժումը", loc["LockPopupPosition"]);
+
+            // Verify uninstaller apology starts with "Ներողություն ենք խնդրում..."
+            string apologyArm = loc["UninstallApology"];
+            Assert.IsTrue(apologyArm.StartsWith("Ներողություն ենք խնդրում", StringComparison.Ordinal),
+                "UninstallApology must start with 'Ներողություն ենք խնդրում...'");
+        }
+
+        [TestMethod]
+        public void TestFolderPopupDisplayAffinity_LockedVsUnlocked()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), "PanakAffinityTest_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                var lockService = FolderLockService.Instance;
+                Assert.IsFalse(lockService.IsFolderLocked(tempDir));
+
+                // When unlocked, affinity should be WDA_NONE (0)
+                bool isLockedUnlocked = !string.IsNullOrEmpty(tempDir) && lockService.IsFolderLocked(tempDir);
+                uint affinityUnlocked = isLockedUnlocked ? ShellHelper.WDA_EXCLUDEFROMCAPTURE : ShellHelper.WDA_NONE;
+                Assert.AreEqual(ShellHelper.WDA_NONE, affinityUnlocked);
+
+                // Lock folder
+                lockService.SetFolderLock(tempDir, "PIN", "1234");
+                Assert.IsTrue(lockService.IsFolderLocked(tempDir));
+
+                // When locked, affinity should be WDA_EXCLUDEFROMCAPTURE (0x11)
+                bool isLockedLocked = !string.IsNullOrEmpty(tempDir) && lockService.IsFolderLocked(tempDir);
+                uint affinityLocked = isLockedLocked ? ShellHelper.WDA_EXCLUDEFROMCAPTURE : ShellHelper.WDA_NONE;
+                Assert.AreEqual(ShellHelper.WDA_EXCLUDEFROMCAPTURE, affinityLocked);
+
+                // Clean up
+                lockService.RemoveFolderLock(tempDir, "1234");
+                Assert.IsFalse(lockService.IsFolderLocked(tempDir));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            }
+        }
+
+        [TestMethod]
+        public void TestPatternLock_OneBasedAndFallbackValidation()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), "PanakPatternTest_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                var lockService = FolderLockService.Instance;
+
+                // 1. Lock with 1-based pattern (created by FolderLockSetupWindow)
+                string pattern1Based = "1-2-3-6-9";
+                lockService.SetFolderLock(tempDir, "Pattern", pattern1Based);
+                Assert.IsTrue(lockService.IsFolderLocked(tempDir));
+
+                // Verify that 1-based pattern unlocks the folder
+                Assert.IsTrue(lockService.UnlockFolderSession(tempDir, pattern1Based));
+                lockService.RelockFolderSession(tempDir);
+                Assert.IsTrue(lockService.IsFolderLocked(tempDir));
+
+                // Convert 1-based to 0-based fallback equivalent: "0-1-2-5-8"
+                var oneBasedList = pattern1Based.Split('-').Select(int.Parse).ToList();
+                string pattern0Based = string.Join("-", oneBasedList.Select(x => x - 1));
+                Assert.AreEqual("0-1-2-5-8", pattern0Based);
+
+                // Clean up lock
+                Assert.IsTrue(lockService.RemoveFolderLock(tempDir, pattern1Based));
+                Assert.IsFalse(lockService.IsFolderLocked(tempDir));
+
+                // 2. Lock with 0-based pattern and test backward compatibility
+                lockService.SetFolderLock(tempDir, "Pattern", pattern0Based);
+                Assert.IsTrue(lockService.IsFolderLocked(tempDir));
+                Assert.IsTrue(lockService.UnlockFolderSession(tempDir, pattern0Based));
+                Assert.IsTrue(lockService.RemoveFolderLock(tempDir, pattern0Based));
+                Assert.IsFalse(lockService.IsFolderLocked(tempDir));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            }
+        }
+
+        [TestMethod]
+        public void TestLockOverlayControl_M3FolderTheme()
+        {
+            Exception? caught = null;
+            var thread = new System.Threading.Thread(() =>
+            {
+                try
+                {
+                    var overlay = new Controls.LockOverlayControl();
+                    overlay.ApplyFolderTheme("#10B981", true);
+                    Assert.IsNotNull(overlay.Resources["LockPrimaryBrush"]);
+                    Assert.IsNotNull(overlay.Resources["LockContainerBrush"]);
+                    Assert.IsNotNull(overlay.Resources["LockOnContainerBrush"]);
+                    Assert.IsNotNull(overlay.Resources["LockBtnHoverBrush"]);
+                    Assert.IsNotNull(overlay.Resources["LockBtnPressedBrush"]);
+                }
+                catch (Exception ex)
+                {
+                    caught = ex;
+                }
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+
+            Assert.IsNull(caught, $"LockOverlayControl M3 theme test failed: {caught}");
+        }
+
+        [TestMethod]
+        public void TestFolderPopupWindow_InPlaceLockSetupAndRemoveLock()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), "PanakInPlaceLockTest_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            Exception? caught = null;
+
+            var thread = new System.Threading.Thread(() =>
+            {
+                try
+                {
+                    var lockService = FolderLockService.Instance;
+
+                    // 1. Initial state: unlocked, no lock
+                    Assert.IsFalse(lockService.IsFolderLocked(tempDir));
+                    Assert.IsNull(lockService.GetFolderLockInfo(tempDir));
+
+                    var window = new FolderPopupWindow();
+                    Assert.IsNotNull(window.FindName("LockSetupPanel"), "LockSetupPanel must exist in FolderPopupWindow");
+                    Assert.IsNotNull(window.FindName("PopupLockOverlay"), "PopupLockOverlay must exist in FolderPopupWindow");
+                    Assert.IsNotNull(window.FindName("FolderLockBtn"), "FolderLockBtn must exist in FolderPopupWindow");
+
+                    // 2. Set lock using in-place credential logic
+                    lockService.SetFolderLock(tempDir, "PIN", "1234");
+                    Assert.IsTrue(lockService.IsFolderLocked(tempDir));
+                    var lockInfo = lockService.GetFolderLockInfo(tempDir);
+                    Assert.IsNotNull(lockInfo);
+                    Assert.IsTrue(lockInfo.IsLocked);
+
+                    // 3. Test remove lock setup mode on overlay
+                    var overlay = (Controls.LockOverlayControl)window.FindName("PopupLockOverlay");
+                    overlay.SetupForRemoveLock(tempDir);
+                    Assert.IsTrue(overlay.IsRemoveLockMode, "Overlay should be in remove lock mode");
+
+                    // 4. Test removing the lock with correct credential
+                    Assert.IsTrue(lockService.RemoveFolderLock(tempDir, "1234"));
+                    Assert.IsFalse(lockService.IsFolderLocked(tempDir));
+                    Assert.IsNull(lockService.GetFolderLockInfo(tempDir));
+
+                    window.Close();
+                }
+                catch (Exception ex)
+                {
+                    caught = ex;
+                }
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+
+            Assert.IsNull(caught, $"In-place lock setup test failed: {caught}");
+        }
+
+        [TestMethod]
+        public void TestLockedFolderAlwaysRecognizedEvenIfAutoPopupFalse()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), "PanakLockAutoPopupTest_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                // Create panak.json with AutoPopup = false
+                var data = new PanakFolderData { AutoPopup = false };
+                data.Save(tempDir);
+
+                // Initially with no lock, IsPanakFolder returns false because AutoPopup is false
+                Assert.IsFalse(PanakManager.Instance.IsPanakFolder(tempDir));
+
+                // Lock folder
+                FolderLockService.Instance.SetFolderLock(tempDir, "Password", "SecretPass123");
+                Assert.IsTrue(FolderLockService.Instance.IsFolderLocked(tempDir));
+
+                // Even though panak.json has AutoPopup = false, locked folder MUST be recognized as Panak folder
+                Assert.IsTrue(PanakManager.Instance.IsPanakFolder(tempDir), "Locked folder must always be recognized as Panak folder");
+                Assert.IsTrue(PanakManager.CheckIfPanakFolder(tempDir), "CheckIfPanakFolder must return true for locked folder");
+
+                // Cleanup
+                FolderLockService.Instance.RemoveFolderLock(tempDir, "SecretPass123");
+                Assert.IsFalse(FolderLockService.Instance.IsFolderLocked(tempDir));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            }
+        }
+
+        [TestMethod]
+        public void TestPatternLineCrossingAndIntermediateDotSelection()
+        {
+            Exception? caught = null;
+            var thread = new System.Threading.Thread(() =>
+            {
+                try
+                {
+                    var overlay = new Controls.LockOverlayControl();
+                    var initCanvasMethod = typeof(Controls.LockOverlayControl).GetMethod("InitPatternCanvas", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    Assert.IsNotNull(initCanvasMethod);
+                    initCanvasMethod.Invoke(overlay, null);
+
+                    // Retrieve private CheckHitDot and _currentPattern via reflection to test
+                    var currentPatternField = typeof(Controls.LockOverlayControl).GetField("_currentPattern", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    Assert.IsNotNull(currentPatternField);
+                    var patternList = (List<int>)currentPatternField.GetValue(overlay)!;
+
+                    var checkHitDotMethod = typeof(Controls.LockOverlayControl).GetMethod("CheckHitDot", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    Assert.IsNotNull(checkHitDotMethod);
+
+                    var patternDotPositionsField = typeof(Controls.LockOverlayControl).GetField("_patternDotPositions", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    Assert.IsNotNull(patternDotPositionsField);
+                    var dotPositions = (System.Windows.Point[])patternDotPositionsField.GetValue(overlay)!;
+
+                    // 1. Initial click on Dot 1
+                    checkHitDotMethod.Invoke(overlay, new object[] { dotPositions[0] });
+                    Assert.AreEqual(1, patternList.Count);
+                    Assert.AreEqual(1, patternList[0]);
+
+                    // 2. Drag directly to Dot 3 (line crosses Dot 2)
+                    checkHitDotMethod.Invoke(overlay, new object[] { dotPositions[2] });
+                    // Both 2 and 3 should be selected in order
+                    Assert.AreEqual(3, patternList.Count);
+                    Assert.AreEqual(1, patternList[0]);
+                    Assert.AreEqual(2, patternList[1]);
+                    Assert.AreEqual(3, patternList[2]);
+
+                    // 3. From 3, drag to 9 (line crosses Dot 6)
+                    checkHitDotMethod.Invoke(overlay, new object[] { dotPositions[8] });
+                    Assert.AreEqual(5, patternList.Count);
+                    Assert.AreEqual(6, patternList[3]);
+                    Assert.AreEqual(9, patternList[4]);
+
+                    // 4. From 9, drag to 7 (line crosses Dot 8)
+                    checkHitDotMethod.Invoke(overlay, new object[] { dotPositions[6] });
+                    Assert.AreEqual(7, patternList.Count);
+                    Assert.AreEqual(8, patternList[5]);
+                    Assert.AreEqual(7, patternList[6]);
+                }
+                catch (Exception ex)
+                {
+                    caught = ex;
+                }
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+
+            Assert.IsNull(caught, $"Pattern line crossing test failed: {caught}");
         }
     }
 }

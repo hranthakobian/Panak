@@ -209,6 +209,12 @@ namespace Panak.Services {
 
             return await Task.Run(async () => {
                 try {
+                    if (FolderLockService.Instance.HasAnyLockedFolders()) {
+                        string msg = LocalizationService.Instance["LockedFoldersExistWarning"]
+                            ?? "Առկա են կողպված պանակներ: Ապատեղադրելու համար նախ ապակողպեք դրանք:";
+                        return (false, msg);
+                    }
+
                     progress?.Report((0.10, LocalizationService.Instance["StoppingProcesses"] ?? "Stopping Panak processes..."));
                     TerminateRunningPanak();
 

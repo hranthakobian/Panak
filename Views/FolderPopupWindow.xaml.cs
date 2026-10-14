@@ -13,12 +13,16 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using Ellipse = System.Windows.Shapes.Ellipse;
+using Line = System.Windows.Shapes.Line;
+using Polyline = System.Windows.Shapes.Polyline;
 using Panak.Models;
 using Panak.Services;
 
 namespace Panak.Views {
     public partial class FolderPopupWindow : Window {
         private const int WM_WINDOWPOSCHANGING = 0x0046;
+        private const int WM_WINDOWPOSCHANGED = 0x0047;
         private const uint SWP_NOSIZE = 0x0001;
         private const uint SWP_NOMOVE = 0x0002;
 
@@ -54,6 +58,8 @@ namespace Panak.Views {
         private bool _isCustomPositioned = false;
 
         public bool IsPinned => _isPinned;
+        public string RootFolderPath => _rootFolderPath;
+        public string CurrentFolderPath => _currentFolderPath;
 
         public bool IsWithinOpenGracePeriod() {
             return _isOpening || (DateTime.UtcNow - _openedTime).TotalMilliseconds < 750;
@@ -69,9 +75,25 @@ namespace Panak.Views {
             FolderItemsControl.Loaded += (s, e) => ApplySettings();
             ApplyLocalization();
 
+            LocationChanged += (s, e) => {
+                if (!_isOpening && !_isClosing && IsVisible) {
+                    UpdatePopupBlurBehind(false);
+                }
+            };
+
             SettingsService.Instance.SettingsChanged += OnSettingsChanged;
             Closed += (s, e) => {
                 SettingsService.Instance.SettingsChanged -= OnSettingsChanged;
+            };
+
+            PopupLockOverlay.Unlocked += () => {
+                UpdateLockState();
+            };
+            PopupLockOverlay.LockRemoved += () => {
+                UpdateLockState();
+            };
+            PopupLockOverlay.Cancelled += () => {
+                UpdateLockState();
             };
         }
 
@@ -127,7 +149,10 @@ namespace Panak.Views {
                         double dpiX = dpi.DpiScaleX;
                         double dpiY = dpi.DpiScaleY;
 
-                        var workArea = SystemParameters.WorkArea;
+                        var workArea = ShellHelper.GetMonitorWorkArea(hwnd);
+                        if (workArea.IsEmpty || workArea.Width <= 0) {
+                            workArea = SystemParameters.WorkArea;
+                        }
                         int screenLeft = (int)Math.Round(workArea.Left * dpiX);
                         int screenTop = (int)Math.Round(workArea.Top * dpiY);
                         int screenRight = (int)Math.Round(workArea.Right * dpiX);
@@ -160,6 +185,16 @@ namespace Panak.Views {
                         Marshal.StructureToPtr(pos, lParam, false);
                     }
                 }
+            } else if (msg == WM_WINDOWPOSCHANGED && !_isOpening && !_isClosing && IsVisible && _isCustomPositioned) {
+                try {
+                    var pos = Marshal.PtrToStructure<WINDOWPOS>(lParam);
+                    if ((pos.flags & SWP_NOMOVE) == 0) {
+                        var dpi = VisualTreeHelper.GetDpi(this);
+                        double curLeft = pos.x / dpi.DpiScaleX;
+                        double curTop = pos.y / dpi.DpiScaleY;
+                        UpdatePopupBlurBehind(false, curLeft, curTop);
+                    }
+                } catch { }
             }
             return IntPtr.Zero;
         }
@@ -182,6 +217,21 @@ namespace Panak.Views {
             } catch {
                 // Ignore DWM errors on older Windows versions
             }
+
+            UpdateDisplayAffinity();
+        }
+
+        public void UpdateDisplayAffinity() {
+            try {
+                if (ShellHelper.IsWindows11OrGreater) {
+                    IntPtr hwnd = new WindowInteropHelper(this).Handle;
+                    if (hwnd != IntPtr.Zero) {
+                        bool isLocked = !string.IsNullOrEmpty(_rootFolderPath) && FolderLockService.Instance.IsFolderLocked(_rootFolderPath);
+                        uint affinity = isLocked ? ShellHelper.WDA_EXCLUDEFROMCAPTURE : ShellHelper.WDA_NONE;
+                        ShellHelper.SetWindowDisplayAffinity(hwnd, affinity);
+                    }
+                }
+            } catch { }
         }
 
         protected override void OnDeactivated(EventArgs e) {
@@ -237,6 +287,9 @@ namespace Panak.Views {
             RootContainer.Opacity = 1.0;
             PopupScale.ScaleX = 1.0;
             PopupScale.ScaleY = 1.0;
+            _currentSliderPage = 0;
+            PagesTranslateX.BeginAnimation(TranslateTransform.XProperty, null);
+            PagesTranslateX.X = 0;
 
             LoadMetadata();
             RefreshItemsList();
@@ -321,11 +374,15 @@ namespace Panak.Views {
                 }
 
                 NameEditBox.Text = _folderData.Title;
-                AlwaysPanakCheckBox.IsChecked = PanakManager.Instance.IsPanakFolder(_rootFolderPath);
+                bool isPanak = PanakManager.Instance.IsPanakFolder(_rootFolderPath);
+                AlwaysPanakCheckBox.IsChecked = isPanak;
+                _folderData.AutoPopup = isPanak;
                 CloseEditPanelImmediate();
             } finally {
                 _isInitializing = false;
             }
+            UpdateLockState();
+            EnsurePanakJsonSync();
 
             // Position & play opening animation
             Dispatcher.InvokeAsync(() => {
@@ -340,6 +397,9 @@ namespace Panak.Views {
                 return;
             }
             _currentFolderPath = path;
+            _currentSliderPage = 0;
+            PagesTranslateX.BeginAnimation(TranslateTransform.XProperty, null);
+            PagesTranslateX.X = 0;
             RefreshItemsList();
             UpdateBreadcrumbs();
         }
@@ -478,6 +538,8 @@ namespace Panak.Views {
 
             SliderPagesViewport.Width = pageW;
             SliderPagesViewport.Height = pageH;
+            SliderPagesPanel.Width = _totalSliderPages * pageW;
+            SliderPagesPanel.Height = pageH;
             SliderPagesPanel.Children.Clear();
             var itemTemplate = (DataTemplate)Resources["PanakItemDataTemplate"];
 
@@ -509,17 +571,32 @@ namespace Panak.Views {
 
         private void UpdateSliderDots() {
             SliderDotsPanel.Children.Clear();
-            for (int i = 0; i < _totalSliderPages; i++) {
-                bool isActive = (i == _currentSliderPage);
+            if (_totalSliderPages <= 1) {
+                FooterPagerGrid.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            int visibleDots = Math.Min(5, _totalSliderPages);
+            int startIndex = (_totalSliderPages > 5)
+                ? Math.Clamp(_currentSliderPage - 2, 0, _totalSliderPages - 5)
+                : 0;
+
+            var textBrush = TryFindResource("PopupTextBrush") as Brush ?? Brushes.White;
+            var subtextBrush = TryFindResource("PopupSubtextBrush") as Brush ?? Brushes.Gray;
+
+            for (int k = 0; k < visibleDots; k++) {
+                int pageIdx = startIndex + k;
+                bool isActive = (pageIdx == _currentSliderPage);
+
                 var dot = new Border {
                     Width = isActive ? 20.0 : 7.0,
                     Height = 7.0,
                     CornerRadius = new CornerRadius(3.5),
                     Margin = new Thickness(2.5, 0, 2.5, 0),
-                    Background = isActive ? (TryFindResource("PopupTextBrush") as Brush ?? Brushes.White) : (TryFindResource("PopupSubtextBrush") as Brush ?? Brushes.Gray),
+                    Background = isActive ? textBrush : subtextBrush,
                     Opacity = isActive ? 0.95 : 0.45,
                     Cursor = Cursors.Hand,
-                    Tag = i
+                    Tag = pageIdx
                 };
                 dot.MouseLeftButtonDown += (s, e) => {
                     if (s is FrameworkElement fe && fe.Tag is int targetPage) {
@@ -538,7 +615,7 @@ namespace Panak.Views {
             SliderPrevButton.Opacity = _currentSliderPage > 0 ? 1.0 : 0.35;
             SliderNextButton.Opacity = _currentSliderPage < _totalSliderPages - 1 ? 1.0 : 0.35;
 
-            FooterPagerGrid.Visibility = (_totalSliderPages > 1) ? Visibility.Visible : Visibility.Collapsed;
+            FooterPagerGrid.Visibility = Visibility.Visible;
         }
 
         private void NavigateToSliderPage(int targetPage) {
@@ -553,32 +630,14 @@ namespace Panak.Views {
             double targetX = -targetPage * pageWidth;
 
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            var anim = new DoubleAnimation(PagesTranslateX.X, targetX, TimeSpan.FromMilliseconds(240)) {
+            var anim = new DoubleAnimation {
+                To = targetX,
+                Duration = TimeSpan.FromMilliseconds(240),
                 EasingFunction = ease
             };
             PagesTranslateX.BeginAnimation(TranslateTransform.XProperty, anim);
 
-            for (int i = 0; i < SliderDotsPanel.Children.Count; i++) {
-                if (SliderDotsPanel.Children[i] is Border dot) {
-                    bool isActive = (i == _currentSliderPage);
-                    double targetW = isActive ? 20.0 : 7.0;
-                    double targetOp = isActive ? 0.95 : 0.45;
-                    var brush = isActive
-                        ? (TryFindResource("PopupTextBrush") as Brush ?? Brushes.White)
-                        : (TryFindResource("PopupSubtextBrush") as Brush ?? Brushes.Gray);
-
-                    var wAnim = new DoubleAnimation(dot.Width, targetW, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease };
-                    var opAnim = new DoubleAnimation(dot.Opacity, targetOp, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease };
-                    dot.BeginAnimation(WidthProperty, wAnim);
-                    dot.BeginAnimation(OpacityProperty, opAnim);
-                    dot.Background = brush;
-                }
-            }
-
-            SliderPrevButton.IsEnabled = _currentSliderPage > 0;
-            SliderNextButton.IsEnabled = _currentSliderPage < _totalSliderPages - 1;
-            SliderPrevButton.Opacity = _currentSliderPage > 0 ? 1.0 : 0.35;
-            SliderNextButton.Opacity = _currentSliderPage < _totalSliderPages - 1 ? 1.0 : 0.35;
+            UpdateSliderDots();
         }
 
         private void SliderViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
@@ -602,7 +661,7 @@ namespace Panak.Views {
             if (!SettingsService.Instance.Current.SliderDragEnabled) return;
             if (e.LeftButton == MouseButtonState.Pressed && _totalSliderPages > 1) {
                 _dragStartX = e.GetPosition(SliderPagesViewport).X;
-                _dragStartTranslateX = PagesTranslateX.X;
+                _dragStartTranslateX = PagesTranslateX.Value.OffsetX;
                 _isDraggingPages = true;
             }
         }
@@ -666,7 +725,37 @@ namespace Panak.Views {
             if (_isInitializing) {
                 return;
             }
-            _folderData.Save(_rootFolderPath);
+            if (AlwaysPanakCheckBox.IsChecked == true) {
+                _folderData.AutoPopup = true;
+                _folderData.Save(_rootFolderPath);
+            } else {
+                EnsurePanakJsonSync();
+            }
+        }
+
+        public void EnsurePanakJsonSync() {
+            if (string.IsNullOrEmpty(_rootFolderPath) || !Directory.Exists(_rootFolderPath)) {
+                return;
+            }
+            string metaFile = Path.Combine(_rootFolderPath, "panak.json");
+            bool isAlwaysPanak = AlwaysPanakCheckBox.IsChecked == true;
+
+            if (isAlwaysPanak) {
+                _folderData.AutoPopup = true;
+                if (!File.Exists(metaFile)) {
+                    _folderData.Save(_rootFolderPath);
+                }
+                PanakManager.Instance.WatchFolder(_rootFolderPath);
+            } else {
+                _folderData.AutoPopup = false;
+                CancelPendingDebouncedSave();
+                if (File.Exists(metaFile)) {
+                    try {
+                        File.SetAttributes(metaFile, FileAttributes.Normal);
+                        File.Delete(metaFile);
+                    } catch { }
+                }
+            }
         }
 
         public void RefreshItemsList() {
@@ -675,6 +764,16 @@ namespace Panak.Views {
                 : -1;
 
             Items.Clear();
+
+            if (!string.IsNullOrEmpty(_rootFolderPath) && FolderLockService.Instance.IsFolderLocked(_rootFolderPath)) {
+                EmptyStatePanel.Visibility = Visibility.Collapsed;
+                ItemsScrollViewer.Visibility = Visibility.Collapsed;
+                SliderPagesViewport.Visibility = Visibility.Collapsed;
+                FooterPagerGrid.Visibility = Visibility.Collapsed;
+                PopupLockOverlay.Visibility = Visibility.Visible;
+                ExplorerButton.Visibility = Visibility.Collapsed;
+                return;
+            }
 
             if (!Directory.Exists(_currentFolderPath)) {
                 EmptyStatePanel.Visibility = Visibility.Visible;
@@ -688,6 +787,7 @@ namespace Panak.Views {
                     .Where(f => !f.Name.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase) &&
                                 !f.Name.StartsWith("panak_icon", StringComparison.OrdinalIgnoreCase) &&
                                 !f.Name.Equals("panak.json", StringComparison.OrdinalIgnoreCase) &&
+                                !f.Name.Equals("panak_lock.json", StringComparison.OrdinalIgnoreCase) &&
                                 !f.Name.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase) &&
                                 !f.Attributes.HasFlag(FileAttributes.Hidden))
                     .OrderBy(f => !f.Attributes.HasFlag(FileAttributes.Directory))
@@ -820,6 +920,16 @@ namespace Panak.Views {
                 opacityGradient.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromArgb(35, primaryColor.R, primaryColor.G, primaryColor.B), 0.0));
                 opacityGradient.GradientStops.Add(new GradientStop(primaryColor, 1.0));
                 Resources["OpacityTrackBrush"] = opacityGradient;
+
+                // Dynamic header button background tinted with folder theme color
+                var headerBtnBg = _isCurrentThemeDark
+                    ? System.Windows.Media.Color.FromArgb(48, primaryColor.R, primaryColor.G, primaryColor.B)
+                    : System.Windows.Media.Color.FromArgb(32, primaryColor.R, primaryColor.G, primaryColor.B);
+                Resources["PopupHeaderBtnBg"] = new SolidColorBrush(headerBtnBg);
+
+                if (PopupLockOverlay != null) {
+                    PopupLockOverlay.ApplyFolderTheme(hexColor, _isCurrentThemeDark);
+                }
             } catch {
                 // Fallback
             }
@@ -832,13 +942,24 @@ namespace Panak.Views {
                 _iconScreenBounds = ExplorerHelper.GetBoundingBoxForPath(_currentFolderPath);
             }
 
-            double screenLeft = SystemParameters.WorkArea.Left;
-            double screenTop = SystemParameters.WorkArea.Top;
-            double screenRight = SystemParameters.WorkArea.Right;
-            double screenBottom = SystemParameters.WorkArea.Bottom;
+            Point testPoint = !_iconScreenBounds.IsEmpty 
+                ? new Point(_iconScreenBounds.Left, _iconScreenBounds.Top)
+                : (ShellHelper.GetCursorPos(out var curPt) ? new Point(curPt.X, curPt.Y) : new Point(SystemParameters.WorkArea.Left, SystemParameters.WorkArea.Top));
 
-            double popupW = ActualWidth > 0 ? ActualWidth : MinWidth;
-            double popupH = ActualHeight > 0 ? ActualHeight : MinHeight;
+            Rect monitorWorkArea = ShellHelper.GetMonitorWorkArea(testPoint);
+            double screenLeft = monitorWorkArea.Left;
+            double screenTop = monitorWorkArea.Top;
+            double screenRight = monitorWorkArea.Right;
+            double screenBottom = monitorWorkArea.Bottom;
+
+            RootContainer.Measure(new Size(screenRight - screenLeft - 16, screenBottom - screenTop - 16));
+            double desiredW = RootContainer.DesiredSize.Width;
+            double desiredH = RootContainer.DesiredSize.Height;
+
+            double popupW = Math.Max(desiredW, ActualWidth > 0 ? ActualWidth : MinWidth);
+            double popupH = Math.Max(desiredH, ActualHeight > 0 ? ActualHeight : MinHeight);
+            popupW = Math.Clamp(popupW, MinWidth, MaxWidth);
+            popupH = Math.Clamp(popupH, MinHeight, MaxHeight);
 
             double targetLeft;
             double targetTop;
@@ -852,37 +973,68 @@ namespace Panak.Views {
                 double iconX = _iconScreenBounds.Left;
                 double iconY = _iconScreenBounds.Top;
 
-                bool isRight = iconX > (screenLeft + screenRight) / 2.0;
-                bool isBottom = iconY > (screenTop + screenBottom) / 2.0;
+                // Available space from icon in all 4 directions
+                double spaceRight = (screenRight - 8) - (iconX - 8);
+                double spaceLeft = (_iconScreenBounds.Right + 8) - (screenLeft + 8);
+                double spaceDown = (screenBottom - 8) - (iconY - 8);
+                double spaceUp = (_iconScreenBounds.Bottom + 8) - (screenTop + 8);
 
-                if (!isRight && !isBottom) {
-                    // Top-Left quadrant: anchor at Top-Left corner directly over icon
+                // If opening to the right would overflow the monitor, flip to opposite direction (open leftward)
+                bool openLeft;
+                if (spaceRight >= popupW) {
+                    openLeft = false;
+                } else if (spaceLeft >= popupW) {
+                    openLeft = true;
+                } else {
+                    openLeft = spaceLeft > spaceRight;
+                }
+
+                // If opening downward would overflow the monitor, flip to opposite direction (open upward)
+                bool openUp;
+                if (spaceDown >= popupH) {
+                    openUp = false;
+                } else if (spaceUp >= popupH) {
+                    openUp = true;
+                } else {
+                    openUp = spaceUp > spaceDown;
+                }
+
+                if (!openLeft && !openUp) {
+                    // Top-Left anchor: opens downward and to the right
                     targetLeft = iconX - 8;
                     targetTop = iconY - 8;
                     originPoint = new Point(0.0, 0.0);
-                } else if (isRight && !isBottom) {
-                    // Top-Right quadrant: anchor at Top-Right corner directly over icon
+                } else if (openLeft && !openUp) {
+                    // Top-Right anchor: opens downward and to the left
                     targetLeft = _iconScreenBounds.Right + 8 - popupW;
                     targetTop = iconY - 8;
                     originPoint = new Point(1.0, 0.0);
-                } else if (!isRight && isBottom) {
-                    // Bottom-Left quadrant: anchor at Bottom-Left corner directly over icon
+                } else if (!openLeft && openUp) {
+                    // Bottom-Left anchor: opens upward and to the right
                     targetLeft = iconX - 8;
                     targetTop = _iconScreenBounds.Bottom + 8 - popupH;
                     originPoint = new Point(0.0, 1.0);
                 } else {
-                    // Bottom-Right quadrant: anchor at Bottom-Right corner directly over icon
+                    // Bottom-Right anchor: opens upward and to the left
                     targetLeft = _iconScreenBounds.Right + 8 - popupW;
                     targetTop = _iconScreenBounds.Bottom + 8 - popupH;
                     originPoint = new Point(1.0, 1.0);
                 }
             } else {
                 if (ShellHelper.GetCursorPos(out var pt)) {
-                    bool isRight = pt.X > (screenLeft + screenRight) / 2.0;
-                    bool isBottom = pt.Y > (screenTop + screenBottom) / 2.0;
-                    targetLeft = isRight ? pt.X - popupW : pt.X;
-                    targetTop = isBottom ? pt.Y - popupH : pt.Y;
-                    originPoint = new Point(isRight ? 1.0 : 0.0, isBottom ? 1.0 : 0.0);
+                    double cursorX = pt.X;
+                    double cursorY = pt.Y;
+                    double spaceRight = (screenRight - 8) - cursorX;
+                    double spaceLeft = cursorX - (screenLeft + 8);
+                    double spaceDown = (screenBottom - 8) - cursorY;
+                    double spaceUp = cursorY - (screenTop + 8);
+
+                    bool openLeft = (spaceRight < popupW && spaceLeft >= popupW) || (spaceRight < popupW && spaceLeft > spaceRight);
+                    bool openUp = (spaceDown < popupH && spaceUp >= popupH) || (spaceDown < popupH && spaceUp > spaceDown);
+
+                    targetLeft = openLeft ? cursorX - popupW : cursorX;
+                    targetTop = openUp ? cursorY - popupH : cursorY;
+                    originPoint = new Point(openLeft ? 1.0 : 0.0, openUp ? 1.0 : 0.0);
                 } else {
                     targetLeft = (screenLeft + screenRight - popupW) / 2.0;
                     targetTop = (screenTop + screenBottom - popupH) / 2.0;
@@ -890,18 +1042,18 @@ namespace Panak.Views {
                 }
             }
 
-            // Clamp strictly within work area
-            if (targetLeft < screenLeft + 8) {
-                targetLeft = screenLeft + 8;
-            }
+            // Strict clamp in all 4 directions (Left, Right, Top, Bottom) - never exceeds monitor
             if (targetLeft + popupW > screenRight - 8) {
                 targetLeft = screenRight - popupW - 8;
             }
-            if (targetTop < screenTop + 8) {
-                targetTop = screenTop + 8;
+            if (targetLeft < screenLeft + 8) {
+                targetLeft = screenLeft + 8;
             }
             if (targetTop + popupH > screenBottom - 8) {
                 targetTop = screenBottom - popupH - 8;
+            }
+            if (targetTop < screenTop + 8) {
+                targetTop = screenTop + 8;
             }
 
             Left = targetLeft;
@@ -911,66 +1063,20 @@ namespace Panak.Views {
             RootContainer.RenderTransformOrigin = originPoint;
 
             _anchorScreenPoint = new Point(
-                (_transformOrigin.X > 0.5) ? (targetLeft + popupW) : targetLeft,
-                (_transformOrigin.Y > 0.5) ? (targetTop + popupH) : targetTop
+                (!_iconScreenBounds.IsEmpty && _iconScreenBounds.Width > 0)
+                    ? (originPoint.X > 0.5 ? _iconScreenBounds.Right + 8 : _iconScreenBounds.Left - 8)
+                    : ((originPoint.X > 0.5) ? (targetLeft + popupW) : targetLeft),
+                (!_iconScreenBounds.IsEmpty && _iconScreenBounds.Height > 0)
+                    ? (originPoint.Y > 0.5 ? _iconScreenBounds.Bottom + 8 : _iconScreenBounds.Top - 8)
+                    : ((originPoint.Y > 0.5) ? (targetTop + popupH) : targetTop)
             );
 
             PopupScale.ScaleX = 0.12;
             PopupScale.ScaleY = 0.12;
             RootContainer.Opacity = 0.0;
 
-            // Capture screen area behind the popup for frosted glass / acrylic blur
-            // Capture screen area behind the popup for frosted glass / acrylic blur
-            try {
-                if (!SettingsService.Instance.Current.FolderBlurEnabled || SettingsService.Instance.Current.FolderBlurRadius <= 0) {
-                    PopupBlurImage.Source = null;
-                    PopupBlurImage.Visibility = Visibility.Collapsed;
-                } else {
-                    double dpi = 1.0;
-                    try {
-                        dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
-                    } catch { }
-                    if (dpi <= 0) dpi = 1.0;
-
-                    double blurMargin = 25;
-                    double cardW = Math.Max(10, popupW);
-                    double cardH = Math.Max(10, popupH);
-                    double imgW = cardW + blurMargin * 2;
-                    double imgH = cardH + blurMargin * 2;
-
-                    CardClipGeometry.Rect = new Rect(0, 0, cardW, cardH);
-                    Canvas.SetLeft(PopupBlurImage, -blurMargin);
-                    Canvas.SetTop(PopupBlurImage, -blurMargin);
-                    PopupBlurImage.Width = imgW;
-                    PopupBlurImage.Height = imgH;
-
-                    double cardLeft = targetLeft;
-                    double cardTop = targetTop;
-                    double capLeft = Math.Max(screenLeft, cardLeft - blurMargin);
-                    double capTop = Math.Max(screenTop, cardTop - blurMargin);
-
-                    var screenBmp = ShellHelper.CaptureScreenArea(
-                        (int)Math.Round(capLeft),
-                        (int)Math.Round(capTop),
-                        (int)Math.Round(imgW),
-                        (int)Math.Round(imgH),
-                        dpi);
-
-                    if (screenBmp != null) {
-                        PopupBlurImage.Source = screenBmp;
-                        PopupBlurImage.Visibility = Visibility.Visible;
-                        PopupBlurEffect.Radius = Math.Clamp(SettingsService.Instance.Current.FolderBlurRadius, 1.0, 60.0);
-                    } else {
-                        PopupBlurImage.Source = null;
-                        PopupBlurImage.Visibility = Visibility.Collapsed;
-                    }
-                }
-            } catch {
-                PopupBlurImage.Source = null;
-                PopupBlurImage.Visibility = Visibility.Collapsed;
-            } finally {
-                ApplyThemeBackground();
-            }
+            UpdatePopupBlurBehind(true, targetLeft, targetTop, popupW, popupH);
+            ApplyThemeBackground();
 
             Show();
             Activate();
@@ -994,6 +1100,7 @@ namespace Panak.Views {
             animScaleX.Completed += (s, e) => {
                 if (_animationSessionId == currentSession) {
                     _isOpening = false;
+                    UpdatePopupBlurBehind(forceImmediate: true);
                 }
             };
 
@@ -1007,10 +1114,10 @@ namespace Panak.Views {
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e) {
-            if (_isOpening || _isClosing) {
+            if (_isClosing) {
                 return;
             }
-            if (e.PreviousSize.Width <= 0 || e.PreviousSize.Height <= 0) {
+            if (e.NewSize.Width <= 0 || e.NewSize.Height <= 0) {
                 return;
             }
 
@@ -1024,10 +1131,15 @@ namespace Panak.Views {
             }
 
             if (!_isCustomPositioned) {
-                double screenLeft = SystemParameters.WorkArea.Left;
-                double screenTop = SystemParameters.WorkArea.Top;
-                double screenRight = SystemParameters.WorkArea.Right;
-                double screenBottom = SystemParameters.WorkArea.Bottom;
+                var hwnd = new WindowInteropHelper(this).Handle;
+                Rect monitorWorkArea = ShellHelper.GetMonitorWorkArea(hwnd != IntPtr.Zero ? hwnd : (IntPtr)0);
+                if (monitorWorkArea.IsEmpty || monitorWorkArea.Width <= 0) {
+                    monitorWorkArea = SystemParameters.WorkArea;
+                }
+                double screenLeft = monitorWorkArea.Left;
+                double screenTop = monitorWorkArea.Top;
+                double screenRight = monitorWorkArea.Right;
+                double screenBottom = monitorWorkArea.Bottom;
 
                 double newLeft;
                 double newTop;
@@ -1039,18 +1151,55 @@ namespace Panak.Views {
                     newLeft = (_transformOrigin.X > 0.5) ? (_anchorScreenPoint.X - newW) : _anchorScreenPoint.X;
                     newTop = (_transformOrigin.Y > 0.5) ? (_anchorScreenPoint.Y - newH) : _anchorScreenPoint.Y;
 
-                    // Clamp strictly within work area
-                    if (newLeft < screenLeft + 8) {
-                        newLeft = screenLeft + 8;
+                    // If growing in current direction exceeds bounds, flip to opposite direction if it has more room
+                    if (_transformOrigin.X <= 0.5 && newLeft + newW > screenRight - 8) {
+                        double spaceLeft = _anchorScreenPoint.X - screenLeft;
+                        double spaceRight = screenRight - _anchorScreenPoint.X;
+                        if (spaceLeft > spaceRight || spaceLeft >= newW) {
+                            newLeft = _anchorScreenPoint.X - newW;
+                            _transformOrigin.X = 1.0;
+                            RootContainer.RenderTransformOrigin = _transformOrigin;
+                        }
+                    } else if (_transformOrigin.X > 0.5 && newLeft < screenLeft + 8) {
+                        double spaceLeft = _anchorScreenPoint.X - screenLeft;
+                        double spaceRight = screenRight - _anchorScreenPoint.X;
+                        if (spaceRight > spaceLeft || spaceRight >= newW) {
+                            newLeft = _anchorScreenPoint.X;
+                            _transformOrigin.X = 0.0;
+                            RootContainer.RenderTransformOrigin = _transformOrigin;
+                        }
                     }
+
+                    if (_transformOrigin.Y <= 0.5 && newTop + newH > screenBottom - 8) {
+                        double spaceUp = _anchorScreenPoint.Y - screenTop;
+                        double spaceDown = screenBottom - _anchorScreenPoint.Y;
+                        if (spaceUp > spaceDown || spaceUp >= newH) {
+                            newTop = _anchorScreenPoint.Y - newH;
+                            _transformOrigin.Y = 1.0;
+                            RootContainer.RenderTransformOrigin = _transformOrigin;
+                        }
+                    } else if (_transformOrigin.Y > 0.5 && newTop < screenTop + 8) {
+                        double spaceUp = _anchorScreenPoint.Y - screenTop;
+                        double spaceDown = screenBottom - _anchorScreenPoint.Y;
+                        if (spaceDown > spaceUp || spaceDown >= newH) {
+                            newTop = _anchorScreenPoint.Y;
+                            _transformOrigin.Y = 0.0;
+                            RootContainer.RenderTransformOrigin = _transformOrigin;
+                        }
+                    }
+
+                    // Strictly clamp in all directions so popup never exceeds monitor boundaries
                     if (newLeft + newW > screenRight - 8) {
                         newLeft = screenRight - newW - 8;
                     }
-                    if (newTop < screenTop + 8) {
-                        newTop = screenTop + 8;
+                    if (newLeft < screenLeft + 8) {
+                        newLeft = screenLeft + 8;
                     }
                     if (newTop + newH > screenBottom - 8) {
                         newTop = screenBottom - newH - 8;
+                    }
+                    if (newTop < screenTop + 8) {
+                        newTop = screenTop + 8;
                     }
                 }
 
@@ -1070,6 +1219,7 @@ namespace Panak.Views {
                 double blurMargin = 25;
                 PopupBlurImage.Width = cardW + blurMargin * 2;
                 PopupBlurImage.Height = cardH + blurMargin * 2;
+                UpdatePopupBlurBehind(false, Left, Top, cardW, cardH);
             }
 
             UpdateTitleMarquee(_folderData.Title);
@@ -1219,7 +1369,11 @@ namespace Panak.Views {
             }
             _isClosing = true;
             _isOpening = false;
+            if (!string.IsNullOrEmpty(_rootFolderPath)) {
+                FolderLockService.Instance.RelockFolderSession(_rootFolderPath);
+            }
             FlushPendingSettingsSave();
+            EnsurePanakJsonSync();
             int currentSession = ++_animationSessionId;
 
             Duration dur = new Duration(TimeSpan.FromMilliseconds(180));
@@ -1244,17 +1398,109 @@ namespace Panak.Views {
             RootContainer.BeginAnimation(OpacityProperty, animOpacity);
         }
 
+        private long _lastBlurCaptureTicks = 0;
+        private bool _isCapturingBlur = false;
+
+        public void UpdatePopupBlurBehind(bool forceImmediate = false, double? overrideLeft = null, double? overrideTop = null, double? overrideW = null, double? overrideH = null) {
+            try {
+                if (!SettingsService.Instance.Current.FolderBlurEnabled || SettingsService.Instance.Current.FolderBlurRadius <= 0) {
+                    PopupBlurImage.Source = null;
+                    PopupBlurImage.Visibility = Visibility.Collapsed;
+                    return;
+                }
+
+                long now = DateTime.UtcNow.Ticks;
+                if (!forceImmediate && _lastBlurCaptureTicks > 0 && (now - _lastBlurCaptureTicks) < TimeSpan.FromMilliseconds(25).Ticks) {
+                    return;
+                }
+                if (_isCapturingBlur) return;
+                _isCapturingBlur = true;
+                _lastBlurCaptureTicks = now;
+
+                double dpi = 1.0;
+                try {
+                    dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
+                } catch { }
+                if (dpi <= 0) dpi = 1.0;
+
+                double cardW = Math.Max(10, overrideW ?? (ActualWidth > 0 ? ActualWidth : Width));
+                double cardH = Math.Max(10, overrideH ?? (ActualHeight > 0 ? ActualHeight : Height));
+                double blurMargin = 25;
+                double imgW = cardW + blurMargin * 2;
+                double imgH = cardH + blurMargin * 2;
+
+                CardClipGeometry.Rect = new Rect(0, 0, cardW, cardH);
+                Canvas.SetLeft(PopupBlurImage, -blurMargin);
+                Canvas.SetTop(PopupBlurImage, -blurMargin);
+                PopupBlurImage.Width = imgW;
+                PopupBlurImage.Height = imgH;
+
+                double cardLeft = overrideLeft ?? Left;
+                double cardTop = overrideTop ?? Top;
+                double capLeft = cardLeft - blurMargin;
+                double capTop = cardTop - blurMargin;
+
+                bool isHwAccelerated = (RenderCapability.Tier >> 16) >= 2;
+                var screenBmp = ShellHelper.CaptureScreenArea(
+                    (int)Math.Round(capLeft),
+                    (int)Math.Round(capTop),
+                    (int)Math.Round(imgW),
+                    (int)Math.Round(imgH),
+                    dpi,
+                    downsampleForBlur: true);
+
+                if (screenBmp != null) {
+                    PopupBlurImage.Source = screenBmp;
+                    PopupBlurImage.Visibility = Visibility.Visible;
+                    double radius = Math.Clamp(SettingsService.Instance.Current.FolderBlurRadius, 1.0, 60.0);
+                    if (!isHwAccelerated) {
+                        radius = Math.Min(radius, 14.0);
+                    }
+                    PopupBlurEffect.Radius = radius;
+                } else {
+                    PopupBlurImage.Source = null;
+                    PopupBlurImage.Visibility = Visibility.Collapsed;
+                }
+                ApplyThemeBackground();
+            } catch {
+                PopupBlurImage.Source = null;
+                PopupBlurImage.Visibility = Visibility.Collapsed;
+                ApplyThemeBackground();
+            } finally {
+                _isCapturingBlur = false;
+            }
+        }
+
         // Header Actions
         private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
             if (e.ClickCount == 1 && e.LeftButton == MouseButtonState.Pressed) {
-                if (FindVisualParent<Button>(e.OriginalSource as DependencyObject) == null &&
-                    FindVisualParent<TextBox>(e.OriginalSource as DependencyObject) == null) {
+                var dep = e.OriginalSource as DependencyObject;
+                if (FindVisualParent<Button>(dep) == null &&
+                    FindVisualParent<TextBox>(dep) == null &&
+                    !IsDescendantOf(dep, TitleContainer)) {
+                    if (SettingsService.Instance.Current.LockPopupPosition) {
+                        return;
+                    }
                     _isCustomPositioned = true;
                     try {
                         DragMove();
                     } catch { }
+                    UpdatePopupBlurBehind(true);
                 }
             }
+        }
+
+        private static bool IsDescendantOf(DependencyObject? child, DependencyObject? target) {
+            if (child == null || target == null) return false;
+            while (child != null) {
+                if (ReferenceEquals(child, target)) return true;
+                if (child is Visual || child is System.Windows.Media.Media3D.Visual3D) {
+                    child = VisualTreeHelper.GetParent(child);
+                } else {
+                    child = LogicalTreeHelper.GetParent(child);
+                }
+            }
+            return false;
         }
 
         private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject {
@@ -1277,11 +1523,12 @@ namespace Panak.Views {
             } else {
                 PanakManager.Instance.RestoreBackdropAfterDrag();
             }
+            PanakManager.Instance.EnsurePopupAboveBackdrop();
         }
 
         private void UpdatePinVisual() {
-            // Keep topmost if pinned OR if FocusMode is active so the popup never drops behind the backdrop
-            Topmost = _isPinned || SettingsService.Instance.Current.FocusModeEnabled;
+            // Popup window must always stay Topmost so it never drops behind background or desktop windows
+            Topmost = true;
             var loc = LocalizationService.Instance;
             PinButton.ToolTip = _isPinned ? loc["Unpin"] : loc["Pin"];
             if (_isPinned) {
@@ -1336,6 +1583,9 @@ namespace Panak.Views {
         }
 
         private void ExplorerButton_Click(object sender, RoutedEventArgs e) {
+            if (FolderLockService.Instance.IsFolderLocked(_rootFolderPath)) {
+                return;
+            }
             ShellContextMenu.OpenFile(_currentFolderPath);
             CloseAnimated();
         }
@@ -1349,7 +1599,7 @@ namespace Panak.Views {
                 return;
             }
             _folderData.AutoPopup = true;
-            SaveMetadata();
+            EnsurePanakJsonSync();
             PanakManager.Instance.WatchFolder(_rootFolderPath);
             PanakManager.Instance.ScheduleFolderIconUpdate(_rootFolderPath, immediate: true);
         }
@@ -1358,25 +1608,36 @@ namespace Panak.Views {
             if (_isInitializing) {
                 return;
             }
+            if (!string.IsNullOrEmpty(_rootFolderPath) && (FolderLockService.Instance.IsFolderLocked(_rootFolderPath) || FolderLockService.Instance.GetFolderLockInfo(_rootFolderPath)?.IsLocked == true)) {
+                AlwaysPanakCheckBox.IsChecked = true;
+                return;
+            }
             _folderData.AutoPopup = false;
-            SaveMetadata();
+            EnsurePanakJsonSync();
             PanakManager.Instance.RevertToRegularFolder(_rootFolderPath);
         }
 
         // Inline Title Rename via Double-click
-        private void FolderTitleText_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
-            if (e.ClickCount == 2) {
+        public void FolderTitleText_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+            if (InlineNameEditBox.Visibility == Visibility.Visible) {
+                return;
+            }
+            if (e.ClickCount >= 2) {
                 StartInlineRename();
+                e.Handled = true;
+            } else if (e.ClickCount == 1) {
+                // Prevent single-click bubbling up to Header to avoid accidental DragMove
                 e.Handled = true;
             }
         }
 
-        private void StartInlineRename() {
+        public void StartInlineRename() {
             TitleMarqueeTransform.BeginAnimation(TranslateTransform.XProperty, null);
             TitleMarqueeTransform.X = 0;
             FolderTitleDuplicateText.Visibility = Visibility.Collapsed;
             TitleMarqueeCanvas.Visibility = Visibility.Collapsed;
             TitleContainer.Width = double.NaN;
+            TitleContainer.MaxWidth = ActualWidth > 0 ? Math.Max(180, ActualWidth - 120) : double.PositiveInfinity;
             InlineNameEditBox.Text = _folderData.Title;
             FolderTitleText.Visibility = Visibility.Collapsed;
             InlineNameEditBox.Visibility = Visibility.Visible;
@@ -1546,68 +1807,72 @@ namespace Panak.Views {
             ToggleEditPanel(forceOpen: false);
         }
 
-        private System.Threading.Timer? _debouncedSettingsSaveTimer;
-        private readonly object _debouncedSaveLock = new object();
+        private System.Windows.Threading.DispatcherTimer? _debouncedSettingsSaveTimer;
+
+        private void CancelPendingDebouncedSave() {
+            if (_debouncedSettingsSaveTimer != null) {
+                try {
+                    _debouncedSettingsSaveTimer.Stop();
+                } catch { }
+                _debouncedSettingsSaveTimer = null;
+            }
+        }
 
         private void ScheduleDebouncedFolderSettingsSave(bool immediate) {
             string folderPath = _rootFolderPath;
             if (string.IsNullOrEmpty(folderPath)) return;
 
-            if (immediate) {
-                lock (_debouncedSaveLock) {
-                    if (_debouncedSettingsSaveTimer != null) {
-                        try { _debouncedSettingsSaveTimer.Dispose(); } catch { }
-                        _debouncedSettingsSaveTimer = null;
-                    }
-                }
+            CancelPendingDebouncedSave();
 
+            if (AlwaysPanakCheckBox.IsChecked != true) {
+                EnsurePanakJsonSync();
+                return;
+            }
+
+            if (immediate) {
                 try {
+                    _folderData.AutoPopup = true;
                     _folderData.Save(folderPath);
-                    PanakManager.Instance.ScheduleFolderIconUpdate(folderPath, immediate: true, shape: _folderData.IconShape, color: _folderData.Color);
+                    PanakManager.Instance.ScheduleFolderIconUpdate(folderPath, immediate: false, shape: _folderData.IconShape, color: _folderData.Color);
                 } catch { }
                 return;
             }
 
-            int delayMs = 250;
-            lock (_debouncedSaveLock) {
-                if (_debouncedSettingsSaveTimer != null) {
+            _debouncedSettingsSaveTimer = new System.Windows.Threading.DispatcherTimer(
+                TimeSpan.FromMilliseconds(350),
+                System.Windows.Threading.DispatcherPriority.Background,
+                (s, e) => {
+                    CancelPendingDebouncedSave();
                     try {
-                        _debouncedSettingsSaveTimer.Change(delayMs, System.Threading.Timeout.Infinite);
-                    } catch { }
-                } else {
-                    _debouncedSettingsSaveTimer = new System.Threading.Timer(_ => {
-                        lock (_debouncedSaveLock) {
-                            try {
-                                _debouncedSettingsSaveTimer?.Dispose();
-                            } catch { }
-                            _debouncedSettingsSaveTimer = null;
-                        }
-
-                        try {
+                        if (AlwaysPanakCheckBox.IsChecked == true) {
+                            _folderData.AutoPopup = true;
                             _folderData.Save(folderPath);
-                            PanakManager.Instance.ScheduleFolderIconUpdate(folderPath, immediate: true, shape: _folderData.IconShape, color: _folderData.Color);
-                        } catch { }
-                    }, null, delayMs, System.Threading.Timeout.Infinite);
-                }
-            }
+                            PanakManager.Instance.ScheduleFolderIconUpdate(folderPath, immediate: false, shape: _folderData.IconShape, color: _folderData.Color);
+                        } else {
+                            EnsurePanakJsonSync();
+                        }
+                    } catch { }
+                },
+                Dispatcher
+            );
+            _debouncedSettingsSaveTimer.Start();
         }
 
         private void FlushPendingSettingsSave() {
             string folderPath = _rootFolderPath;
             if (string.IsNullOrEmpty(folderPath)) return;
 
-            lock (_debouncedSaveLock) {
-                if (_debouncedSettingsSaveTimer != null) {
-                    try {
-                        _debouncedSettingsSaveTimer.Dispose();
-                    } catch { }
-                    _debouncedSettingsSaveTimer = null;
-
-                    try {
+            if (_debouncedSettingsSaveTimer != null) {
+                CancelPendingDebouncedSave();
+                try {
+                    if (AlwaysPanakCheckBox.IsChecked == true) {
+                        _folderData.AutoPopup = true;
                         _folderData.Save(folderPath);
-                        PanakManager.Instance.ScheduleFolderIconUpdate(folderPath, immediate: true, shape: _folderData.IconShape, color: _folderData.Color);
-                    } catch { }
-                }
+                        PanakManager.Instance.ScheduleFolderIconUpdate(folderPath, immediate: false, shape: _folderData.IconShape, color: _folderData.Color);
+                    } else {
+                        EnsurePanakJsonSync();
+                    }
+                } catch { }
             }
         }
 
@@ -1686,7 +1951,6 @@ namespace Panak.Views {
             }
             ApplyOpacity(e.NewValue);
             _folderData.BackgroundOpacity = e.NewValue;
-            PanakManager.Instance.WatchFolder(_rootFolderPath);
             ScheduleDebouncedFolderSettingsSave(immediate: false);
         }
 
@@ -1710,8 +1974,8 @@ namespace Panak.Views {
 
                 ApplyThemeBackground();
 
-                var textColor = isDark ? System.Windows.Media.Color.FromRgb(248, 250, 252) : System.Windows.Media.Color.FromRgb(15, 23, 42);
-                var subtextColor = isDark ? System.Windows.Media.Color.FromRgb(148, 163, 184) : System.Windows.Media.Color.FromRgb(100, 116, 139);
+                var textColor = isDark ? System.Windows.Media.Color.FromRgb(255, 255, 255) : System.Windows.Media.Color.FromRgb(0, 0, 0);
+                var subtextColor = isDark ? System.Windows.Media.Color.FromRgb(255, 255, 255) : System.Windows.Media.Color.FromRgb(0, 0, 0);
 
                 if (Resources["PopupTextBrush"] is SolidColorBrush ptb && !ptb.IsFrozen) {
                     ptb.Color = textColor;
@@ -1733,39 +1997,44 @@ namespace Panak.Views {
                     CardBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(56, 255, 255, 255));
                     CardBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0));
 
-                    FolderTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
+                    FolderTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Colors.White);
                     EmptyTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Colors.White);
-                    EmptySubtext.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
-                    EditNameLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
-                    ColorThemeLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
-                    AlwaysPanakCheckBox.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
+                    EmptySubtext.Foreground = new SolidColorBrush(System.Windows.Media.Colors.White);
+                    EditNameLabel.Foreground = new SolidColorBrush(System.Windows.Media.Colors.White);
+                    ColorThemeLabel.Foreground = new SolidColorBrush(System.Windows.Media.Colors.White);
+                    AlwaysPanakCheckBox.Foreground = new SolidColorBrush(System.Windows.Media.Colors.White);
+                    FolderLockHeaderLabel.Foreground = new SolidColorBrush(System.Windows.Media.Colors.White);
 
                     Resources["PopupHeaderBtnBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(37, 255, 255, 255));
-                    Resources["PopupHeaderBtnFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(226, 232, 240));
+                    Resources["PopupHeaderBtnFg"] = new SolidColorBrush(System.Windows.Media.Colors.White);
                     Resources["PopupItemBadgeBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(37, 255, 255, 255));
-                    Resources["PopupItemBadgeFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
+                    Resources["PopupItemBadgeFg"] = new SolidColorBrush(System.Windows.Media.Colors.White);
                     Resources["PopupItemHoverBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(45, 255, 255, 255));
                 } else {
                     // Light Theme
                     CardBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
                     CardBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 255, 255, 255));
 
-                    FolderTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
-                    EmptyTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
-                    EmptySubtext.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 116, 139));
-                    EditNameLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
-                    ColorThemeLabel.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
-                    AlwaysPanakCheckBox.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
+                    FolderTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Colors.Black);
+                    EmptyTitleText.Foreground = new SolidColorBrush(System.Windows.Media.Colors.Black);
+                    EmptySubtext.Foreground = new SolidColorBrush(System.Windows.Media.Colors.Black);
+                    EditNameLabel.Foreground = new SolidColorBrush(System.Windows.Media.Colors.Black);
+                    ColorThemeLabel.Foreground = new SolidColorBrush(System.Windows.Media.Colors.Black);
+                    AlwaysPanakCheckBox.Foreground = new SolidColorBrush(System.Windows.Media.Colors.Black);
+                    FolderLockHeaderLabel.Foreground = new SolidColorBrush(System.Windows.Media.Colors.Black);
 
                     Resources["PopupHeaderBtnBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(25, 0, 0, 0));
-                    Resources["PopupHeaderBtnFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 41, 59));
+                    Resources["PopupHeaderBtnFg"] = new SolidColorBrush(System.Windows.Media.Colors.Black);
                     Resources["PopupItemBadgeBg"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 0, 0, 0));
-                    Resources["PopupItemBadgeFg"] = new SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
+                    Resources["PopupItemBadgeFg"] = new SolidColorBrush(System.Windows.Media.Colors.Black);
                     Resources["PopupItemHoverBrush"] = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 0, 0, 0));
                 }
 
                 FolderTitleDuplicateText.Foreground = FolderTitleText.Foreground;
                 UpdatePinVisual();
+                if (PopupLockOverlay != null) {
+                    PopupLockOverlay.ApplyThemeContrast(isDark);
+                }
             } catch {
                 // Ignore theme application errors
             }
@@ -1974,6 +2243,9 @@ namespace Panak.Views {
         }
 
         private void MenuItemOpenInExplorer_Click(object sender, RoutedEventArgs e) {
+            if (FolderLockService.Instance.IsFolderLocked(_rootFolderPath)) {
+                return;
+            }
             if (sender is MenuItem mi && mi.DataContext is PanakItem item) {
                 ShellContextMenu.ShowInExplorer(item.FullPath);
                 CloseAnimated();
@@ -2024,9 +2296,477 @@ namespace Panak.Views {
             }
         }
 
+        private void MenuItemUnpack_Click(object sender, RoutedEventArgs e) {
+            if (!string.IsNullOrEmpty(_rootFolderPath)) {
+                PanakManager.Instance.UnpackPanakFolder(_rootFolderPath);
+                CloseAnimated();
+            }
+        }
+
+        private readonly List<int> _inlineSetupPatternDots = new();
+        private bool _isInlineSetupDrawing = false;
+        private readonly Point[] _inlineSetupPatternDotPositions = new Point[9];
+        private readonly Ellipse[] _inlineSetupPatternDotElements = new Ellipse[9];
+        private readonly Ellipse[] _inlineSetupPatternDotRings = new Ellipse[9];
+        private Polyline? _inlineSetupPolyline;
+        private Line? _inlineSetupActiveLine;
+        private double _widthBeforeLockSetup = 0;
+
+        private void FolderLockBtn_Click(object sender, RoutedEventArgs e) {
+            if (string.IsNullOrEmpty(_rootFolderPath)) return;
+            var lockInfo = FolderLockService.Instance.GetFolderLockInfo(_rootFolderPath);
+            bool hasConfiguredLock = lockInfo != null && lockInfo.IsLocked;
+
+            ToggleEditPanel(forceOpen: false);
+
+            if (hasConfiguredLock) {
+                // In-place credential prompt to remove lock
+                ItemsScrollViewer.Visibility = Visibility.Collapsed;
+                SliderPagesViewport.Visibility = Visibility.Collapsed;
+                FooterPagerGrid.Visibility = Visibility.Collapsed;
+                EmptyStatePanel.Visibility = Visibility.Collapsed;
+                LockSetupPanel.Visibility = Visibility.Collapsed;
+
+                PopupLockOverlay.SetupForRemoveLock(_rootFolderPath);
+                PopupLockOverlay.ApplyFolderTheme(_folderData.Color, _isCurrentThemeDark);
+                PopupLockOverlay.Visibility = Visibility.Visible;
+            } else {
+                // In-place lock setup view
+                ShowLockSetupView();
+            }
+        }
+
+        private void UpdateLockState() {
+            if (string.IsNullOrEmpty(_rootFolderPath)) return;
+            bool isLocked = FolderLockService.Instance.IsFolderLocked(_rootFolderPath);
+            var lockInfo = FolderLockService.Instance.GetFolderLockInfo(_rootFolderPath);
+            bool hasConfiguredLock = lockInfo != null && lockInfo.IsLocked;
+
+            if (hasConfiguredLock) {
+                FolderLockHeaderLabel.Text = "Պանակը կողպված է";
+                FolderLockBtnIcon.Text = "🔓 ";
+                FolderLockBtnText.Text = "Հեռացնել փական";
+            } else {
+                FolderLockHeaderLabel.Text = "Կողպել պանակը";
+                FolderLockBtnIcon.Text = "🔒 ";
+                FolderLockBtnText.Text = "Կողպել պանակը";
+            }
+
+            if (isLocked) {
+                PopupLockOverlay.SetupForFolder(_rootFolderPath);
+                PopupLockOverlay.ApplyFolderTheme(_folderData.Color, _isCurrentThemeDark);
+                PopupLockOverlay.Visibility = Visibility.Visible;
+                LockSetupPanel.Visibility = Visibility.Collapsed;
+                ItemsScrollViewer.Visibility = Visibility.Collapsed;
+                SliderPagesViewport.Visibility = Visibility.Collapsed;
+                FooterPagerGrid.Visibility = Visibility.Collapsed;
+                EmptyStatePanel.Visibility = Visibility.Collapsed;
+                ExplorerButton.Visibility = Visibility.Collapsed;
+            } else {
+                PopupLockOverlay.Visibility = Visibility.Collapsed;
+                LockSetupPanel.Visibility = Visibility.Collapsed;
+                ExplorerButton.Visibility = Visibility.Visible;
+                ApplySettings();
+                RefreshItemsList();
+                UpdateItemCountText();
+            }
+            UpdateDisplayAffinity();
+        }
+
+        private void ShowLockSetupView() {
+            _widthBeforeLockSetup = ActualWidth > 0 ? ActualWidth : (GetConfiguredColumns() * ItemCellWidth + 24);
+            if (ActualWidth < 300) {
+                this.Width = 310;
+            }
+
+            ItemsScrollViewer.Visibility = Visibility.Collapsed;
+            SliderPagesViewport.Visibility = Visibility.Collapsed;
+            FooterPagerGrid.Visibility = Visibility.Collapsed;
+            EmptyStatePanel.Visibility = Visibility.Collapsed;
+            PopupLockOverlay.Visibility = Visibility.Collapsed;
+
+            SetupPasswordInput.Password = string.Empty;
+            SetupPasswordConfirm.Password = string.Empty;
+            SetupPinInput.Password = string.Empty;
+            SetupPinConfirm.Password = string.Empty;
+            _inlineSetupPatternDots.Clear();
+            SetupErrorBadge.Visibility = Visibility.Collapsed;
+
+            SetupMethodPasswordRadio.IsChecked = true;
+            SetupPasswordContainer.Visibility = Visibility.Visible;
+            SetupPinContainer.Visibility = Visibility.Collapsed;
+            SetupPatternContainer.Visibility = Visibility.Collapsed;
+
+            LockSetupPanel.Visibility = Visibility.Visible;
+            SetupPasswordInput.Focus();
+        }
+
+        private void HideLockSetupView() {
+            LockSetupPanel.Visibility = Visibility.Collapsed;
+            if (_widthBeforeLockSetup > 0) {
+                this.Width = _widthBeforeLockSetup;
+            } else {
+                this.Width = double.NaN;
+            }
+            UpdateLockState();
+        }
+
+        private void SetupCancelBtn_Click(object sender, RoutedEventArgs e) {
+            HideLockSetupView();
+        }
+
+        private void SetupMethodRadio_Checked(object sender, RoutedEventArgs e) {
+            if (SetupPasswordContainer == null || SetupPinContainer == null || SetupPatternContainer == null) return;
+
+            double oldHeight = ActualHeight;
+
+            SetupPasswordContainer.Visibility = Visibility.Collapsed;
+            SetupPinContainer.Visibility = Visibility.Collapsed;
+            SetupPatternContainer.Visibility = Visibility.Collapsed;
+            SetupErrorBadge.Visibility = Visibility.Collapsed;
+
+            if (SetupMethodPasswordRadio.IsChecked == true) {
+                SetupPasswordContainer.Visibility = Visibility.Visible;
+                SetupPasswordInput.Focus();
+            } else if (SetupMethodPinRadio.IsChecked == true) {
+                SetupPinContainer.Visibility = Visibility.Visible;
+                SetupPinInput.Focus();
+            } else if (SetupMethodPatternRadio.IsChecked == true) {
+                SetupPatternContainer.Visibility = Visibility.Visible;
+                InitInlineSetupPatternCanvas();
+                ResetInlineSetupPatternVisuals();
+            }
+
+            if (IsLoaded && LockSetupPanel.Visibility == Visibility.Visible && oldHeight > 0) {
+                UpdateLayout();
+                RootContainer.Measure(new Size(ActualWidth > 0 ? ActualWidth : 310, double.PositiveInfinity));
+                double targetHeight = RootContainer.DesiredSize.Height;
+                if (targetHeight > 0 && Math.Abs(targetHeight - oldHeight) > 3) {
+                    this.SizeToContent = SizeToContent.Manual;
+                    var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                    var anim = new DoubleAnimation(oldHeight, targetHeight, new Duration(TimeSpan.FromMilliseconds(220))) {
+                        EasingFunction = ease
+                    };
+                    anim.Completed += (s, a) => {
+                        this.BeginAnimation(HeightProperty, null);
+                        this.Height = double.NaN;
+                        this.SizeToContent = SizeToContent.Height;
+                    };
+                    this.BeginAnimation(HeightProperty, anim);
+                }
+            }
+        }
+
+        private void SetupSaveBtn_Click(object sender, RoutedEventArgs e) {
+            SetupErrorBadge.Visibility = Visibility.Collapsed;
+            string lockType = "Password";
+            string credential = string.Empty;
+
+            if (SetupMethodPasswordRadio.IsChecked == true) {
+                lockType = "Password";
+                string p1 = SetupPasswordInput.Password;
+                string p2 = SetupPasswordConfirm.Password;
+                if (string.IsNullOrEmpty(p1)) {
+                    ShowSetupError("Խնդրում ենք մուտքագրել գաղտնաբառ:");
+                    return;
+                }
+                if (p1 != p2) {
+                    ShowSetupError("Գաղտնաբառերը չեն համընկնում:");
+                    return;
+                }
+                credential = p1;
+            } else if (SetupMethodPinRadio.IsChecked == true) {
+                lockType = "PIN";
+                string pin1 = SetupPinInput.Password;
+                string pin2 = SetupPinConfirm.Password;
+                if (string.IsNullOrEmpty(pin1) || pin1.Length < 4 || pin1.Length > 8 || !pin1.All(char.IsDigit)) {
+                    ShowSetupError("PIN կոդը պետք է բաղկացած լինի 4-ից 8 թվանշաններից:");
+                    return;
+                }
+                if (pin1 != pin2) {
+                    ShowSetupError("PIN կոդերը չեն համընկնում:");
+                    return;
+                }
+                credential = pin1;
+            } else if (SetupMethodPatternRadio.IsChecked == true) {
+                lockType = "Pattern";
+                if (_inlineSetupPatternDots.Count < 4) {
+                    ShowSetupError("Նախշը պետք է պարունակի առնվազն 4 կետ:");
+                    return;
+                }
+                credential = string.Join("-", _inlineSetupPatternDots);
+            }
+
+            FolderLockService.Instance.SetFolderLock(_rootFolderPath, lockType, credential, null);
+            _folderData.AutoPopup = true;
+            AlwaysPanakCheckBox.IsChecked = true;
+            EnsurePanakJsonSync();
+            PanakManager.Instance.WatchFolder(_rootFolderPath);
+            PanakManager.Instance.ScheduleFolderIconUpdate(_rootFolderPath, immediate: true);
+            HideLockSetupView();
+        }
+
+        private void ShowSetupError(string msg) {
+            SetupErrorText.Text = msg;
+            SetupErrorBadge.Visibility = Visibility.Visible;
+        }
+
+        private void InitInlineSetupPatternCanvas() {
+            if (InlineSetupPatternCanvas == null) return;
+            InlineSetupPatternCanvas.Children.Clear();
+
+            Brush primaryBrush = TryFindResource("M3PrimaryBrush") as Brush ?? new SolidColorBrush(Color.FromRgb(234, 88, 12));
+            Brush dotFillBrush = TryFindResource("PopupSubtextBrush") as Brush ?? new SolidColorBrush(Color.FromArgb(120, 150, 150, 150));
+
+            _inlineSetupPolyline = new Polyline {
+                Stroke = primaryBrush,
+                StrokeThickness = 3.5,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                StrokeLineJoin = PenLineJoin.Round
+            };
+            InlineSetupPatternCanvas.Children.Add(_inlineSetupPolyline);
+
+            _inlineSetupActiveLine = new Line {
+                Stroke = primaryBrush,
+                Opacity = 0.6,
+                StrokeThickness = 3,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                Visibility = Visibility.Collapsed
+            };
+            InlineSetupPatternCanvas.Children.Add(_inlineSetupActiveLine);
+
+            double w = 170;
+            double h = 170;
+            double stepX = w / 3.0;
+            double stepY = h / 3.0;
+
+            for (int i = 0; i < 9; i++) {
+                int row = i / 3;
+                int col = i % 3;
+                double cx = col * stepX + stepX / 2.0;
+                double cy = row * stepY + stepY / 2.0;
+                _inlineSetupPatternDotPositions[i] = new Point(cx, cy);
+
+                var ring = new Ellipse {
+                    Width = 32,
+                    Height = 32,
+                    Stroke = primaryBrush,
+                    StrokeThickness = 2,
+                    Visibility = Visibility.Collapsed
+                };
+                Canvas.SetLeft(ring, cx - 16);
+                Canvas.SetTop(ring, cy - 16);
+                InlineSetupPatternCanvas.Children.Add(ring);
+                _inlineSetupPatternDotRings[i] = ring;
+
+                var dot = new Ellipse {
+                    Width = 14,
+                    Height = 14,
+                    Fill = dotFillBrush
+                };
+                Canvas.SetLeft(dot, cx - 7);
+                Canvas.SetTop(dot, cy - 7);
+                InlineSetupPatternCanvas.Children.Add(dot);
+                _inlineSetupPatternDotElements[i] = dot;
+            }
+        }
+
+        private void InlineSetupPatternCanvas_MouseDown(object sender, MouseButtonEventArgs e) {
+            if (e.LeftButton != MouseButtonState.Pressed) return;
+            _isInlineSetupDrawing = true;
+            _inlineSetupPatternDots.Clear();
+            ResetInlineSetupPatternVisuals();
+            SetupErrorBadge.Visibility = Visibility.Collapsed;
+
+            Point p = e.GetPosition(InlineSetupPatternCanvas);
+            CheckInlineSetupHitDot(p);
+            InlineSetupPatternCanvas.CaptureMouse();
+        }
+
+        private void InlineSetupPatternCanvas_MouseMove(object sender, MouseEventArgs e) {
+            if (!_isInlineSetupDrawing) return;
+            Point p = e.GetPosition(InlineSetupPatternCanvas);
+            CheckInlineSetupHitDot(p);
+
+            if (_inlineSetupPatternDots.Count > 0 && _inlineSetupActiveLine != null) {
+                var lastDot = _inlineSetupPatternDotPositions[_inlineSetupPatternDots.Last() - 1];
+                _inlineSetupActiveLine.X1 = lastDot.X;
+                _inlineSetupActiveLine.Y1 = lastDot.Y;
+                _inlineSetupActiveLine.X2 = p.X;
+                _inlineSetupActiveLine.Y2 = p.Y;
+                _inlineSetupActiveLine.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void InlineSetupPatternCanvas_MouseUp(object sender, MouseButtonEventArgs e) {
+            FinishInlineSetupDrawing();
+        }
+
+        private void InlineSetupPatternCanvas_MouseLeave(object sender, MouseEventArgs e) {
+            if (_isInlineSetupDrawing && !InlineSetupPatternCanvas.IsMouseCaptured) {
+                FinishInlineSetupDrawing();
+            }
+        }
+
+        private void FinishInlineSetupDrawing() {
+            if (!_isInlineSetupDrawing) return;
+            _isInlineSetupDrawing = false;
+            if (InlineSetupPatternCanvas.IsMouseCaptured) {
+                InlineSetupPatternCanvas.ReleaseMouseCapture();
+            }
+            if (_inlineSetupActiveLine != null) {
+                _inlineSetupActiveLine.Visibility = Visibility.Collapsed;
+            }
+
+            UpdateInlinePatternDisplay();
+            if (_inlineSetupPatternDots.Count > 0 && _inlineSetupPatternDots.Count < 4) {
+                ShowSetupError("Նախշը պետք է ունենա առնվազն 4 կետ");
+            }
+        }
+
+        private static int GetIntermediateDot(int a, int b) {
+            if (a > b) (a, b) = (b, a);
+            return (a, b) switch {
+                (1, 3) => 2,
+                (4, 6) => 5,
+                (7, 9) => 8,
+                (1, 7) => 4,
+                (2, 8) => 5,
+                (3, 9) => 6,
+                (1, 9) => 5,
+                (3, 7) => 5,
+                _ => 0
+            };
+        }
+
+        private void SelectInlineSetupDot(int val) {
+            if (_inlineSetupPatternDots.Contains(val) || val < 1 || val > 9) return;
+            int idx = val - 1;
+            _inlineSetupPatternDots.Add(val);
+            HighlightInlineSetupDot(idx);
+            _inlineSetupPolyline?.Points.Add(_inlineSetupPatternDotPositions[idx]);
+            UpdateInlinePatternDisplay();
+        }
+
+        private void CheckInlineSetupHitDot(Point p) {
+            double radiusSq = 20 * 20;
+
+            if (_inlineSetupPatternDots.Count == 0) {
+                for (int i = 0; i < 9; i++) {
+                    int val = i + 1;
+                    var dotPos = _inlineSetupPatternDotPositions[i];
+                    double dx = p.X - dotPos.X;
+                    double dy = p.Y - dotPos.Y;
+                    if (dx * dx + dy * dy <= radiusSq) {
+                        SelectInlineSetupDot(val);
+                        break;
+                    }
+                }
+                return;
+            }
+
+            Point start = _inlineSetupPatternDotPositions[_inlineSetupPatternDots.Last() - 1];
+            Point end = p;
+
+            double segDx = end.X - start.X;
+            double segDy = end.Y - start.Y;
+            double segLenSq = segDx * segDx + segDy * segDy;
+
+            var crossedDots = new List<(int val, double t)>();
+
+            for (int i = 0; i < 9; i++) {
+                int val = i + 1;
+                if (_inlineSetupPatternDots.Contains(val)) continue;
+
+                var dotPos = _inlineSetupPatternDotPositions[i];
+                double distSq;
+                double t;
+
+                if (segLenSq < 0.001) {
+                    double ddx = p.X - dotPos.X;
+                    double ddy = p.Y - dotPos.Y;
+                    distSq = ddx * ddx + ddy * ddy;
+                    t = 0;
+                } else {
+                    t = ((dotPos.X - start.X) * segDx + (dotPos.Y - start.Y) * segDy) / segLenSq;
+                    double tClamped = Math.Max(0, Math.Min(1, t));
+                    double projX = start.X + tClamped * segDx;
+                    double projY = start.Y + tClamped * segDy;
+                    double ddx = dotPos.X - projX;
+                    double ddy = dotPos.Y - projY;
+                    distSq = ddx * ddx + ddy * ddy;
+                }
+
+                if (distSq <= radiusSq) {
+                    crossedDots.Add((val, t));
+                }
+            }
+
+            crossedDots.Sort((a, b) => a.t.CompareTo(b.t));
+
+            foreach (var (val, _) in crossedDots) {
+                if (_inlineSetupPatternDots.Contains(val)) continue;
+                if (_inlineSetupPatternDots.Count > 0) {
+                    int mid = GetIntermediateDot(_inlineSetupPatternDots.Last(), val);
+                    if (mid > 0 && !_inlineSetupPatternDots.Contains(mid)) {
+                        SelectInlineSetupDot(mid);
+                    }
+                }
+                SelectInlineSetupDot(val);
+            }
+        }
+
+        private void HighlightInlineSetupDot(int i) {
+            if (i >= 0 && i < 9) {
+                Brush primaryBrush = TryFindResource("M3PrimaryBrush") as Brush ?? new SolidColorBrush(Color.FromRgb(234, 88, 12));
+                if (_inlineSetupPatternDotElements[i] != null) {
+                    _inlineSetupPatternDotElements[i].Fill = primaryBrush;
+                }
+                if (_inlineSetupPatternDotRings[i] != null) {
+                    _inlineSetupPatternDotRings[i].Visibility = Visibility.Visible;
+                }
+            }
+        }
+
+        private void ResetInlineSetupPatternVisuals() {
+            if (_inlineSetupPolyline != null) {
+                _inlineSetupPolyline.Points.Clear();
+            }
+            if (_inlineSetupActiveLine != null) {
+                _inlineSetupActiveLine.Visibility = Visibility.Collapsed;
+            }
+            Brush dotFillBrush = TryFindResource("PopupSubtextBrush") as Brush ?? new SolidColorBrush(Color.FromArgb(120, 150, 150, 150));
+            for (int i = 0; i < 9; i++) {
+                if (_inlineSetupPatternDotElements[i] != null) {
+                    _inlineSetupPatternDotElements[i].Fill = dotFillBrush;
+                }
+                if (_inlineSetupPatternDotRings[i] != null) {
+                    _inlineSetupPatternDotRings[i].Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+
+        private void UpdateInlinePatternDisplay() {
+            if (_inlineSetupPatternDots.Count == 0) {
+                InlineSetupPatternText.Text = "Ընտրված կետեր՝ (չկա)";
+            } else {
+                InlineSetupPatternText.Text = "Ընտրված կետեր՝ " + string.Join(" ➔ ", _inlineSetupPatternDots);
+            }
+        }
+
+        private void InlineSetupPatternClear_Click(object sender, RoutedEventArgs e) {
+            _inlineSetupPatternDots.Clear();
+            ResetInlineSetupPatternVisuals();
+            UpdateInlinePatternDisplay();
+            SetupErrorBadge.Visibility = Visibility.Collapsed;
+        }
+
         private void ContextMenu_Opened(object sender, RoutedEventArgs e) {
             if (sender is ContextMenu cm) {
                 var loc = LocalizationService.Instance;
+                bool isLocked = FolderLockService.Instance.IsFolderLocked(_rootFolderPath);
                 foreach (var item in cm.Items) {
                     if (item is MenuItem mi) {
                         string header = mi.Header?.ToString() ?? string.Empty;
@@ -2034,8 +2774,11 @@ namespace Panak.Views {
                             mi.Header = loc["Open"];
                         } else if (header.Contains("Explorer")) {
                             mi.Header = loc["OpenInExplorer"];
+                            mi.Visibility = isLocked ? Visibility.Collapsed : Visibility.Visible;
                         } else if (header.Contains("պանակից") || header.Contains("folder") || header == loc["RemoveFromFolder"]) {
                             mi.Header = loc["RemoveFromFolder"];
+                        } else if (header.Contains("Ապահավաքել") || header.Contains("Unpack") || header == loc["UnpackPanakFolder"]) {
+                            mi.Header = loc["UnpackPanakFolder"];
                         } else if (header == "Ջնջել" || header == "Delete" || header == loc["Delete"]) {
                             mi.Header = loc["Delete"];
                         } else if (header == "Հատկություններ" || header == "Properties" || header == loc["Properties"]) {
@@ -2053,6 +2796,17 @@ namespace Panak.Views {
                     TitleMarqueeCanvas.Visibility = Visibility.Visible;
                     FolderTitleText.Visibility = Visibility.Visible;
                     UpdateTitleMarquee(_folderData.Title);
+                    e.Handled = true;
+                    return;
+                }
+                if (LockSetupPanel.Visibility == Visibility.Visible) {
+                    HideLockSetupView();
+                    e.Handled = true;
+                    return;
+                }
+                if (PopupLockOverlay.Visibility == Visibility.Visible && PopupLockOverlay.IsRemoveLockMode) {
+                    PopupLockOverlay.CancelRemoveLock();
+                    UpdateLockState();
                     e.Handled = true;
                     return;
                 }

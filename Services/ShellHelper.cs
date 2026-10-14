@@ -147,6 +147,13 @@ namespace Panak.Services {
         [DllImport("gdi32.dll")]
         public static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight, IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
 
+        [DllImport("gdi32.dll")]
+        public static extern bool StretchBlt(IntPtr hdcDest, int nXOriginDest, int nYOriginDest, int nWidthDest, int nHeightDest,
+            IntPtr hdcSrc, int nXOriginSrc, int nYOriginSrc, int nWidthSrc, int nHeightSrc, int dwRop);
+
+        [DllImport("gdi32.dll")]
+        public static extern int SetStretchBltMode(IntPtr hdc, int iStretchMode);
+
         [DllImport("user32.dll")]
         public static extern bool IsWindow(IntPtr hWnd);
 
@@ -586,6 +593,14 @@ namespace Panak.Services {
             ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".ico", ".tif", ".tiff"
         };
 
+        // High-performance in-memory caching for icons and thumbnails across all system operations
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, BitmapSource> _extensionIconSourceCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (long LastWriteTime, BitmapSource Source)> _fileIconSourceCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (long LastWriteTime, BitmapSource Source)> _thumbnailSourceCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Bitmap> _extensionIconBitmapCache = new(StringComparer.OrdinalIgnoreCase);
+        private static BitmapSource? _cachedFolderIconLarge;
+        private static BitmapSource? _cachedFolderIconSmall;
+
         public static string? ResolveShortcut(string lnkPath) {
             try {
                 if (!File.Exists(lnkPath)) return null;
@@ -614,15 +629,25 @@ namespace Panak.Services {
 
                 string ext = Path.GetExtension(resolvedPath);
                 if (ImageExtensions.Contains(ext) && File.Exists(resolvedPath)) {
+                    long lwt = 0;
+                    try { lwt = File.GetLastWriteTimeUtc(resolvedPath).Ticks; } catch { }
+                    string cacheKey = (isLarge ? "L:" : "S:") + resolvedPath;
+                    if (lwt > 0 && _thumbnailSourceCache.TryGetValue(cacheKey, out var cachedThumb) && cachedThumb.LastWriteTime == lwt) {
+                        return cachedThumb.Source;
+                    }
+
                     try {
                         var bmp = new BitmapImage();
                         bmp.BeginInit();
                         bmp.UriSource = new Uri(resolvedPath);
-                        bmp.DecodePixelWidth = 96;
+                        bmp.DecodePixelWidth = isLarge ? 96 : 48;
                         bmp.CacheOption = BitmapCacheOption.OnLoad;
                         bmp.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
                         bmp.EndInit();
                         bmp.Freeze();
+                        if (lwt > 0) {
+                            _thumbnailSourceCache[cacheKey] = (lwt, bmp);
+                        }
                         return bmp;
                     } catch {
                         // Fallback to file icon
@@ -657,27 +682,80 @@ namespace Panak.Services {
             return GetFileIconBitmap(filePath, isLarge);
         }
 
+        public static BitmapSource? GetFolderIconSource(bool isLarge = true) {
+            try {
+                if (isLarge && _cachedFolderIconLarge != null) return _cachedFolderIconLarge;
+                if (!isLarge && _cachedFolderIconSmall != null) return _cachedFolderIconSmall;
+
+                string sysDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                if (!string.IsNullOrEmpty(sysDir) && Directory.Exists(sysDir)) {
+                    var src = GetFileIconSource(sysDir, isLarge);
+                    if (src != null) return src;
+                }
+
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                if (!string.IsNullOrEmpty(baseDir) && Directory.Exists(baseDir)) {
+                    var src = GetFileIconSource(baseDir, isLarge);
+                    if (src != null) return src;
+                }
+            } catch { }
+
+            return null;
+        }
+
         public static BitmapSource? GetFileIconSource(string filePath, bool isLarge = true) {
             try {
+                bool isDir = Directory.Exists(filePath);
+                if (isDir) {
+                    if (isLarge && _cachedFolderIconLarge != null) return _cachedFolderIconLarge;
+                    if (!isLarge && _cachedFolderIconSmall != null) return _cachedFolderIconSmall;
+                }
+
+                string ext = Path.GetExtension(filePath);
+                bool isSpecificFile = ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
+                                      ext.Equals(".ico", StringComparison.OrdinalIgnoreCase) ||
+                                      ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase);
+
+                string extCacheKey = (isLarge ? "L:" : "S:") + (isDir ? ":folder:" : ext);
+                if (!isDir && !isSpecificFile && !string.IsNullOrEmpty(ext)) {
+                    if (_extensionIconSourceCache.TryGetValue(extCacheKey, out var cachedSource)) {
+                        return cachedSource;
+                    }
+                } else if (!isDir && isSpecificFile && File.Exists(filePath)) {
+                    long lwt = 0;
+                    try { lwt = File.GetLastWriteTimeUtc(filePath).Ticks; } catch { }
+                    string fileKey = (isLarge ? "L:" : "S:") + filePath;
+                    if (lwt > 0 && _fileIconSourceCache.TryGetValue(fileKey, out var cachedEntry) && cachedEntry.LastWriteTime == lwt) {
+                        return cachedEntry.Source;
+                    }
+                }
+
+                BitmapSource? result = null;
                 SHFILEINFO shinfo = new SHFILEINFO();
                 uint flags = SHGFI_ICON | (isLarge ? SHGFI_LARGEICON : SHGFI_SMALLICON);
 
-                if (!File.Exists(filePath) && !Directory.Exists(filePath)) {
+                uint dwAttr = 0;
+                if (!File.Exists(filePath) && !isDir) {
                     flags |= SHGFI_USEFILEATTRIBUTES;
+                    dwAttr = 0x00000080u; // FILE_ATTRIBUTE_NORMAL
+                } else if (!Directory.Exists(filePath) && isDir) {
+                    flags |= SHGFI_USEFILEATTRIBUTES;
+                    dwAttr = 0x00000010u; // FILE_ATTRIBUTE_DIRECTORY
                 }
 
-                IntPtr hImg = SHGetFileInfo(filePath, 0, ref shinfo, (uint)Marshal.SizeOf(shinfo), flags);
+                IntPtr hImg = SHGetFileInfo(filePath, dwAttr, ref shinfo, (uint)Marshal.SizeOf(shinfo), flags);
                 if (shinfo.hIcon != IntPtr.Zero) {
                     try {
                         using (Icon icon = Icon.FromHandle(shinfo.hIcon)) {
                             using Bitmap bitmap = icon.ToBitmap();
                             IntPtr hBitmap = bitmap.GetHbitmap();
                             try {
-                                return Imaging.CreateBitmapSourceFromHBitmap(
+                                result = Imaging.CreateBitmapSourceFromHBitmap(
                                     hBitmap,
                                     IntPtr.Zero,
                                     Int32Rect.Empty,
                                     BitmapSizeOptions.FromEmptyOptions());
+                                result.Freeze();
                             } finally {
                                 DeleteObject(hBitmap);
                             }
@@ -687,35 +765,62 @@ namespace Panak.Services {
                     }
                 }
 
-                if (File.Exists(filePath)) {
+                if (result == null && File.Exists(filePath)) {
                     using (Icon? assoc = Icon.ExtractAssociatedIcon(filePath)) {
                         if (assoc != null) {
                             using Bitmap bmp = assoc.ToBitmap();
                             IntPtr hBmp = bmp.GetHbitmap();
                             try {
-                                return Imaging.CreateBitmapSourceFromHBitmap(
+                                result = Imaging.CreateBitmapSourceFromHBitmap(
                                     hBmp,
                                     IntPtr.Zero,
                                     Int32Rect.Empty,
                                     BitmapSizeOptions.FromEmptyOptions());
+                                result.Freeze();
                             } finally {
                                 DeleteObject(hBmp);
                             }
                         }
                     }
                 }
+
+                if (result != null) {
+                    if (isDir) {
+                        if (isLarge) _cachedFolderIconLarge = result;
+                        else _cachedFolderIconSmall = result;
+                    } else if (!isSpecificFile && !string.IsNullOrEmpty(ext)) {
+                        _extensionIconSourceCache[extCacheKey] = result;
+                    } else if (isSpecificFile && File.Exists(filePath)) {
+                        long lwt = 0;
+                        try { lwt = File.GetLastWriteTimeUtc(filePath).Ticks; } catch { }
+                        if (lwt > 0) {
+                            string fileKey = (isLarge ? "L:" : "S:") + filePath;
+                            _fileIconSourceCache[fileKey] = (lwt, result);
+                        }
+                    }
+                }
+
+                return result;
             } catch {
-                // Fallback
+                return null;
             }
-            return null;
         }
 
         public static Bitmap? GetFileIconBitmap(string filePath, bool isLarge = true) {
             try {
+                string ext = Path.GetExtension(filePath);
+                bool isDir = Directory.Exists(filePath);
+                string key = (isLarge ? "L:" : "S:") + (isDir ? ":folder:" : ext);
+                if (!isDir && !ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(ext)) {
+                    if (_extensionIconBitmapCache.TryGetValue(key, out var cachedBmp)) {
+                        return (Bitmap)cachedBmp.Clone();
+                    }
+                }
+
                 SHFILEINFO shinfo = new SHFILEINFO();
                 uint flags = SHGFI_ICON | (isLarge ? SHGFI_LARGEICON : SHGFI_SMALLICON);
 
-                if (!File.Exists(filePath) && !Directory.Exists(filePath)) {
+                if (!File.Exists(filePath) && !isDir) {
                     flags |= SHGFI_USEFILEATTRIBUTES;
                 }
 
@@ -723,7 +828,11 @@ namespace Panak.Services {
                 if (shinfo.hIcon != IntPtr.Zero) {
                     try {
                         using (Icon icon = Icon.FromHandle(shinfo.hIcon)) {
-                            return new Bitmap(icon.ToBitmap());
+                            Bitmap res = new Bitmap(icon.ToBitmap());
+                            if (!isDir && !ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(ext)) {
+                                _extensionIconBitmapCache[key] = (Bitmap)res.Clone();
+                            }
+                            return res;
                         }
                     } finally {
                         DestroyIcon(shinfo.hIcon);
@@ -733,7 +842,11 @@ namespace Panak.Services {
                 if (File.Exists(filePath)) {
                     using (Icon? assoc = Icon.ExtractAssociatedIcon(filePath)) {
                         if (assoc != null) {
-                            return new Bitmap(assoc.ToBitmap());
+                            Bitmap res = new Bitmap(assoc.ToBitmap());
+                            if (!isDir && !ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(ext)) {
+                                _extensionIconBitmapCache[key] = (Bitmap)res.Clone();
+                            }
+                            return res;
                         }
                     }
                 }
@@ -775,6 +888,67 @@ namespace Panak.Services {
 
         [DllImport("dwmapi.dll")]
         public static extern int DwmEnableBlurBehindWindow(IntPtr hWnd, ref DWM_BLURBEHIND pBlurBehind);
+
+        public const uint WDA_NONE = 0x00000000;
+        public const uint WDA_MONITOR = 0x00000001;
+        public const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
+
+        [DllImport("user32.dll")]
+        public static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
+
+        private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFOEX lpmi);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        public struct MONITORINFOEX {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public int dwFlags;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string szDevice;
+        }
+
+        public static List<Rect> GetAllMonitorsBounds() {
+            var monitors = new List<Rect>();
+            try {
+                EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr hMon, IntPtr hdc, ref RECT rc, IntPtr data) => {
+                    var mi = new MONITORINFOEX();
+                    mi.cbSize = Marshal.SizeOf(typeof(MONITORINFOEX));
+                    if (GetMonitorInfo(hMon, ref mi)) {
+                        monitors.Add(new Rect(
+                            mi.rcMonitor.Left,
+                            mi.rcMonitor.Top,
+                            Math.Max(1, mi.rcMonitor.Right - mi.rcMonitor.Left),
+                            Math.Max(1, mi.rcMonitor.Bottom - mi.rcMonitor.Top)
+                        ));
+                    } else {
+                        monitors.Add(new Rect(
+                            rc.Left,
+                            rc.Top,
+                            Math.Max(1, rc.Right - rc.Left),
+                            Math.Max(1, rc.Bottom - rc.Top)
+                        ));
+                    }
+                    return true;
+                }, IntPtr.Zero);
+            } catch { }
+
+            if (monitors.Count == 0) {
+                monitors.Add(new Rect(
+                    SystemParameters.VirtualScreenLeft,
+                    SystemParameters.VirtualScreenTop,
+                    SystemParameters.VirtualScreenWidth,
+                    SystemParameters.VirtualScreenHeight
+                ));
+            }
+            return monitors;
+        }
 
         public static Color GetWindowsAccentColor() {
             try {
@@ -912,7 +1086,7 @@ namespace Panak.Services {
 
                     // 2. Trash can container bin
                     dc.DrawGeometry(brushCloud, null, System.Windows.Media.Geometry.Parse(
-                        "M35.6414 72C34.1731 72 32.9205 70.9372 32.6814 69.4885L26.5757 32.4885C26.2741 30.6613 27.6838 29 29.5356 29L59.5458 29C61.3698 29 62.7717 30.6142 62.5162 32.4202L57.2828 69.4202C57.0735 70.8999 55.8069 72 54.3123 72L35.6414 72Z"));
+                        "M35.6213 72C34.1618 72 32.9141 70.9497 32.6652 69.5116L26.6078 34.5116C26.2903 32.6775 27.7024 31 29.5638 31L59.5221 31C61.3543 31 62.7585 32.6279 62.4897 34.4402L57.2976 69.4402C57.0794 70.911 55.8169 72 54.3301 72L35.6213 72Z"));
 
                     // 3. Trash can lid
                     dc.DrawRoundedRectangle(brushCloud, null, new System.Windows.Rect(26, 18, 37, 9), 3, 3);
@@ -1018,7 +1192,7 @@ namespace Panak.Services {
             return DefaultPastelColorHex;
         }
 
-        public static BitmapSource? CaptureScreenArea(int x, int y, int width, int height, double dpiScale = 1.0) {
+        public static BitmapSource? CaptureScreenArea(int x, int y, int width, int height, double dpiScale = 1.0, bool downsampleForBlur = false) {
             try {
                 if (width <= 0 || height <= 0) {
                     return null;
@@ -1028,9 +1202,33 @@ namespace Panak.Services {
                 int physX = (int)Math.Round(x * dpiScale);
                 int physY = (int)Math.Round(y * dpiScale);
 
-                using var bmp = new System.Drawing.Bitmap(physWidth, physHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                int bmpW = downsampleForBlur && physWidth > 120 ? Math.Max(60, physWidth / 2) : physWidth;
+                int bmpH = downsampleForBlur && physHeight > 120 ? Math.Max(60, physHeight / 2) : physHeight;
+
+                using var bmp = new System.Drawing.Bitmap(bmpW, bmpH, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
                 using (var g = System.Drawing.Graphics.FromImage(bmp)) {
-                    g.CopyFromScreen(physX, physY, 0, 0, new System.Drawing.Size(physWidth, physHeight), System.Drawing.CopyPixelOperation.SourceCopy);
+                    if (downsampleForBlur && (bmpW != physWidth || bmpH != physHeight)) {
+                        IntPtr hdcScreen = GetDC(IntPtr.Zero);
+                        if (hdcScreen != IntPtr.Zero) {
+                            IntPtr hdcBmp = g.GetHdc();
+                            try {
+                                SetStretchBltMode(hdcBmp, 3); // COLORONCOLOR
+                                StretchBlt(hdcBmp, 0, 0, bmpW, bmpH, hdcScreen, physX, physY, physWidth, physHeight, 0x00CC0020);
+                            } finally {
+                                g.ReleaseHdc(hdcBmp);
+                                ReleaseDC(IntPtr.Zero, hdcScreen);
+                            }
+                        } else {
+                            g.CopyFromScreen(physX, physY, 0, 0, new System.Drawing.Size(physWidth, physHeight), System.Drawing.CopyPixelOperation.SourceCopy);
+                        }
+                    } else {
+                        g.CopyFromScreen(physX, physY, 0, 0, new System.Drawing.Size(physWidth, physHeight), System.Drawing.CopyPixelOperation.SourceCopy);
+                    }
+                }
+
+                if (IsBitmapTooDarkOrBlack(bmp)) {
+                    var wpFallback = CropWallpaperArea(x, y, width, height);
+                    if (wpFallback != null) return wpFallback;
                 }
 
                 IntPtr hBitmap = bmp.GetHbitmap();
@@ -1045,6 +1243,47 @@ namespace Panak.Services {
                 } finally {
                     DeleteObject(hBitmap);
                 }
+            } catch {
+                return CropWallpaperArea(x, y, width, height);
+            }
+        }
+
+        public static bool IsWindows11OrGreater => Environment.OSVersion.Version.Build >= 22000;
+
+        public static bool IsBitmapTooDarkOrBlack(System.Drawing.Bitmap bmp) {
+            try {
+                int w = bmp.Width;
+                int h = bmp.Height;
+                if (w < 2 || h < 2) return true;
+                var c1 = bmp.GetPixel(w / 2, h / 2);
+                var c2 = bmp.GetPixel(w / 4, h / 4);
+                var c3 = bmp.GetPixel(Math.Min(w - 1, (3 * w) / 4), Math.Min(h - 1, (3 * h) / 4));
+                double avg = (c1.R + c1.G + c1.B + c2.R + c2.G + c2.B + c3.R + c3.G + c3.B) / 9.0;
+                return avg < 5.0 && (c1.A > 0 || c2.A > 0 || c3.A > 0);
+            } catch {
+                return false;
+            }
+        }
+
+        public static BitmapSource? CropWallpaperArea(int x, int y, int width, int height) {
+            try {
+                var wp = GetDesktopWallpaperBitmap();
+                if (wp == null) return null;
+                double screenW = System.Windows.SystemParameters.PrimaryScreenWidth;
+                double screenH = System.Windows.SystemParameters.PrimaryScreenHeight;
+                if (screenW <= 0 || screenH <= 0 || width <= 0 || height <= 0) return wp;
+
+                double scaleX = wp.PixelWidth / screenW;
+                double scaleY = wp.PixelHeight / screenH;
+
+                int cropX = Math.Clamp((int)(x * scaleX), 0, Math.Max(0, wp.PixelWidth - 1));
+                int cropY = Math.Clamp((int)(y * scaleY), 0, Math.Max(0, wp.PixelHeight - 1));
+                int cropW = Math.Clamp((int)(width * scaleX), 1, wp.PixelWidth - cropX);
+                int cropH = Math.Clamp((int)(height * scaleY), 1, wp.PixelHeight - cropY);
+
+                var cropped = new System.Windows.Media.Imaging.CroppedBitmap(wp, new System.Windows.Int32Rect(cropX, cropY, cropW, cropH));
+                cropped.Freeze();
+                return cropped;
             } catch {
                 return null;
             }
@@ -1093,14 +1332,23 @@ namespace Panak.Services {
             return _cachedWorkerW;
         }
 
+        private static bool _cachedLiveWallpaperRunning = false;
+        private static long _lastLiveWallpaperCheckTicks = 0;
+
         public static bool IsLiveWallpaperEngineRunning() {
+            long now = Environment.TickCount64;
+            if (now - _lastLiveWallpaperCheckTicks < 3000) {
+                return _cachedLiveWallpaperRunning;
+            }
             try {
-                return System.Diagnostics.Process.GetProcessesByName("wallpaper64").Length > 0
+                _cachedLiveWallpaperRunning = System.Diagnostics.Process.GetProcessesByName("wallpaper64").Length > 0
                     || System.Diagnostics.Process.GetProcessesByName("wallpaper32").Length > 0
                     || System.Diagnostics.Process.GetProcessesByName("Lively").Length > 0;
             } catch {
-                return false;
+                _cachedLiveWallpaperRunning = false;
             }
+            _lastLiveWallpaperCheckTicks = now;
+            return _cachedLiveWallpaperRunning;
         }
 
         public static BitmapSource? CaptureLiveWallpaper() {
@@ -1226,6 +1474,73 @@ namespace Panak.Services {
             } catch {
                 // DWM acrylic attribute fallback
             }
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MONITORINFO {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
+        }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+        private const uint MONITOR_DEFAULTTONEAREST = 2;
+
+        public static Rect GetMonitorWorkArea(System.Windows.Point screenPointDpi) {
+            try {
+                var pt = new POINT { X = (int)Math.Round(screenPointDpi.X), Y = (int)Math.Round(screenPointDpi.Y) };
+                IntPtr hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+                if (hMon != IntPtr.Zero) {
+                    MONITORINFO mi = new MONITORINFO();
+                    mi.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+                    if (GetMonitorInfo(hMon, ref mi)) {
+                        return new Rect(mi.rcWork.Left, mi.rcWork.Top, mi.rcWork.Right - mi.rcWork.Left, mi.rcWork.Bottom - mi.rcWork.Top);
+                    }
+                }
+            } catch { }
+            return SystemParameters.WorkArea;
+        }
+
+        public static Rect GetMonitorWorkArea(IntPtr hwnd) {
+            try {
+                if (hwnd != IntPtr.Zero) {
+                    IntPtr hMon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                    if (hMon != IntPtr.Zero) {
+                        MONITORINFO mi = new MONITORINFO();
+                        mi.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+                        if (GetMonitorInfo(hMon, ref mi)) {
+                            return new Rect(mi.rcWork.Left, mi.rcWork.Top, mi.rcWork.Right - mi.rcWork.Left, mi.rcWork.Bottom - mi.rcWork.Top);
+                        }
+                    }
+                }
+            } catch { }
+            return SystemParameters.WorkArea;
+        }
+
+        public static Rect GetMonitorBounds(IntPtr hwnd) {
+            try {
+                if (hwnd != IntPtr.Zero) {
+                    IntPtr hMon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                    if (hMon != IntPtr.Zero) {
+                        MONITORINFO mi = new MONITORINFO();
+                        mi.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+                        if (GetMonitorInfo(hMon, ref mi)) {
+                            return new Rect(mi.rcMonitor.Left, mi.rcMonitor.Top, mi.rcMonitor.Right - mi.rcMonitor.Left, mi.rcMonitor.Bottom - mi.rcMonitor.Top);
+                        }
+                    }
+                }
+            } catch { }
+            return new Rect(0, 0, SystemParameters.PrimaryScreenWidth, SystemParameters.PrimaryScreenHeight);
         }
 
         public static bool IsWindowsDarkTheme() {

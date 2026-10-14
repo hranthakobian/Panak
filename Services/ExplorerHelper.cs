@@ -145,16 +145,26 @@ namespace Panak.Services {
                 // Ignore
             }
 
-            // 3. Search Desktop list in UIAutomation
+            // 3. Search Desktop list in UIAutomation (scoped specifically to Desktop window for instant lookup)
             try {
-                AutomationElement? root = AutomationElement.RootElement;
-                if (root != null) {
-                    var found = root.FindFirst(TreeScope.Descendants,
-                        new PropertyCondition(AutomationElement.NameProperty, folderName));
-                    if (found != null) {
-                        Rect r = found.Current.BoundingRectangle;
-                        if (!r.IsEmpty && r.Width > 0 && r.Height > 0) {
-                            return r;
+                IntPtr progman = ShellHelper.FindWindow("Progman", null);
+                IntPtr defView = ShellHelper.FindWindowEx(progman, IntPtr.Zero, "SHELLDLL_DefView", null);
+                if (defView == IntPtr.Zero) {
+                    IntPtr workerW = ShellHelper.GetWallpaperWorkerW();
+                    if (workerW != IntPtr.Zero) {
+                        defView = ShellHelper.FindWindowEx(workerW, IntPtr.Zero, "SHELLDLL_DefView", null);
+                    }
+                }
+                if (defView != IntPtr.Zero) {
+                    AutomationElement? desktopElem = AutomationElement.FromHandle(defView);
+                    if (desktopElem != null) {
+                        var found = desktopElem.FindFirst(TreeScope.Children,
+                            new PropertyCondition(AutomationElement.NameProperty, folderName));
+                        if (found != null) {
+                            Rect r = found.Current.BoundingRectangle;
+                            if (!r.IsEmpty && r.Width > 0 && r.Height > 0) {
+                                return r;
+                            }
                         }
                     }
                 }

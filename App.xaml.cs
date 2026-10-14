@@ -30,17 +30,25 @@ namespace Panak {
 
             AppDomain.CurrentDomain.UnhandledException += (s, ev) => {
                 try {
-                    string logPath = Path.Combine(Path.GetTempPath(), "panak_crash.log");
-                    File.AppendAllText(logPath, $"[{DateTime.Now}] AppDomain Unhandled: {ev.ExceptionObject}\n");
+                    string details = ev.ExceptionObject is Exception ex
+                        ? CrashReportWindow.FormatException(ex)
+                        : $"Unhandled Object: {ev.ExceptionObject}";
+                    CrashReportWindow.ShowReport(details);
                 } catch { }
             };
 
             DispatcherUnhandledException += (s, ev) => {
                 try {
-                    string logPath = Path.Combine(Path.GetTempPath(), "panak_crash.log");
-                    File.AppendAllText(logPath, $"[{DateTime.Now}] Dispatcher Unhandled: {ev.Exception}\n");
+                    CrashReportWindow.ShowReport(ev.Exception);
                 } catch { }
                 ev.Handled = true;
+            };
+
+            TaskScheduler.UnobservedTaskException += (s, ev) => {
+                try {
+                    CrashReportWindow.ShowReport(ev.Exception);
+                } catch { }
+                ev.SetObserved();
             };
 
             string[] args = e.Args;

@@ -1,6 +1,38 @@
+# What's New in Panak v2.0.0
+
+## 🌟 Highlights & Major Features (v2.0.0)
+
+### 1. 🔒 Comprehensive Multi-Factor Folder Security & Locking
+* **Individual Folder Locks**: Lock folders independently with Password (PBKDF2/SHA-256), PIN (4-8 digits), or phone-like drag-to-draw 3x3 Pattern.
+* **Settings Lock**: Lock the entire Settings interface with Password, PIN, or Pattern.
+* **Explorer Protection**: The "Open in Windows Explorer" button and context menu item are completely hidden and blocked when a folder is locked.
+* **Tamper & Offline Resistance**: Folder locks write persistent security markers to `panak_lock.json` and `desktop.ini` attributes (`PanakLocked=1`).
+* **Uninstaller Safeguard**: The Standalone Uninstaller strictly blocks uninstallation if any folder in the system is still locked, preventing accidental loss of access.
+
+---
+
+### 2. 📦 Unpack Panak Folder («Ապահավաքել պանակը»)
+* **One-Click Unpack**: Move all contents out of the Panak container directly into its parent folder, clean up the container, and dissolve the custom folder state. Accessible from both header actions and folder context menu.
+
+---
+
+### 3. 🖥️ Redesigned Two-Pane Settings Window with Live Desktop Preview
+* **Dual-Column Layout**: Left column houses scrollable setting cards; right column displays a full-height Live Preview with real desktop wallpaper, folder icon, and popup card.
+* **Four Section Tabs with Smooth Scroll**: Instant navigation between «Արտաքին», «Դիրք», «Անվտանգություն», and «Համակարգ» with fluid cubic-ease scrolling.
+* **Collapsible Preview**: Header button collapses or expands the live preview pane, smoothly transitioning window width between 880px and 520px.
+* **Color First**: Color & Hue card is positioned before the Theme Mode card for improved setup ergonomics.
+
+---
+
+### 4. 🪟 Windows 10 Black Blur Fix & Visual Polish
+* **BitBlt Exclude Window Compatibility**: Exclude-from-capture is applied strictly on Windows 11 (Build >= 22000), eliminating black rectangles on Windows 10 and falling back to clean wallpaper sampling.
+* **Authentic Uninstaller Assets**: Modern dynamic vector SVG trash can with theme-bound brushes and authentic uninstaller icons.
+
+---
+
 # What's New in Panak v1.9.0
 
-## 🌟 Highlights & Major Features
+## 🌟 Highlights & Major Features (v1.9.0)
 
 ### 1. 🖼️ Real-Time Wallpaper Engine & Desktop Background in Preview
 * **Live Wallpaper Capture**: The Setup Wizard and Welcome experience capture the live Windows desktop background in real time. If **Wallpaper Engine** or interactive live wallpapers are active, Panak captures frames directly from `WorkerW` to display live, moving wallpaper inside the preview cards.

@@ -300,21 +300,21 @@ namespace Panak.ShellExt {
                     if (doc.RootElement.TryGetProperty("Language", out var langProp)) {
                         string lang = langProp.GetString()?.ToLowerInvariant() ?? "";
                         return lang switch {
-                            "hy" => "Հավաքել Panak պանակի մեջ",
+                            "hy" => "Հավաքել Panak-ի մեջ",
                             "en" => "Collect into Panak folder",
                             "ru" => "Собрать в папку Panak",
                             "fr" => "Rassembler dans un dossier Panak",
                             "es" => "Reunir en carpeta Panak",
                             "zh" => "收集到 Panak 文件夹",
                             "ar" => "جمع في مجلد Panak",
-                            _ => "Հավաքել Panak պանակի մեջ"
+                            _ => "Հավաքել Panak-ի մեջ"
                         };
                     }
                 }
             } catch { }
 
             // Default to Armenian as configured for Panak
-            return "Հավաքել Panak պանակի մեջ";
+            return "Հավաքել Panak-ի մեջ";
         }
 
         private IntPtr GetPanakIconBitmap() {

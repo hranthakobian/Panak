@@ -153,17 +153,23 @@ namespace Panak.Services {
                 }
 
                 if (msg == WM_MOUSEMOVE) {
-                    MSLLHOOKSTRUCT hookStruct = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
-                    if (!_isLeftDragging && _leftDragStartPt.x != 0 && _leftDragStartPt.y != 0) {
-                        int dx = Math.Abs(hookStruct.pt.x - _leftDragStartPt.x);
-                        int dy = Math.Abs(hookStruct.pt.y - _leftDragStartPt.y);
-                        if (dx > 8 || dy > 8) {
-                            _isLeftDragging = true;
-                            if (_leftDragSourceItem == null) {
-                                var curItem = ExplorerHelper.GetItemUnderCursor();
-                                if (curItem != null && !string.IsNullOrEmpty(curItem.Value.Path) && !curItem.Value.IsFolder && File.Exists(curItem.Value.Path)) {
-                                    _leftDragSourceItem = curItem.Value;
-                                    _leftDragSelectedFiles = ExplorerHelper.GetActiveExplorerSelectedPaths();
+                    if (SettingsService.Instance.Current.CombineFilesOnDrop) {
+                        MSLLHOOKSTRUCT hookStruct = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+                        if (!_isLeftDragging && _leftDragStartPt.x != 0 && _leftDragStartPt.y != 0) {
+                            int dx = Math.Abs(hookStruct.pt.x - _leftDragStartPt.x);
+                            int dy = Math.Abs(hookStruct.pt.y - _leftDragStartPt.y);
+                            if (dx > 8 || dy > 8) {
+                                _isLeftDragging = true;
+                                if (_leftDragSourceItem == null) {
+                                    Task.Run(() => {
+                                        try {
+                                            var curItem = ExplorerHelper.GetItemUnderCursor();
+                                            if (curItem != null && !string.IsNullOrEmpty(curItem.Value.Path) && !curItem.Value.IsFolder && File.Exists(curItem.Value.Path)) {
+                                                _leftDragSourceItem = curItem.Value;
+                                                _leftDragSelectedFiles = ExplorerHelper.GetActiveExplorerSelectedPaths();
+                                            }
+                                        } catch { }
+                                    });
                                 }
                             }
                         }

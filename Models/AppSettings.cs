@@ -8,6 +8,7 @@ namespace Panak.Models {
         public double FocusBlurRadius { get; set; } = 28.0;
         public string IconShape { get; set; } = "Squircle";
         public bool IsLocked { get; set; } = false;
+        public bool LockPopupPosition { get; set; } = false;
         public bool RightDoubleClickEnabled { get; set; } = true;
         public bool SpaceQuickLookEnabled { get; set; } = true;
         public string QuickLookHotkey { get; set; } = "Space";
@@ -32,5 +33,6 @@ namespace Panak.Models {
         public bool RandomColorOnCreate { get; set; } = false;
         public bool RandomOpacityOnCreate { get; set; } = false;
         public System.Collections.Generic.List<string> CustomPaletteColors { get; set; } = new();
+        public System.Collections.Generic.List<string> HiddenPresetColors { get; set; } = new();
     }
 }
